@@ -504,8 +504,9 @@ async def execute_sql_scripts(db: AsyncSession, sql_scripts: str, *, is_init: bo
     """解析并执行 SQL 脚本"""
     try:
         stmts = await parse_sql_script(sql_scripts)
+        conn = await db.connection()
         for stmt in stmts:
-            await db.execute(text(stmt))
+            await conn.exec_driver_sql(stmt)
     except Exception as e:
         raise cappa.Exit(f'SQL 脚本执行失败：{e}', code=1)
 
@@ -517,8 +518,9 @@ async def execute_destroy_sql_scripts(db: AsyncSession, sql_scripts: str) -> Non
     """执行插件销毁 SQL 脚本"""
     try:
         stmts = await parse_sql_script(sql_scripts, is_destroy=True)
+        conn = await db.connection()
         for stmt in stmts:
-            await db.execute(text(stmt))
+            await conn.exec_driver_sql(stmt)
     except Exception as e:
         raise cappa.Exit(f'销毁 SQL 脚本执行失败：{e}', code=1)
 
