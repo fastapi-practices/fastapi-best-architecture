@@ -60,6 +60,7 @@ class ConfigService:
         return await paging_data(db, config_select)
 
     @staticmethod
+    @cache_invalidate(settings.CACHE_CONFIG_REDIS_PREFIX)
     async def create(*, db: AsyncSession, obj: CreateConfigParam) -> None:
         """
         创建参数配置

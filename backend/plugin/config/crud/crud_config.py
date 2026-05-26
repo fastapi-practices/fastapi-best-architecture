@@ -21,7 +21,7 @@ class CRUDConfig(CRUDPlus[Config]):
         """
         return await self.select_model_by_column(db, id=pk)
 
-    async def get_all(self, db: AsyncSession, type: str) -> Sequence[Config | None]:
+    async def get_all(self, db: AsyncSession, type: str | None) -> Sequence[Config | None]:
         """
         通过键名获取参数配置
 
@@ -29,7 +29,12 @@ class CRUDConfig(CRUDPlus[Config]):
         :param type: 参数配置类型
         :return:
         """
-        return await self.select_models(db, type=type)
+        filters = {}
+
+        if type is not None:
+            filters['type'] = type
+
+        return await self.select_models(db, **filters)
 
     async def get_all_by_ids(self, db: AsyncSession, pks: list[int]) -> Sequence[Config]:
         """

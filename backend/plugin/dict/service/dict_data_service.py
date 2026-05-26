@@ -91,6 +91,7 @@ class DictDataService:
         return await paging_data(db, dict_data_select)
 
     @staticmethod
+    @cache_invalidate(settings.CACHE_DICT_REDIS_PREFIX)
     async def create(*, db: AsyncSession, obj: CreateDictDataParam) -> None:
         """
         创建字典数据
