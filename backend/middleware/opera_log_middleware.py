@@ -14,12 +14,6 @@ from backend.app.admin.service.opera_log_service import opera_log_service
 from backend.common.context import ctx
 from backend.common.enums import StatusType
 from backend.common.log import log
-from backend.common.observability.prometheus.fastapi import (
-    dec_fastapi_request_in_progress,
-    inc_fastapi_exception,
-    inc_fastapi_response,
-    observe_fastapi_request_cost_time,
-)
 from backend.common.observability.prometheus.queue import observe_queue_size
 from backend.common.queue import batch_consume
 from backend.common.response.response_code import StandardResponseCode
@@ -68,9 +62,6 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                 msg = getattr(e, 'msg', str(e))
                 status = StatusType.disable
 
-            if path.startswith(settings.FASTAPI_API_V1_PATH):
-                inc_fastapi_exception(method=method, path=path, exception_type=type(e).__name__)
-
             raise
         else:
             elapsed = round((time.perf_counter() - ctx.perf_time) * 1000, 3)
@@ -82,6 +73,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                     '__request_validation_exception__',
                     '__request_assertion_error__',
                     '__request_custom_exception__',
+                    '__request_unknown_exception__',
                 ]:
                     exception = ctx.get(exception_key)
                     if exception:
@@ -90,11 +82,6 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                         status = StatusType.disable
                         log.error(f'请求异常: {msg}')
                         break
-
-            if path.startswith(settings.FASTAPI_API_V1_PATH):
-                observe_fastapi_request_cost_time(
-                    method=method, path=path, elapsed=elapsed, trace_id=get_request_trace_id()
-                )
         finally:
             # summary 只能在请求后获取
             route = request.scope.get('route')
@@ -133,11 +120,8 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                     opera_time=ctx.start_time,
                 )
                 await self.opera_log_queue.put(opera_log_in)
-                observe_queue_size(self.opera_log_queue, queue_name=self.opera_log_queue_name)
-
-            if path.startswith(settings.FASTAPI_API_V1_PATH):
-                inc_fastapi_response(method=method, path=path, status_code=code)
-                dec_fastapi_request_in_progress(method=method, path=path)
+                if settings.GRAFANA_METRICS_ENABLE:
+                    observe_queue_size(self.opera_log_queue, queue_name=self.opera_log_queue_name)
 
         return response
 

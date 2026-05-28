@@ -245,6 +245,6 @@ def register_metrics(app: FastAPI) -> None:
     :return:
     """
     metrics_app = make_asgi_app()
-    app.mount('/metrics', metrics_app)
+    app.mount(settings.GRAFANA_METRICS_PATH, metrics_app)
 
     init_otel(app)

@@ -190,6 +190,7 @@ def register_exception(app: FastAPI) -> None:  # noqa: C901
         else:
             res = response_base.fail(res=CustomResponseCode.HTTP_500)
             content = res.model_dump()
+        ctx.__request_unknown_exception__ = content
         content.update(trace_id=get_request_trace_id())
         return MsgSpecJSONResponse(
             status_code=StandardResponseCode.HTTP_500,
@@ -223,6 +224,10 @@ def register_exception(app: FastAPI) -> None:  # noqa: C901
                 else:
                     res = response_base.fail(res=CustomResponseCode.HTTP_500)
                     content = res.model_dump()
+            if isinstance(exc, BaseExceptionError):
+                ctx.__request_custom_exception__ = content
+            else:
+                ctx.__request_unknown_exception__ = content
             content.update(trace_id=get_request_trace_id())
             response = MsgSpecJSONResponse(
                 status_code=exc.code if isinstance(exc, BaseExceptionError) else StandardResponseCode.HTTP_500,

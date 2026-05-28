@@ -9,6 +9,7 @@ from opentelemetry.instrumentation.celery import CeleryInstrumentor
 
 from backend.app.task.tasks.beat import get_local_beat_schedule
 from backend.common.enums import DataBaseType
+from backend.common.observability.otel import init_resource, init_tracer
 from backend.core.conf import settings
 from backend.core.path_conf import BASE_PATH
 
@@ -17,6 +18,8 @@ from backend.core.path_conf import BASE_PATH
 def init_celery_tracing(*args, **kwargs) -> None:
     """初始化 Celery 追踪"""
     if settings.GRAFANA_METRICS_ENABLE:
+        resource = init_resource(settings.GRAFANA_CELERY_OTEL_SERVICE_NAME)
+        init_tracer(resource)
         CeleryInstrumentor().instrument()
 
 

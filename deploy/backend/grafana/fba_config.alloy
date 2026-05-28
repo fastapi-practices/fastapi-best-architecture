@@ -85,6 +85,7 @@ prometheus.scrape "fba_server" {
 	}]
 	forward_to      = [prometheus.remote_write.prom_server.receiver]
 	job_name        = "fba_server"
+	metrics_path    = "/metrics/"
 	scrape_interval = "5s"
 	scrape_timeout  = "5s"
 }
@@ -119,8 +120,7 @@ otelcol.exporter.otlp "tempo" {
   client {
     endpoint = "fba_tempo:4317"
     tls {
-        insecure             = true
-        insecure_skip_verify = true
+        insecure = true
     }
   }
 }
