@@ -241,6 +241,7 @@ class Settings(BaseSettings):
     OPERA_LOG_QUEUE_MAXSIZE: int = 100000
     OPERA_LOG_QUEUE_BATCH_CONSUME_SIZE: int = 100
     OPERA_LOG_QUEUE_TIMEOUT: int = 60  # 1 分钟
+    OPERA_LOG_BODY_MAX_SIZE: int = 10240  # 10 KB
 
     # Plugin 配置
     PLUGIN_REQUIRED: list[str] = ['dict']

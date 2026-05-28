@@ -162,13 +162,23 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
 
         # Tip: .body() 必须在 .form() 之前获取
         # https://github.com/encode/starlette/discussions/1933
-        content_type = request.headers.get('Content-Type', '').split(';')
+        content_types = [item.strip().lower() for item in request.headers.get('Content-Type', '').split(';')]
+        is_multipart = 'multipart/form-data' in content_types
+        is_form = is_multipart or 'application/x-www-form-urlencoded' in content_types
+        content_length = self.get_content_length(request)
+        if content_length is not None and content_length > settings.OPERA_LOG_BODY_MAX_SIZE:
+            args['body'] = self.build_truncated_body(content_length, settings.OPERA_LOG_BODY_MAX_SIZE)
+            return args or None
+
+        if is_multipart and content_length is None:
+            args['body'] = self.build_truncated_body(None, settings.OPERA_LOG_BODY_MAX_SIZE)
+            return args or None
 
         # 请求体
         body_data = await request.body()
-        if body_data:
+        if body_data and not is_form:
             # 注意：非 json 数据默认使用 data 作为键
-            if 'application/json' not in content_type:
+            if 'application/json' not in content_types:
                 args['data'] = body_data.decode('utf-8', 'ignore') if isinstance(body_data, bytes) else str(body_data)
             else:
                 json_data = await request.json()
@@ -177,56 +187,64 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                 else:
                     args['data'] = str(json_data)
 
-        # 表单参数
-        form_data = await request.form()
-        if len(form_data) > 0:
-            serialized_form = {}
-            for k, v in form_data.items():
-                if isinstance(v, UploadFile):
-                    serialized_form[k] = {
-                        'filename': v.filename,
-                        'content_type': v.content_type,
-                        'size': v.size,
-                    }
+        if is_form:
+            # 表单参数
+            form_data = await request.form()
+            if len(form_data) > 0:
+                serialized_form = {}
+                for k, v in form_data.items():
+                    if isinstance(v, UploadFile):
+                        serialized_form[k] = {
+                            'filename': v.filename,
+                            'content_type': v.content_type,
+                            'size': v.size,
+                        }
+                    else:
+                        serialized_form[k] = v
+                if not is_multipart:
+                    args['x-www-form-urlencoded'] = self.desensitization(serialized_form)
                 else:
-                    serialized_form[k] = v
-            if 'multipart/form-data' not in content_type:
-                args['x-www-form-urlencoded'] = self.desensitization(serialized_form)
-            else:
-                args['form-data'] = self.desensitization(serialized_form)
+                    args['form-data'] = self.desensitization(serialized_form)
 
         if args:
-            args = self.truncate(args)
+            try:
+                args_str = json.dumps(args, ensure_ascii=False)
+                args_size = len(args_str.encode('utf-8'))
+                if args_size > settings.OPERA_LOG_BODY_MAX_SIZE:
+                    args = self.build_truncated_body(args_size, settings.OPERA_LOG_BODY_MAX_SIZE)
+            except Exception as e:
+                log.error(f'请求参数截断处理失败：{e}')
 
         return args or None
 
     @staticmethod
-    def truncate(args: dict[str, Any]) -> dict[str, Any]:
+    def get_content_length(request: Request) -> int | None:
         """
-        截断处理
+        获取请求体大小
 
-        :param args: 需要截断的请求参数字典
+        :param request: FastAPI 请求对象
         :return:
         """
-        max_size = 10240  # 数据最大大小（字节）
+        content_length = request.headers.get('Content-Length')
+        if not content_length:
+            return None
+        return int(content_length)
 
-        try:
-            args_str = json.dumps(args, ensure_ascii=False)
-            args_size = len(args_str.encode('utf-8'))
+    @staticmethod
+    def build_truncated_body(original_size: int | None, max_size: int) -> dict[str, Any]:
+        """
+        构建请求体截断信息
 
-            if args_size > max_size:
-                truncated_str = args_str[:max_size]
-                return {
-                    '_truncated': True,
-                    '_original_size': args_size,
-                    '_max_size': max_size,
-                    '_message': f'数据过大已截断：原始大小 {args_size} 字节，限制 {max_size} 字节',
-                    'data_preview': truncated_str,
-                }
-        except Exception as e:
-            log.error(f'请求参数截断处理失败：{e}')
-
-        return args
+        :param original_size: 原始请求体大小
+        :param max_size: 最大允许记录大小
+        :return:
+        """
+        return {
+            '_truncated': True,
+            '_original_size': original_size,
+            '_max_size': max_size,
+            '_message': '请求体过大或大小未知，已跳过操作日志请求体记录',
+        }
 
     @staticmethod
     def desensitization(args: dict[str, Any]) -> dict[str, Any]:
