@@ -37,6 +37,11 @@ async def connect(sid, environ, auth) -> bool:
 
     # 免授权直连
     if token == settings.WS_NO_AUTH_MARKER:
+        if settings.ENVIRONMENT == 'prod':
+            log.error('WebSocket 连接失败：生产环境禁止免授权直连')
+            return False
+        await redis_client.set(f'{settings.TOKEN_ONLINE_REDIS_PREFIX}:sid:{sid}', session_uuid)
+        await redis_client.sadd(f'{settings.TOKEN_ONLINE_REDIS_PREFIX}:session:{session_uuid}', sid)
         await redis_client.sadd(settings.TOKEN_ONLINE_REDIS_PREFIX, session_uuid)
         return True
 
@@ -47,6 +52,8 @@ async def connect(sid, environ, auth) -> bool:
         log.info(f'WebSocket 连接失败：{e!s}')
         return False
 
+    await redis_client.set(f'{settings.TOKEN_ONLINE_REDIS_PREFIX}:sid:{sid}', session_uuid)
+    await redis_client.sadd(f'{settings.TOKEN_ONLINE_REDIS_PREFIX}:session:{session_uuid}', sid)
     await redis_client.sadd(settings.TOKEN_ONLINE_REDIS_PREFIX, session_uuid)
     return True
 
@@ -54,4 +61,13 @@ async def connect(sid, environ, auth) -> bool:
 @sio.event
 async def disconnect(sid) -> None:
     """Socket 断开连接事件"""
-    await redis_client.spop(settings.TOKEN_ONLINE_REDIS_PREFIX)
+    session_uuid = await redis_client.get(f'{settings.TOKEN_ONLINE_REDIS_PREFIX}:sid:{sid}')
+    if not session_uuid:
+        return
+
+    session_key = f'{settings.TOKEN_ONLINE_REDIS_PREFIX}:session:{session_uuid}'
+    await redis_client.delete(f'{settings.TOKEN_ONLINE_REDIS_PREFIX}:sid:{sid}')
+    await redis_client.srem(session_key, sid)
+    if await redis_client.scard(session_key) == 0:
+        await redis_client.delete(session_key)
+        await redis_client.srem(settings.TOKEN_ONLINE_REDIS_PREFIX, session_uuid)
