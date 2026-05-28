@@ -1,6 +1,6 @@
+import asyncio
 import os
 
-from asyncio import create_task
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -59,7 +59,7 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
         await snowflake.init()
 
     # 创建操作日志任务
-    create_task(OperaLogMiddleware.consumer())
+    opera_log_task = asyncio.create_task(OperaLogMiddleware.consumer())
 
     # 启动缓存 Pub/Sub 监听器
     cache_pubsub_manager.start_listener()
@@ -68,6 +68,14 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 停止缓存 Pub/Sub 监听器
     await cache_pubsub_manager.stop_listener()
+
+    # 取消操作日志任务
+    if not opera_log_task.done():
+        opera_log_task.cancel()
+        try:
+            await opera_log_task
+        except asyncio.CancelledError:
+            pass
 
     # 释放 snowflake 节点
     if settings.SNOWFLAKE_ENABLED or settings.DATABASE_PK_MODE == 'snowflake':
