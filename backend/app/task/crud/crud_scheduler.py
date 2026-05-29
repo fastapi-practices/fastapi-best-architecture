@@ -81,8 +81,6 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
         :return:
         """
         task_scheduler = await self.get(db, pk)
-        if not task_scheduler:
-            raise errors.NotFoundError(msg='任务调度不存在')
         for key, value in obj.model_dump(exclude_unset=True).items():
             setattr(task_scheduler, key, value)
         TaskScheduler.no_changes = False
@@ -98,8 +96,6 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
         :return:
         """
         task_scheduler = await self.get(db, pk)
-        if not task_scheduler:
-            raise errors.NotFoundError(msg='任务调度不存在')
         task_scheduler.enabled = status
         TaskScheduler.no_changes = False
         return 1
@@ -112,7 +108,7 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
         :param pk: 任务调度 ID
         :return:
         """
-        await self.delete_model_by_column(
+        count = await self.delete_model_by_column(
             db,
             logical_deletion=True,
             deleted_flag_column='deleted',
@@ -122,8 +118,9 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
             id=pk,
             deleted=0,
         )
-        TaskScheduler.no_changes = False
-        return 1
+        if count:
+            TaskScheduler.no_changes = False
+        return count
 
 
 task_scheduler_dao: CRUDTaskScheduler = CRUDTaskScheduler(TaskScheduler)
