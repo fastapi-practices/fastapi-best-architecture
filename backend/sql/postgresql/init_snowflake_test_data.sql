@@ -1,5 +1,5 @@
-insert into sys_dept (id, name, sort, leader, phone, email, status, del_flag, parent_id, created_time, updated_time)
-values (2048601264366944256, '测试', 0, null, null, null, 1, false, null, now(), null);
+insert into sys_dept (id, name, sort, leader, phone, email, status, deleted, parent_id, created_time, updated_time)
+values (2048601264366944256, '测试', 0, null, null, null, 1, 0, null, now(), null);
 
 insert into sys_menu (id, title, name, path, sort, icon, type, component, perms, status, display, cache, link, remark, parent_id, created_time, updated_time)
 values

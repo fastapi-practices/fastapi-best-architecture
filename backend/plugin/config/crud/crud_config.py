@@ -6,6 +6,7 @@ from sqlalchemy_crud_plus import CRUDPlus
 
 from backend.plugin.config.model import Config
 from backend.plugin.config.schema.config import CreateConfigParam, UpdateConfigParam
+from backend.utils.timezone import timezone
 
 
 class CRUDConfig(CRUDPlus[Config]):
@@ -19,7 +20,7 @@ class CRUDConfig(CRUDPlus[Config]):
         :param pk: 参数配置 ID
         :return:
         """
-        return await self.select_model_by_column(db, id=pk)
+        return await self.select_model_by_column(db, id=pk, deleted=0)
 
     async def get_all(self, db: AsyncSession, type: str | None) -> Sequence[Config | None]:
         """
@@ -29,7 +30,7 @@ class CRUDConfig(CRUDPlus[Config]):
         :param type: 参数配置类型
         :return:
         """
-        filters = {}
+        filters = {'deleted': 0}
 
         if type is not None:
             filters['type'] = type
@@ -44,27 +45,37 @@ class CRUDConfig(CRUDPlus[Config]):
         :param pks: 参数配置 ID 列表
         :return:
         """
-        return await self.select_models(db, id__in=pks)
+        return await self.select_models(db, id__in=pks, deleted=0)
 
-    async def get_all_by_keys(self, db: AsyncSession, keys: list[str]) -> Sequence[Config]:
+    async def get_all_by_keys(
+        self, db: AsyncSession, keys: list[str], *, include_deleted: bool = False
+    ) -> Sequence[Config]:
         """
         通过键名列表批量获取参数配置
 
         :param db: 数据库会话
         :param keys: 参数配置键名列表
+        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        return await self.select_models(db, key__in=keys)
+        filters = {'key__in': keys}
+        if not include_deleted:
+            filters['deleted'] = 0
+        return await self.select_models(db, **filters)
 
-    async def get_by_key(self, db: AsyncSession, key: str) -> Config | None:
+    async def get_by_key(self, db: AsyncSession, key: str, *, include_deleted: bool = False) -> Config | None:
         """
         通过键名获取参数配置
 
         :param db: 数据库会话
         :param key: 参数配置键名
+        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        return await self.select_model_by_column(db, key=key)
+        filters = {'key': key}
+        if not include_deleted:
+            filters['deleted'] = 0
+        return await self.select_model_by_column(db, **filters)
 
     async def get_select(self, name: str | None, type: str | None) -> Select:
         """
@@ -74,7 +85,7 @@ class CRUDConfig(CRUDPlus[Config]):
         :param type: 参数配置类型
         :return:
         """
-        filters = {}
+        filters = {'deleted': 0}
 
         if name is not None:
             filters['name__like'] = f'%{name}%'
@@ -102,7 +113,7 @@ class CRUDConfig(CRUDPlus[Config]):
         :param obj: 更新参数配置参数
         :return:
         """
-        return await self.update_model(db, pk, obj)
+        return await self.update_model_by_column(db, obj, id=pk, deleted=0)
 
     async def bulk_update(self, db: AsyncSession, objs: list[UpdateConfigParam]) -> int:
         """
@@ -122,7 +133,17 @@ class CRUDConfig(CRUDPlus[Config]):
         :param pks: 参数配置 ID 列表
         :return:
         """
-        return await self.delete_model_by_column(db, allow_multiple=True, id__in=pks)
+        return await self.delete_model_by_column(
+            db,
+            allow_multiple=True,
+            logical_deletion=True,
+            deleted_flag_column='deleted',
+            deleted_flag_value=self.model.id,
+            deleted_at_column='deleted_time',
+            deleted_at_factory=timezone.now(),
+            id__in=pks,
+            deleted=0,
+        )
 
 
 config_dao: CRUDConfig = CRUDConfig(Config)

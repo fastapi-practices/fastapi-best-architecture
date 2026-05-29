@@ -3,7 +3,7 @@ from typing import Any
 
 import bcrypt
 
-from sqlalchemy import Select, delete, insert, select
+from sqlalchemy import Select, and_, delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy_crud_plus import CRUDPlus, JoinConfig
 
@@ -44,27 +44,41 @@ class CRUDUser(CRUDPlus[User]):
         :param user_id: 用户 ID
         :return:
         """
-        return await self.select_model(db, user_id)
+        return await self.select_model(db, user_id, deleted=0)
 
-    async def get_by_username(self, db: AsyncSession, username: str) -> User | None:
+    async def get_by_username(self, db: AsyncSession, username: str, *, include_deleted: bool = False) -> User | None:
         """
         通过用户名获取用户
 
         :param db: 数据库会话
         :param username: 用户名
+        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        return await self.select_model_by_column(db, username=username)
+        filters = {'username': username}
 
-    async def get_all_by_usernames(self, db: AsyncSession, usernames: list[str]) -> Sequence[User]:
+        if not include_deleted:
+            filters['deleted'] = 0
+
+        return await self.select_model_by_column(db, **filters)
+
+    async def get_all_by_usernames(
+        self, db: AsyncSession, usernames: list[str], *, include_deleted: bool = False
+    ) -> Sequence[User]:
         """
         通过用户名列表批量获取用户
 
         :param db: 数据库会话
         :param usernames: 用户名列表
+        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        return await self.select_models(db, username__in=usernames)
+        filters = {'username__in': usernames}
+
+        if not include_deleted:
+            filters['deleted'] = 0
+
+        return await self.select_models(db, **filters)
 
     async def get_by_nickname(self, db: AsyncSession, nickname: str) -> User | None:
         """
@@ -74,17 +88,23 @@ class CRUDUser(CRUDPlus[User]):
         :param nickname: 用户昵称
         :return:
         """
-        return await self.select_model_by_column(db, nickname=nickname)
+        return await self.select_model_by_column(db, nickname=nickname, deleted=0)
 
-    async def check_email(self, db: AsyncSession, email: str) -> User | None:
+    async def check_email(self, db: AsyncSession, email: str, *, include_deleted: bool = False) -> User | None:
         """
         检查邮箱是否已被绑定
 
         :param db: 数据库会话
         :param email: 电子邮箱
+        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        return await self.select_model_by_column(db, email=email)
+        filters = {'email': email}
+
+        if not include_deleted:
+            filters['deleted'] = 0
+
+        return await self.select_model_by_column(db, **filters)
 
     async def get_select(self, dept: int | None, username: str | None, phone: str | None, status: int | None) -> Select:
         """
@@ -96,7 +116,7 @@ class CRUDUser(CRUDPlus[User]):
         :param status: 用户状态
         :return:
         """
-        filters = {}
+        filters = {'deleted': 0}
 
         if dept:
             filters['dept_id'] = dept
@@ -111,9 +131,17 @@ class CRUDUser(CRUDPlus[User]):
             'id',
             'desc',
             join_conditions=[
-                JoinConfig(model=Dept, join_on=Dept.id == self.model.dept_id, fill_result=True),
+                JoinConfig(
+                    model=Dept,
+                    join_on=and_(Dept.id == self.model.dept_id, Dept.deleted == 0),
+                    fill_result=True,
+                ),
                 JoinConfig(model=user_role, join_on=user_role.c.user_id == self.model.id),
-                JoinConfig(model=Role, join_on=Role.id == user_role.c.role_id, fill_result=True),
+                JoinConfig(
+                    model=Role,
+                    join_on=and_(Role.id == user_role.c.role_id, Role.deleted == 0),
+                    fill_result=True,
+                ),
             ],
             **filters,
         )
@@ -136,7 +164,7 @@ class CRUDUser(CRUDPlus[User]):
         await db.flush()
 
         if obj.roles:
-            role_stmt = select(Role).where(Role.id.in_(obj.roles))
+            role_stmt = select(Role).where(Role.id.in_(obj.roles), Role.deleted == 0)
             result = await db.execute(role_stmt)
             roles = result.scalars().all()
 
@@ -158,7 +186,7 @@ class CRUDUser(CRUDPlus[User]):
         db.add(new_user)
         await db.flush()
 
-        role_stmt = select(Role).where(Role.status == StatusType.enable)
+        role_stmt = select(Role).where(Role.status == StatusType.enable, Role.deleted == 0)
         result = await db.execute(role_stmt)
         role = result.scalars().first()  # 默认绑定第一个角色
         if role is None:
@@ -179,13 +207,13 @@ class CRUDUser(CRUDPlus[User]):
         role_ids = obj.roles
         del obj.roles
 
-        count = await self.update_model(db, user_id, obj)
+        count = await self.update_model_by_column(db, obj, id=user_id, deleted=0)
 
         user_role_stmt = delete(user_role).where(user_role.c.user_id == user_id)
         await db.execute(user_role_stmt)
 
         if role_ids:
-            role_stmt = select(Role).where(Role.id.in_(role_ids))
+            role_stmt = select(Role).where(Role.id.in_(role_ids), Role.deleted == 0)
             result = await db.execute(role_stmt)
             roles = result.scalars().all()
 
@@ -203,7 +231,7 @@ class CRUDUser(CRUDPlus[User]):
         :param username: 用户名
         :return:
         """
-        return await self.update_model_by_column(db, {'last_login_time': timezone.now()}, username=username)
+        return await self.update_model_by_column(db, {'last_login_time': timezone.now()}, username=username, deleted=0)
 
     async def update_password_changed_time(self, db: AsyncSession, user_id: int) -> int:
         """
@@ -213,7 +241,9 @@ class CRUDUser(CRUDPlus[User]):
         :param user_id: 用户 ID
         :return:
         """
-        return await self.update_model(db, user_id, {'last_password_changed_time': timezone.now()})
+        return await self.update_model_by_column(
+            db, {'last_password_changed_time': timezone.now()}, id=user_id, deleted=0
+        )
 
     async def update_nickname(self, db: AsyncSession, user_id: int, nickname: str) -> int:
         """
@@ -224,7 +254,7 @@ class CRUDUser(CRUDPlus[User]):
         :param nickname: 用户昵称
         :return:
         """
-        return await self.update_model(db, user_id, {'nickname': nickname})
+        return await self.update_model_by_column(db, {'nickname': nickname}, id=user_id, deleted=0)
 
     async def update_avatar(self, db: AsyncSession, user_id: int, avatar: str) -> int:
         """
@@ -235,7 +265,7 @@ class CRUDUser(CRUDPlus[User]):
         :param avatar: 头像地址
         :return:
         """
-        return await self.update_model(db, user_id, {'avatar': avatar})
+        return await self.update_model_by_column(db, {'avatar': avatar}, id=user_id, deleted=0)
 
     async def update_email(self, db: AsyncSession, user_id: int, email: str) -> int:
         """
@@ -246,7 +276,7 @@ class CRUDUser(CRUDPlus[User]):
         :param email: 邮箱
         :return:
         """
-        return await self.update_model(db, user_id, {'email': email})
+        return await self.update_model_by_column(db, {'email': email}, id=user_id, deleted=0)
 
     async def reset_password(self, db: AsyncSession, pk: int, password: str) -> int:
         """
@@ -259,7 +289,7 @@ class CRUDUser(CRUDPlus[User]):
         """
         salt = bcrypt.gensalt()
         new_pwd = get_hash_password(password, salt)
-        return await self.update_model(db, pk, {'password': new_pwd, 'salt': salt}, flush=True)
+        return await self.update_model_by_column(db, {'password': new_pwd, 'salt': salt}, flush=True, id=pk, deleted=0)
 
     async def set_super(self, db: AsyncSession, user_id: int, *, is_super: bool) -> int:
         """
@@ -270,7 +300,7 @@ class CRUDUser(CRUDPlus[User]):
         :param is_super: 是否超级管理员
         :return:
         """
-        return await self.update_model(db, user_id, {'is_superuser': is_super})
+        return await self.update_model_by_column(db, {'is_superuser': is_super}, id=user_id, deleted=0)
 
     async def set_staff(self, db: AsyncSession, user_id: int, *, is_staff: bool) -> int:
         """
@@ -281,7 +311,7 @@ class CRUDUser(CRUDPlus[User]):
         :param is_staff: 是否可登录后台
         :return:
         """
-        return await self.update_model(db, user_id, {'is_staff': is_staff})
+        return await self.update_model_by_column(db, {'is_staff': is_staff}, id=user_id, deleted=0)
 
     async def set_status(self, db: AsyncSession, user_id: int, status: int) -> int:
         """
@@ -292,7 +322,7 @@ class CRUDUser(CRUDPlus[User]):
         :param status: 状态
         :return:
         """
-        return await self.update_model(db, user_id, {'status': status})
+        return await self.update_model_by_column(db, {'status': status}, id=user_id, deleted=0)
 
     async def set_multi_login(self, db: AsyncSession, user_id: int, *, multi_login: bool) -> int:
         """
@@ -303,7 +333,7 @@ class CRUDUser(CRUDPlus[User]):
         :param multi_login: 是否允许多端登录
         :return:
         """
-        return await self.update_model(db, user_id, {'is_multi_login': multi_login})
+        return await self.update_model_by_column(db, {'is_multi_login': multi_login}, id=user_id, deleted=0)
 
     async def delete(self, db: AsyncSession, user_id: int) -> int:
         """
@@ -321,10 +351,16 @@ class CRUDUser(CRUDPlus[User]):
             except ImportError:
                 raise errors.ServerError(msg='OAuth2 插件用法导入失败，请联系系统管理员')
 
-        user_role_stmt = delete(user_role).where(user_role.c.user_id == user_id)
-        await db.execute(user_role_stmt)
-
-        return await self.delete_model(db, user_id)
+        return await self.delete_model_by_column(
+            db,
+            logical_deletion=True,
+            deleted_flag_column='deleted',
+            deleted_flag_value=self.model.id,
+            deleted_at_column='deleted_time',
+            deleted_at_factory=timezone.now(),
+            id=user_id,
+            deleted=0,
+        )
 
     async def get_join(
         self,
@@ -341,7 +377,7 @@ class CRUDUser(CRUDPlus[User]):
         :param username: 用户名
         :return:
         """
-        filters = {}
+        filters = {'deleted': 0}
 
         if user_id:
             filters['id'] = user_id
@@ -351,15 +387,35 @@ class CRUDUser(CRUDPlus[User]):
         result = await self.select_models(
             db,
             join_conditions=[
-                JoinConfig(model=Dept, join_on=Dept.id == self.model.dept_id, fill_result=True),
+                JoinConfig(
+                    model=Dept,
+                    join_on=and_(Dept.id == self.model.dept_id, Dept.deleted == 0),
+                    fill_result=True,
+                ),
                 JoinConfig(model=user_role, join_on=user_role.c.user_id == self.model.id),
-                JoinConfig(model=Role, join_on=Role.id == user_role.c.role_id, fill_result=True),
+                JoinConfig(
+                    model=Role,
+                    join_on=and_(Role.id == user_role.c.role_id, Role.deleted == 0),
+                    fill_result=True,
+                ),
                 JoinConfig(model=role_menu, join_on=role_menu.c.role_id == Role.id),
-                JoinConfig(model=Menu, join_on=Menu.id == role_menu.c.menu_id, fill_result=True),
+                JoinConfig(
+                    model=Menu,
+                    join_on=and_(Menu.id == role_menu.c.menu_id, Menu.deleted == 0),
+                    fill_result=True,
+                ),
                 JoinConfig(model=role_data_scope, join_on=role_data_scope.c.role_id == Role.id),
-                JoinConfig(model=DataScope, join_on=DataScope.id == role_data_scope.c.data_scope_id, fill_result=True),
+                JoinConfig(
+                    model=DataScope,
+                    join_on=and_(DataScope.id == role_data_scope.c.data_scope_id, DataScope.deleted == 0),
+                    fill_result=True,
+                ),
                 JoinConfig(model=data_scope_rule, join_on=data_scope_rule.c.data_scope_id == DataScope.id),
-                JoinConfig(model=DataRule, join_on=DataRule.id == data_scope_rule.c.data_rule_id, fill_result=True),
+                JoinConfig(
+                    model=DataRule,
+                    join_on=and_(DataRule.id == data_scope_rule.c.data_rule_id, DataRule.deleted == 0),
+                    fill_result=True,
+                ),
             ],
             **filters,
         )

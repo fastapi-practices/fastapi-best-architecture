@@ -7,6 +7,7 @@ from sqlalchemy_crud_plus import CRUDPlus
 from backend.common.enums import StatusType
 from backend.plugin.dict.model import DictData
 from backend.plugin.dict.schema.dict_data import CreateDictDataParam, UpdateDictDataParam
+from backend.utils.timezone import timezone
 
 
 class CRUDDictData(CRUDPlus[DictData]):
@@ -20,7 +21,7 @@ class CRUDDictData(CRUDPlus[DictData]):
         :param pk: 字典数据 ID
         :return:
         """
-        return await self.select_model(db, pk)
+        return await self.select_model(db, pk, deleted=0)
 
     async def get_by_type_code(self, db: AsyncSession, type_code: str) -> Sequence[DictData]:
         """
@@ -36,6 +37,7 @@ class CRUDDictData(CRUDPlus[DictData]):
             sort_orders='desc',
             type_code=type_code,
             status=StatusType.enable.value,
+            deleted=0,
         )
 
     async def get_all(self, db: AsyncSession) -> Sequence[DictData]:
@@ -45,7 +47,7 @@ class CRUDDictData(CRUDPlus[DictData]):
         :param db: 数据库会话
         :return:
         """
-        return await self.select_models(db)
+        return await self.select_models(db, deleted=0)
 
     async def get_select(
         self,
@@ -65,7 +67,7 @@ class CRUDDictData(CRUDPlus[DictData]):
         :param type_id: 字典类型 ID
         :return:
         """
-        filters = {}
+        filters = {'deleted': 0}
 
         if type_code is not None:
             filters['type_code'] = type_code
@@ -89,7 +91,11 @@ class CRUDDictData(CRUDPlus[DictData]):
         :param type_code: 字典类型编码
         :return:
         """
-        return await self.select_model_by_column(db, and_(self.model.label == label, self.model.type_code == type_code))
+        return await self.select_model_by_column(
+            db,
+            and_(self.model.label == label, self.model.type_code == type_code),
+            deleted=0,
+        )
 
     async def create(self, db: AsyncSession, obj: CreateDictDataParam, type_code: str) -> None:
         """
@@ -117,7 +123,7 @@ class CRUDDictData(CRUDPlus[DictData]):
         """
         dict_obj = obj.model_dump()
         dict_obj.update({'type_code': type_code})
-        return await self.update_model(db, pk, dict_obj)
+        return await self.update_model_by_column(db, dict_obj, id=pk, deleted=0)
 
     async def delete(self, db: AsyncSession, pks: list[int]) -> int:
         """
@@ -127,7 +133,17 @@ class CRUDDictData(CRUDPlus[DictData]):
         :param pks: 字典数据 ID 列表
         :return:
         """
-        return await self.delete_model_by_column(db, allow_multiple=True, id__in=pks)
+        return await self.delete_model_by_column(
+            db,
+            allow_multiple=True,
+            logical_deletion=True,
+            deleted_flag_column='deleted',
+            deleted_flag_value=self.model.id,
+            deleted_at_column='deleted_time',
+            deleted_at_factory=timezone.now(),
+            id__in=pks,
+            deleted=0,
+        )
 
     async def delete_by_type_id(self, db: AsyncSession, type_ids: list[int]) -> int:
         """
@@ -137,7 +153,17 @@ class CRUDDictData(CRUDPlus[DictData]):
         :param type_ids: 字典类型 ID 列表
         :return:
         """
-        return await self.delete_model_by_column(db, allow_multiple=True, type_id__in=type_ids)
+        return await self.delete_model_by_column(
+            db,
+            allow_multiple=True,
+            logical_deletion=True,
+            deleted_flag_column='deleted',
+            deleted_flag_value=self.model.id,
+            deleted_at_column='deleted_time',
+            deleted_at_factory=timezone.now(),
+            type_id__in=type_ids,
+            deleted=0,
+        )
 
 
 dict_data_dao: CRUDDictData = CRUDDictData(DictData)

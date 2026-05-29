@@ -21,7 +21,7 @@ dependencies = [
   # https://github.com/celery/celery/issues/7874
   "celery-aio-pool>=0.1.0rc8",
   "cryptography>=47.0.0",
-  "dulwich>=1.2.4",
+  "dulwich>=1.2.5",
   "fast-captcha>=0.3.2",
   "fastapi-pagination[sqlalchemy]>=0.15.13",
   "fastapi[standard-no-fastapi-cloud-cli]>=0.136.3",
@@ -55,7 +55,7 @@ dependencies = [
   "python-socketio>=5.16.2",
   "redis[hiredis]>=8.0.0",
   "rtoml>=0.13.0",
-  "sqlalchemy-crud-plus>=1.13.2",
+  "sqlalchemy-crud-plus>=1.13.3",
   "sqlalchemy[asyncio]>=2.0.50",
   "sqlparse>=0.5.5",
   "starlette-context>=0.5.1",

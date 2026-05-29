@@ -6,6 +6,8 @@ from sqlalchemy_crud_plus import CRUDPlus
 
 from backend.app.task.model import TaskScheduler
 from backend.app.task.schema.scheduler import CreateTaskSchedulerParam, UpdateTaskSchedulerParam
+from backend.common.exception import errors
+from backend.utils.timezone import timezone
 
 
 class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
@@ -20,7 +22,7 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
         :param pk: 任务调度 ID
         :return:
         """
-        return await task_scheduler_dao.select_model(db, pk)
+        return await task_scheduler_dao.select_model(db, pk, deleted=0)
 
     async def get_all(self, db: AsyncSession) -> Sequence[TaskScheduler]:
         """
@@ -29,7 +31,7 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
         :param db: 数据库会话
         :return:
         """
-        return await self.select_models(db)
+        return await self.select_models(db, deleted=0)
 
     async def get_select(self, name: str | None, type: int | None) -> Select:
         """
@@ -39,7 +41,7 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
         :param type: 任务调度类型
         :return:
         """
-        filters = {}
+        filters = {'deleted': 0}
 
         if name is not None:
             filters['name__like'] = f'%{name}%'
@@ -48,15 +50,19 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
 
         return await self.select_order('id', **filters)
 
-    async def get_by_name(self, db: AsyncSession, name: str) -> TaskScheduler | None:
+    async def get_by_name(self, db: AsyncSession, name: str, *, include_deleted: bool = False) -> TaskScheduler | None:
         """
         通过名称获取任务调度
 
         :param db: 数据库会话
         :param name: 任务调度名称
+        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        return await self.select_model_by_column(db, name=name)
+        filters = {'name': name}
+        if not include_deleted:
+            filters['deleted'] = 0
+        return await self.select_model_by_column(db, **filters)
 
     async def create(self, db: AsyncSession, obj: CreateTaskSchedulerParam) -> None:
         """
@@ -79,6 +85,8 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
         :return:
         """
         task_scheduler = await self.get(db, pk)
+        if not task_scheduler:
+            raise errors.NotFoundError(msg='任务调度不存在')
         for key, value in obj.model_dump(exclude_unset=True).items():
             setattr(task_scheduler, key, value)
         TaskScheduler.no_changes = False
@@ -94,6 +102,8 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
         :return:
         """
         task_scheduler = await self.get(db, pk)
+        if not task_scheduler:
+            raise errors.NotFoundError(msg='任务调度不存在')
         task_scheduler.enabled = status
         TaskScheduler.no_changes = False
         return 1
@@ -106,8 +116,16 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
         :param pk: 任务调度 ID
         :return:
         """
-        task_scheduler = await self.get(db, pk)
-        await db.delete(task_scheduler)
+        await self.delete_model_by_column(
+            db,
+            logical_deletion=True,
+            deleted_flag_column='deleted',
+            deleted_flag_value=self.model.id,
+            deleted_at_column='deleted_time',
+            deleted_at_factory=timezone.now(),
+            id=pk,
+            deleted=0,
+        )
         TaskScheduler.no_changes = False
         return 1
 

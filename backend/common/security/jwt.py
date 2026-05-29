@@ -207,11 +207,10 @@ async def get_current_user(db: AsyncSession, pk: int) -> User:
         raise errors.TokenError(msg='Token 无效')
     if not user.status:
         raise errors.AuthorizationError(msg='用户已被锁定，请联系系统管理员')
-    if user.dept and user.dept_id:
-        if not user.dept.status:
-            raise errors.AuthorizationError(msg='用户所属部门已被锁定，请联系系统管理员')
-        if user.dept.del_flag:
-            raise errors.AuthorizationError(msg='用户所属部门已被删除，请联系系统管理员')
+    if user.dept_id and not user.dept:
+        raise errors.AuthorizationError(msg='用户所属部门不存在或已被删除，请联系系统管理员')
+    if user.dept and not user.dept.status:
+        raise errors.AuthorizationError(msg='用户所属部门已被锁定，请联系系统管理员')
     if user.roles:
         role_status = [role.status for role in user.roles]
         if all(status == 0 for status in role_status):

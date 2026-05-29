@@ -97,7 +97,7 @@ class ModelEntry(ScheduleEntry):
         model.no_changes = True
         self.model.enabled = self.enabled = model.enabled = False
         async with async_db_session.begin() as db:
-            stmt = select(TaskScheduler).where(TaskScheduler.id == model.id)
+            stmt = select(TaskScheduler).where(TaskScheduler.id == model.id, TaskScheduler.deleted == 0)
             query = await db.execute(stmt)
             task = query.scalars().first()
             if task:
@@ -145,7 +145,11 @@ class ModelEntry(ScheduleEntry):
         :return:
         """
         async with async_db_session.begin() as db:
-            stmt = select(TaskScheduler).where(TaskScheduler.id == self.model.id).with_for_update()
+            stmt = (
+                select(TaskScheduler)
+                .where(TaskScheduler.id == self.model.id, TaskScheduler.deleted == 0)
+                .with_for_update()
+            )
             query = await db.execute(stmt)
             task = query.scalars().first()
             if task:
@@ -160,7 +164,7 @@ class ModelEntry(ScheduleEntry):
     async def from_entry(cls, name, app=None, **entry) -> ModelEntry:  # noqa: ANN001
         """保存或更新本地任务调度"""
         async with async_db_session.begin() as db:
-            stmt = select(TaskScheduler).where(TaskScheduler.name == name)
+            stmt = select(TaskScheduler).where(TaskScheduler.name == name, TaskScheduler.deleted == 0)
             query = await db.execute(stmt)
             task = query.scalars().first()
             temp = await cls._unpack_fields(name, **entry)
@@ -186,7 +190,7 @@ class ModelEntry(ScheduleEntry):
                     'interval_every': every,
                     'interval_period': PeriodType.SECONDS.value,
                 }
-                stmt = select(TaskScheduler).filter_by(**spec)
+                stmt = select(TaskScheduler).filter_by(**spec, deleted=0)
                 query = await db.execute(stmt)
                 obj = query.scalars().first()
                 if not obj:
@@ -199,7 +203,7 @@ class ModelEntry(ScheduleEntry):
                     'type': TaskSchedulerType.CRONTAB.value,
                     'crontab': crontab,
                 }
-                stmt = select(TaskScheduler).filter_by(**spec)
+                stmt = select(TaskScheduler).filter_by(**spec, deleted=0)
                 query = await db.execute(stmt)
                 obj = query.scalars().first()
                 if not obj:
@@ -383,7 +387,10 @@ class DatabaseScheduler(Scheduler):
         """获取所有任务调度"""
         async with async_db_session() as db:
             logger.debug('DatabaseScheduler: Fetching database schedule')
-            stmt = select(TaskScheduler).where(TaskScheduler.enabled == True)  # noqa: E712
+            stmt = select(TaskScheduler).where(
+                TaskScheduler.enabled.is_(True),
+                TaskScheduler.deleted == 0,
+            )
             query = await db.execute(stmt)
             schedulers = query.scalars().all()
             s = {}

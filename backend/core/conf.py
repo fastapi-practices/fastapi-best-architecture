@@ -143,7 +143,8 @@ class Settings(BaseSettings):
     DATA_PERMISSION_COLUMN_EXCLUDE: list[str] = [  # 排除允许进行数据过滤的 SQLA 模型列
         'id',
         'sort',
-        'del_flag',
+        'deleted',
+        'deleted_time',
         'created_time',
         'updated_time',
     ]

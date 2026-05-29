@@ -1,13 +1,14 @@
 from collections.abc import Sequence
 from typing import Any
 
-from sqlalchemy import ColumnElement
+from sqlalchemy import ColumnElement, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy_crud_plus import CRUDPlus, JoinConfig
 
 from backend.app.admin.model import Dept, User
 from backend.app.admin.schema.dept import CreateDeptParam, UpdateDeptParam
 from backend.utils.serializers import select_join_serialize
+from backend.utils.timezone import timezone
 
 
 class CRUDDept(CRUDPlus[Dept]):
@@ -21,7 +22,7 @@ class CRUDDept(CRUDPlus[Dept]):
         :param dept_id: 部门 ID
         :return:
         """
-        return await self.select_model_by_column(db, id=dept_id, del_flag=False)
+        return await self.select_model_by_column(db, id=dept_id, deleted=0)
 
     async def get_by_name(self, db: AsyncSession, name: str) -> Dept | None:
         """
@@ -31,7 +32,7 @@ class CRUDDept(CRUDPlus[Dept]):
         :param name: 部门名称
         :return:
         """
-        return await self.select_model_by_column(db, name=name, del_flag=False)
+        return await self.select_model_by_column(db, name=name, deleted=0)
 
     async def get_all(
         self,
@@ -53,7 +54,7 @@ class CRUDDept(CRUDPlus[Dept]):
         :param status: 部门状态
         :return:
         """
-        filters = {'del_flag': False}
+        filters = {'deleted': 0}
 
         if name is not None:
             filters['name__like'] = f'%{name}%'
@@ -85,7 +86,7 @@ class CRUDDept(CRUDPlus[Dept]):
         :param obj: 更新部门参数
         :return:
         """
-        return await self.update_model(db, dept_id, obj)
+        return await self.update_model_by_column(db, obj, id=dept_id, deleted=0)
 
     async def delete(self, db: AsyncSession, dept_id: int) -> int:
         """
@@ -95,7 +96,16 @@ class CRUDDept(CRUDPlus[Dept]):
         :param dept_id: 部门 ID
         :return:
         """
-        return await self.delete_model_by_column(db, id=dept_id, logical_deletion=True, deleted_flag_column='del_flag')
+        return await self.delete_model_by_column(
+            db,
+            logical_deletion=True,
+            deleted_flag_column='deleted',
+            deleted_flag_value=self.model.id,
+            deleted_at_column='deleted_time',
+            deleted_at_factory=timezone.now(),
+            id=dept_id,
+            deleted=0,
+        )
 
     async def get_join(self, db: AsyncSession, dept_id: int) -> Any | None:
         """
@@ -108,7 +118,14 @@ class CRUDDept(CRUDPlus[Dept]):
         result = await self.select_model(
             db,
             dept_id,
-            join_conditions=[JoinConfig(model=User, join_on=User.dept_id == self.model.id, fill_result=True)],
+            deleted=0,
+            join_conditions=[
+                JoinConfig(
+                    model=User,
+                    join_on=and_(User.dept_id == self.model.id, User.deleted == 0),
+                    fill_result=True,
+                )
+            ],
         )
         return select_join_serialize(result, relationships=['Dept-o2m-User'])
 
@@ -120,7 +137,7 @@ class CRUDDept(CRUDPlus[Dept]):
         :param dept_id: 部门 ID
         :return:
         """
-        return await self.select_models(db, parent_id=dept_id, del_flag=False)
+        return await self.select_models(db, parent_id=dept_id, deleted=0)
 
 
 dept_dao: CRUDDept = CRUDDept(Dept)
