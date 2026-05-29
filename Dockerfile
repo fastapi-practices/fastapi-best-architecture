@@ -2,12 +2,12 @@
 ARG SERVER_TYPE=fba_server
 
 # === Python environment from uv ===
-FROM ghcr.io/astral-sh/uv:python3.10-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.10-trixie-slim AS builder
 
 # Used for build Python packages
 RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources \
     && apt-get update \
-    && apt-get install -y --no-install-recommends gcc python3-dev \
+    && apt-get install -y --no-install-recommends gcc make python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /fba
@@ -31,18 +31,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     python -c "from backend.plugin.requirements import install_requirements; install_requirements(None)"
 
 # === Runtime base server image ===
-FROM python:3.10-slim-bookworm AS base_server
+FROM ghcr.io/astral-sh/uv:python3.10-trixie-slim AS base_server
 
 RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources \
     && apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates supervisor \
     && rm -rf /var/lib/apt/lists/*
-
-ADD https://astral.sh/uv/install.sh /uv-installer.sh
-
-RUN sh /uv-installer.sh && rm /uv-installer.sh
-
-ENV PATH="/root/.local/bin/:$PATH"
 
 COPY --from=builder /fba /fba
 

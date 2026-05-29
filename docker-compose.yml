@@ -338,7 +338,7 @@ services:
       - fba_prometheus
     volumes:
       - ./deploy/backend/grafana/fba_tempo.yml:/etc/tempo/fba_tempo.yml
-      - fba_tempo_data:/tmp/tempo
+      - fba_tempo_data:/tmp
     networks:
       - fba_network
     command:
