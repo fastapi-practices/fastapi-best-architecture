@@ -29,21 +29,15 @@ class CRUDDataScope(CRUDPlus[DataScope]):
         """
         return await self.select_model(db, pk, deleted=0)
 
-    async def get_by_name(self, db: AsyncSession, name: str, *, include_deleted: bool = False) -> DataScope | None:
+    async def get_by_name(self, db: AsyncSession, name: str) -> DataScope | None:
         """
         通过名称获取数据范围
 
         :param db: 数据库会话
         :param name: 范围名称
-        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        filters = {'name': name}
-
-        if not include_deleted:
-            filters['deleted'] = 0
-
-        return await self.select_model_by_column(db, **filters)
+        return await self.select_model_by_column(db, name=name, deleted=0)
 
     async def get_join(self, db: AsyncSession, pk: int) -> Any:
         """

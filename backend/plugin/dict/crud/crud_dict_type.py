@@ -49,19 +49,15 @@ class CRUDDictType(CRUDPlus[DictType]):
 
         return await self.select_order('id', 'desc', **filters)
 
-    async def get_by_code(self, db: AsyncSession, code: str, *, include_deleted: bool = False) -> DictType | None:
+    async def get_by_code(self, db: AsyncSession, code: str) -> DictType | None:
         """
         通过编码获取字典类型
 
         :param db: 数据库会话
         :param code: 字典编码
-        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        filters = {'code': code}
-        if not include_deleted:
-            filters['deleted'] = 0
-        return await self.select_model_by_column(db, **filters)
+        return await self.select_model_by_column(db, code=code, deleted=0)
 
     async def create(self, db: AsyncSession, obj: CreateDictTypeParam) -> None:
         """

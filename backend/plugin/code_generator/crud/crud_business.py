@@ -22,19 +22,15 @@ class CRUDGenBusiness(CRUDPlus[GenBusiness]):
         """
         return await self.select_model(db, pk, deleted=0)
 
-    async def get_by_name(self, db: AsyncSession, name: str, *, include_deleted: bool = False) -> GenBusiness | None:
+    async def get_by_name(self, db: AsyncSession, name: str) -> GenBusiness | None:
         """
         通过 name 获取代码生成业务
 
         :param db: 数据库会话
         :param name: 表名
-        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        filters = {'table_name': name}
-        if not include_deleted:
-            filters['deleted'] = 0
-        return await self.select_model_by_column(db, **filters)
+        return await self.select_model_by_column(db, table_name=name, deleted=0)
 
     async def get_all(self, db: AsyncSession) -> Sequence[GenBusiness]:
         """

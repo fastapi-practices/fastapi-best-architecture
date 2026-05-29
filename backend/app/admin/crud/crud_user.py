@@ -46,39 +46,25 @@ class CRUDUser(CRUDPlus[User]):
         """
         return await self.select_model(db, user_id, deleted=0)
 
-    async def get_by_username(self, db: AsyncSession, username: str, *, include_deleted: bool = False) -> User | None:
+    async def get_by_username(self, db: AsyncSession, username: str) -> User | None:
         """
         通过用户名获取用户
 
         :param db: 数据库会话
         :param username: 用户名
-        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        filters = {'username': username}
+        return await self.select_model_by_column(db, username=username, deleted=0)
 
-        if not include_deleted:
-            filters['deleted'] = 0
-
-        return await self.select_model_by_column(db, **filters)
-
-    async def get_all_by_usernames(
-        self, db: AsyncSession, usernames: list[str], *, include_deleted: bool = False
-    ) -> Sequence[User]:
+    async def get_all_by_usernames(self, db: AsyncSession, usernames: list[str]) -> Sequence[User]:
         """
         通过用户名列表批量获取用户
 
         :param db: 数据库会话
         :param usernames: 用户名列表
-        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        filters = {'username__in': usernames}
-
-        if not include_deleted:
-            filters['deleted'] = 0
-
-        return await self.select_models(db, **filters)
+        return await self.select_models(db, username__in=usernames, deleted=0)
 
     async def get_by_nickname(self, db: AsyncSession, nickname: str) -> User | None:
         """
@@ -90,21 +76,15 @@ class CRUDUser(CRUDPlus[User]):
         """
         return await self.select_model_by_column(db, nickname=nickname, deleted=0)
 
-    async def check_email(self, db: AsyncSession, email: str, *, include_deleted: bool = False) -> User | None:
+    async def check_email(self, db: AsyncSession, email: str) -> User | None:
         """
         检查邮箱是否已被绑定
 
         :param db: 数据库会话
         :param email: 电子邮箱
-        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        filters = {'email': email}
-
-        if not include_deleted:
-            filters['deleted'] = 0
-
-        return await self.select_model_by_column(db, **filters)
+        return await self.select_model_by_column(db, email=email, deleted=0)
 
     async def get_select(self, dept: int | None, username: str | None, phone: str | None, status: int | None) -> Select:
         """
@@ -350,6 +330,9 @@ class CRUDUser(CRUDPlus[User]):
                 await user_social_dao.delete_by_user_id(db, user_id)
             except ImportError:
                 raise errors.ServerError(msg='OAuth2 插件用法导入失败，请联系系统管理员')
+
+        user_role_stmt = delete(user_role).where(user_role.c.user_id == user_id)
+        await db.execute(user_role_stmt)
 
         return await self.delete_model_by_column(
             db,

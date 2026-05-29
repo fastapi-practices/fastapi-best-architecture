@@ -115,21 +115,15 @@ class CRUDRole(CRUDPlus[Role]):
 
         return await self.select_order('id', **filters)
 
-    async def get_by_name(self, db: AsyncSession, name: str, *, include_deleted: bool = False) -> Role | None:
+    async def get_by_name(self, db: AsyncSession, name: str) -> Role | None:
         """
         通过名称获取角色
 
         :param db: 数据库会话
         :param name: 角色名称
-        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        filters = {'name': name}
-
-        if not include_deleted:
-            filters['deleted'] = 0
-
-        return await self.select_model_by_column(db, **filters)
+        return await self.select_model_by_column(db, name=name, deleted=0)
 
     async def create(self, db: AsyncSession, obj: CreateRoleParam) -> None:
         """

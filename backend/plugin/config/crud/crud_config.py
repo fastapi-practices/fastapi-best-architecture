@@ -47,35 +47,25 @@ class CRUDConfig(CRUDPlus[Config]):
         """
         return await self.select_models(db, id__in=pks, deleted=0)
 
-    async def get_all_by_keys(
-        self, db: AsyncSession, keys: list[str], *, include_deleted: bool = False
-    ) -> Sequence[Config]:
+    async def get_all_by_keys(self, db: AsyncSession, keys: list[str]) -> Sequence[Config]:
         """
         通过键名列表批量获取参数配置
 
         :param db: 数据库会话
         :param keys: 参数配置键名列表
-        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        filters = {'key__in': keys}
-        if not include_deleted:
-            filters['deleted'] = 0
-        return await self.select_models(db, **filters)
+        return await self.select_models(db, key__in=keys, deleted=0)
 
-    async def get_by_key(self, db: AsyncSession, key: str, *, include_deleted: bool = False) -> Config | None:
+    async def get_by_key(self, db: AsyncSession, key: str) -> Config | None:
         """
         通过键名获取参数配置
 
         :param db: 数据库会话
         :param key: 参数配置键名
-        :param include_deleted: 是否包含已逻辑删除数据
         :return:
         """
-        filters = {'key': key}
-        if not include_deleted:
-            filters['deleted'] = 0
-        return await self.select_model_by_column(db, **filters)
+        return await self.select_model_by_column(db, key=key, deleted=0)
 
     async def get_select(self, name: str | None, type: str | None) -> Select:
         """
