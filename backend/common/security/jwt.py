@@ -86,18 +86,18 @@ async def create_access_token(user_id: int, *, multi_login: bool, **kwargs) -> A
     if not multi_login:
         await redis_client.delete_prefix(f'{settings.TOKEN_REDIS_PREFIX}:{user_id}')
 
-    await redis_client.setex(
+    await redis_client.set(
         f'{settings.TOKEN_REDIS_PREFIX}:{user_id}:{session_uuid}',
-        settings.TOKEN_EXPIRE_SECONDS,
         access_token,
+        ex=settings.TOKEN_EXPIRE_SECONDS,
     )
 
     # Token 附加信息单独存储
     if kwargs:
-        await redis_client.setex(
+        await redis_client.set(
             f'{settings.TOKEN_EXTRA_INFO_REDIS_PREFIX}:{user_id}:{session_uuid}',
-            settings.TOKEN_EXPIRE_SECONDS,
             json.dumps(kwargs, ensure_ascii=False),
+            ex=settings.TOKEN_EXPIRE_SECONDS,
         )
 
     return AccessToken(access_token=access_token, access_token_expire_time=expire, session_uuid=session_uuid)
@@ -122,10 +122,10 @@ async def create_refresh_token(session_uuid: str, user_id: int, *, multi_login: 
     if not multi_login:
         await redis_client.delete_prefix(f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user_id}')
 
-    await redis_client.setex(
+    await redis_client.set(
         f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user_id}:{session_uuid}',
-        settings.TOKEN_REFRESH_EXPIRE_SECONDS,
         refresh_token,
+        ex=settings.TOKEN_REFRESH_EXPIRE_SECONDS,
     )
     return RefreshToken(refresh_token=refresh_token, refresh_token_expire_time=expire)
 
@@ -231,10 +231,10 @@ async def get_jwt_user(user_id: int) -> GetUserInfoWithRelationDetail:
         async with async_db_session() as db:
             current_user = await get_current_user(db, user_id)
             user = GetUserInfoWithRelationDetail.model_validate(current_user)
-            await redis_client.setex(
+            await redis_client.set(
                 f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}',
-                settings.TOKEN_EXPIRE_SECONDS,
                 user.model_dump_json(),
+                ex=settings.TOKEN_EXPIRE_SECONDS,
             )
     else:
         # TODO: 在恰当的时机，应替换为使用 model_validate_json

@@ -154,7 +154,7 @@ def cached(  # noqa: C901
 
                     # 回填 L2
                     if settings.CACHE_REDIS_TTL:
-                        await redis_client.setex(cache_key, settings.CACHE_REDIS_TTL, serialized_result)
+                        await redis_client.set(cache_key, serialized_result, ex=settings.CACHE_REDIS_TTL)
                     else:
                         await redis_client.set(cache_key, serialized_result)
                 except Exception as e:

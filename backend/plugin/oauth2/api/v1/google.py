@@ -25,10 +25,10 @@ google_client = GoogleOAuth20(settings.OAUTH2_GOOGLE_CLIENT_ID, settings.OAUTH2_
 async def get_google_oauth2_url() -> ResponseSchemaModel[str]:
     state = str(uuid.uuid4())
 
-    await redis_client.setex(
+    await redis_client.set(
         f'{settings.OAUTH2_STATE_REDIS_PREFIX}:{state}',
-        settings.OAUTH2_STATE_EXPIRE_SECONDS,
         json.dumps({'type': UserSocialAuthType.login.value}),
+        ex=settings.OAUTH2_STATE_EXPIRE_SECONDS,
     )
 
     auth_url = await google_client.get_authorization_url(redirect_uri=settings.OAUTH2_GOOGLE_REDIRECT_URI, state=state)

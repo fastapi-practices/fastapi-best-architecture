@@ -69,10 +69,10 @@ class UserSocialService:
     async def get_binding_auth_url(*, user_id: int, source: UserSocialType) -> str:
         state = str(uuid.uuid4())
 
-        await redis_client.setex(
+        await redis_client.set(
             f'{settings.OAUTH2_STATE_REDIS_PREFIX}:{state}',
-            settings.OAUTH2_STATE_EXPIRE_SECONDS,
             json.dumps({'type': UserSocialAuthType.binding.value, 'user_id': user_id}),
+            ex=settings.OAUTH2_STATE_EXPIRE_SECONDS,
         )
 
         match source:
