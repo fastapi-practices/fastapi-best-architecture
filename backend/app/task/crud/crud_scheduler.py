@@ -6,7 +6,6 @@ from sqlalchemy_crud_plus import CRUDPlus
 
 from backend.app.task.model import TaskScheduler
 from backend.app.task.schema.scheduler import CreateTaskSchedulerParam, UpdateTaskSchedulerParam
-from backend.common.exception import errors
 from backend.utils.timezone import timezone
 
 
