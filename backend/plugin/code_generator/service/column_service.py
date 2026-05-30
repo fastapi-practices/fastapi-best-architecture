@@ -27,8 +27,10 @@ class GenColumnService:
         """
 
         column = await gen_column_dao.get(db, pk)
-        if not column or not await gen_business_dao.get(db, column.gen_business_id):
+        if not column:
             raise errors.NotFoundError(msg='代码生成模型列不存在')
+        if not await gen_business_dao.get(db, column.gen_business_id):
+            raise errors.NotFoundError(msg='代码生成业务不存在')
         return column
 
     @staticmethod
@@ -87,8 +89,10 @@ class GenColumnService:
         """
 
         column = await gen_column_dao.get(db, pk)
-        if not column or not await gen_business_dao.get(db, column.gen_business_id):
+        if not column:
             raise errors.NotFoundError(msg='代码生成模型列不存在')
+        if not await gen_business_dao.get(db, column.gen_business_id):
+            raise errors.NotFoundError(msg='代码生成业务不存在')
         if not await gen_business_dao.get(db, obj.gen_business_id):
             raise errors.NotFoundError(msg='代码生成业务不存在')
         if obj.name != column.name:
@@ -110,8 +114,10 @@ class GenColumnService:
         """
 
         column = await gen_column_dao.get(db, pk)
-        if not column or not await gen_business_dao.get(db, column.gen_business_id):
+        if not column:
             raise errors.NotFoundError(msg='代码生成模型列不存在')
+        if not await gen_business_dao.get(db, column.gen_business_id):
+            raise errors.NotFoundError(msg='代码生成业务不存在')
         return await gen_column_dao.delete(db, pk)
 
 
