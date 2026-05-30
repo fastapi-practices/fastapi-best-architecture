@@ -226,7 +226,7 @@ class ModelEntry(ScheduleEntry):
     ) -> dict:
         model_schedule = await cls.to_model_schedule(name, task, schedule)
         model_dict = select_as_dict(model_schedule)
-        for k in ['id', 'created_time', 'updated_time']:
+        for k in ['id', 'created_time', 'updated_time', 'deleted', 'deleted_time']:
             try:
                 del model_dict[k]
             except KeyError:  # noqa:PERF203
