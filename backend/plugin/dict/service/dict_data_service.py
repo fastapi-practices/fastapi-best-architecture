@@ -125,10 +125,10 @@ class DictDataService:
         dict_type = await dict_type_dao.get(db, obj.type_id)
         if not dict_type:
             raise errors.NotFoundError(msg='字典类型不存在')
-        if dict_data.label != obj.label and await dict_data_dao.get_by_label_and_type_code(
-            db, obj.label, dict_type.code
-        ):
-            raise errors.ConflictError(msg='字典数据已存在')
+        if dict_data.label != obj.label or dict_data.type_code != dict_type.code:
+            new_dict_data = await dict_data_dao.get_by_label_and_type_code(db, obj.label, dict_type.code)
+            if new_dict_data and new_dict_data.id != pk:
+                raise errors.ConflictError(msg='字典数据已存在')
         count = await dict_data_dao.update(db, pk, obj, dict_type.code)
         return count
 
