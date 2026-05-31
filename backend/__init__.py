@@ -2,16 +2,16 @@ import sqlalchemy as sa
 
 from backend.utils.dynamic_import import get_all_models
 
-# import all models for auto create db tables
-for cls in get_all_models():
-    if isinstance(cls, sa.Table):
-        table_name = cls.name
-        if table_name not in globals():
-            globals()[table_name] = cls
-    else:
-        class_name = cls.__name__
-        if class_name not in globals():
-            globals()[class_name] = cls
+
+def _register_model_globals() -> None:
+    """导入所有模型并注册到 backend 模块命名空间"""
+    for model_obj in get_all_models():
+        model_name = model_obj.name if isinstance(model_obj, sa.Table) else model_obj.__name__
+        if model_name not in globals():
+            globals()[model_name] = model_obj
 
 
-__version__ = '1.13.4'
+_register_model_globals()
+
+
+__version__ = '1.14.0'

@@ -22,7 +22,7 @@ from backend.plugin.code_generator.crud.crud_column import gen_column_dao
 from backend.plugin.code_generator.crud.crud_gen import gen_dao
 from backend.plugin.code_generator.model import GenBusiness
 from backend.plugin.code_generator.schema.business import CreateGenBusinessParam
-from backend.plugin.code_generator.schema.column import CreateGenColumnParam
+from backend.plugin.code_generator.schema.column import CreateGenColumnInternalParam
 from backend.plugin.code_generator.schema.gen import ImportParam
 from backend.plugin.code_generator.service.column_service import gen_column_service
 from backend.plugin.code_generator.utils.format_code import format_python_code
@@ -87,12 +87,12 @@ class GenService:
         await db.flush()
 
         column_info = await gen_dao.get_all_columns(db, obj.table_schema, table_name)
+        gen_columns = []
         for column in column_info:
             column_type = column['column_type'].split('(')[0].upper()
             pd_type = sql_type_to_pydantic(column_type)
-            await gen_column_dao.create(
-                db,
-                CreateGenColumnParam(
+            gen_columns.append(
+                CreateGenColumnInternalParam(
                     name=column['column_name'],
                     comment=column['column_comment'],
                     type=column_type,
@@ -103,9 +103,10 @@ class GenService:
                     is_pk=column['is_pk'],
                     is_nullable=column['is_nullable'],
                     gen_business_id=new_business.id,
+                    pd_type=pd_type,
                 ),
-                pd_type=pd_type,
             )
+        await gen_column_dao.bulk_create(db, gen_columns)
 
     @staticmethod
     async def _render_tpl_code(*, db: AsyncSession, business: GenBusiness) -> dict[str, str]:

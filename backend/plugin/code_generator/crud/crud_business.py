@@ -6,6 +6,7 @@ from sqlalchemy_crud_plus import CRUDPlus
 
 from backend.plugin.code_generator.model import GenBusiness
 from backend.plugin.code_generator.schema.business import CreateGenBusinessParam, UpdateGenBusinessParam
+from backend.utils.timezone import timezone
 
 
 class CRUDGenBusiness(CRUDPlus[GenBusiness]):
@@ -19,7 +20,7 @@ class CRUDGenBusiness(CRUDPlus[GenBusiness]):
         :param pk: 代码生成业务 ID
         :return:
         """
-        return await self.select_model(db, pk)
+        return await self.select_model(db, pk, deleted=0)
 
     async def get_by_name(self, db: AsyncSession, name: str) -> GenBusiness | None:
         """
@@ -29,7 +30,7 @@ class CRUDGenBusiness(CRUDPlus[GenBusiness]):
         :param name: 表名
         :return:
         """
-        return await self.select_model_by_column(db, table_name=name)
+        return await self.select_model_by_column(db, table_name=name, deleted=0)
 
     async def get_all(self, db: AsyncSession) -> Sequence[GenBusiness]:
         """
@@ -38,7 +39,7 @@ class CRUDGenBusiness(CRUDPlus[GenBusiness]):
         :param db: 数据库会话
         :return:
         """
-        return await self.select_models(db)
+        return await self.select_models(db, deleted=0)
 
     async def get_select(self, table_name: str | None) -> Select:
         """
@@ -47,7 +48,7 @@ class CRUDGenBusiness(CRUDPlus[GenBusiness]):
         :param table_name: 业务表名
         :return:
         """
-        filters = {}
+        filters = {'deleted': 0}
 
         if table_name is not None:
             filters['table_name__like'] = f'%{table_name}%'
@@ -73,7 +74,7 @@ class CRUDGenBusiness(CRUDPlus[GenBusiness]):
         :param obj: 更新代码生成业务参数
         :return:
         """
-        return await self.update_model(db, pk, obj)
+        return await self.update_model_by_column(db, obj, id=pk, deleted=0)
 
     async def delete(self, db: AsyncSession, pk: int) -> int:
         """
@@ -83,7 +84,16 @@ class CRUDGenBusiness(CRUDPlus[GenBusiness]):
         :param pk: 代码生成业务 ID
         :return:
         """
-        return await self.delete_model(db, pk)
+        return await self.delete_model_by_column(
+            db,
+            logical_deletion=True,
+            deleted_flag_column='deleted',
+            deleted_flag_value=self.model.id,
+            deleted_at_column='deleted_time',
+            deleted_at_factory=timezone.now(),
+            id=pk,
+            deleted=0,
+        )
 
 
 gen_business_dao: CRUDGenBusiness = CRUDGenBusiness(GenBusiness)

@@ -126,6 +126,8 @@ class CRUDGen:
               column_name <> 'id'
               and column_name <> 'created_time'
               and column_name <> 'updated_time'
+              and column_name <> 'deleted'
+              and column_name <> 'deleted_time'
               and table_name = :table_name
               and table_schema = :table_schema
             order by
@@ -180,6 +182,8 @@ class CRUDGen:
               and a.attname <> 'id'
               and a.attname <> 'created_time'
               and a.attname <> 'updated_time'
+              and a.attname <> 'deleted'
+              and a.attname <> 'deleted_time'
               and t.relname = :table_name
               and n.nspname = :table_schema
             order by

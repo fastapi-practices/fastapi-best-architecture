@@ -1,12 +1,12 @@
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager
-from typing import Any, overload
+from typing import Any, TypeAlias, overload
 
 from fastapi import FastAPI
 
 from backend.common.enums import LifespanStage
 
-LifespanFunc = Callable[[FastAPI], AbstractAsyncContextManager[dict[str, Any] | None]]
+LifespanFunc: TypeAlias = Callable[[FastAPI], AbstractAsyncContextManager[dict[str, Any] | None]]
 
 
 class LifespanManager:

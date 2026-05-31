@@ -1,6 +1,6 @@
 from prometheus_client import Counter, Gauge, Histogram
 
-from backend.common.observability.prometheus.config import PROMETHEUS_APP_NAME
+from backend.core.conf import settings
 
 _PROMETHEUS_FASTAPI_REQUEST_IN_PROGRESS_GAUGE = Gauge(
     name='fba_request_in_progress',
@@ -35,35 +35,41 @@ _PROMETHEUS_FASTAPI_RESPONSE_COUNTER = Counter(
 
 def inc_fastapi_request_in_progress(*, method: str, path: str) -> None:
     """增加当前正在处理的 FastAPI 请求数"""
-    _PROMETHEUS_FASTAPI_REQUEST_IN_PROGRESS_GAUGE.labels(app_name=PROMETHEUS_APP_NAME, method=method, path=path).inc()
+    _PROMETHEUS_FASTAPI_REQUEST_IN_PROGRESS_GAUGE.labels(
+        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, method=method, path=path
+    ).inc()
 
 
 def dec_fastapi_request_in_progress(*, method: str, path: str) -> None:
     """减少当前正在处理的 FastAPI 请求数"""
-    _PROMETHEUS_FASTAPI_REQUEST_IN_PROGRESS_GAUGE.labels(app_name=PROMETHEUS_APP_NAME, method=method, path=path).dec()
+    _PROMETHEUS_FASTAPI_REQUEST_IN_PROGRESS_GAUGE.labels(
+        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, method=method, path=path
+    ).dec()
 
 
 def inc_fastapi_request(*, method: str, path: str) -> None:
     """记录 FastAPI 请求总数"""
-    _PROMETHEUS_FASTAPI_REQUEST_COUNTER.labels(app_name=PROMETHEUS_APP_NAME, method=method, path=path).inc()
+    _PROMETHEUS_FASTAPI_REQUEST_COUNTER.labels(
+        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, method=method, path=path
+    ).inc()
 
 
 def observe_fastapi_request_cost_time(*, method: str, path: str, elapsed: float, trace_id: str) -> None:
     """记录 FastAPI 请求耗时"""
     _PROMETHEUS_FASTAPI_REQUEST_COST_TIME_HISTOGRAM.labels(
-        app_name=PROMETHEUS_APP_NAME, method=method, path=path
-    ).observe(amount=elapsed, exemplar={'TraceID': trace_id})
+        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, method=method, path=path
+    ).observe(amount=elapsed, exemplar={settings.GRAFANA_PROMETHEUS_EXEMPLAR_TRACE_ID_KEY: trace_id})
 
 
 def inc_fastapi_exception(*, method: str, path: str, exception_type: str) -> None:
     """记录 FastAPI 异常总数"""
     _PROMETHEUS_FASTAPI_EXCEPTION_COUNTER.labels(
-        app_name=PROMETHEUS_APP_NAME, method=method, path=path, exception_type=exception_type
+        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, method=method, path=path, exception_type=exception_type
     ).inc()
 
 
 def inc_fastapi_response(*, method: str, path: str, status_code: int | str) -> None:
     """记录 FastAPI 响应总数"""
     _PROMETHEUS_FASTAPI_RESPONSE_COUNTER.labels(
-        app_name=PROMETHEUS_APP_NAME, method=method, path=path, status_code=status_code
+        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, method=method, path=path, status_code=status_code
     ).inc()

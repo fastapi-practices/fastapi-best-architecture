@@ -1,3 +1,5 @@
+from typing import Final
+
 import anyio
 
 from anyio import open_file
@@ -6,10 +8,10 @@ from sqlparse import split
 from backend.common.exception import errors
 
 # 初始化脚本允许的 SQL 语句前缀
-_INIT_SQL_PREFIXES = frozenset({'select', 'insert', 'set', 'do'})
+_INIT_SQL_PREFIXES: Final = frozenset({'select', 'insert', 'set', 'do'})
 
 # 销毁脚本允许的 SQL 语句前缀
-_DESTROY_SQL_PREFIXES = _INIT_SQL_PREFIXES | {'drop', 'delete', 'alter'}
+_DESTROY_SQL_PREFIXES: Final = _INIT_SQL_PREFIXES | {'drop', 'delete', 'alter'}
 
 
 async def parse_sql_script(filepath: str, *, is_destroy: bool = False) -> list[str]:

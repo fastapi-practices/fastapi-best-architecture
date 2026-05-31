@@ -19,8 +19,12 @@ volumes:
     name: fba_static_upload
   fba_rabbitmq:
     name: fba_rabbitmq
+  fba_loki_data:
+    name: fba_loki_data
   fba_prometheus_data:
     name: fba_prometheus_data
+  fba_tempo_data:
+    name: fba_tempo_data
 
 services:
   fba_server:
@@ -273,6 +277,8 @@ services:
     ports:
       - "${DOCKER_MAP_LOKI_PORT:-3100}:3100"
     container_name: fba_loki
+    volumes:
+      - fba_loki_data:/tmp/loki
     networks:
       - fba_network
     command: -config.file=/etc/loki/local-config.yaml
@@ -306,6 +312,9 @@ services:
     depends_on:
       - fba_loki
       - fba_prometheus
+      - fba_tempo
+      - fba_server
+      - fba_celery_exporter
     volumes:
       - ./deploy/backend/grafana/fba_config.alloy:/etc/alloy/fba_config.alloy
     networks:
@@ -329,6 +338,7 @@ services:
       - fba_prometheus
     volumes:
       - ./deploy/backend/grafana/fba_tempo.yml:/etc/tempo/fba_tempo.yml
+      - fba_tempo_data:/tmp
     networks:
       - fba_network
     command:
@@ -343,6 +353,7 @@ services:
     depends_on:
       - fba_loki
       - fba_prometheus
+      - fba_tempo
     volumes:
       - ./deploy/backend/grafana/fba_grafana.ini:/etc/grafana/grafana.ini
       - ./deploy/backend/grafana/dashboards/fba_celery.json:/etc/grafana/dashboards/fba_celery.json

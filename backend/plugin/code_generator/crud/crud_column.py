@@ -4,7 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy_crud_plus import CRUDPlus
 
 from backend.plugin.code_generator.model import GenColumn
-from backend.plugin.code_generator.schema.column import CreateGenColumnParam, UpdateGenColumnParam
+from backend.plugin.code_generator.schema.column import (
+    CreateGenColumnInternalParam,
+    CreateGenColumnParam,
+    UpdateGenColumnParam,
+)
 
 
 class CRUDGenColumn(CRUDPlus[GenColumn]):
@@ -40,6 +44,16 @@ class CRUDGenColumn(CRUDPlus[GenColumn]):
         :return:
         """
         await self.create_model(db, obj, pd_type=pd_type)
+
+    async def bulk_create(self, db: AsyncSession, objs: list[CreateGenColumnInternalParam]) -> None:
+        """
+        批量创建代码生成模型列
+
+        :param db: 数据库会话
+        :param objs: 创建代码生成模型列参数列表
+        :return:
+        """
+        await self.create_models(db, objs)
 
     async def update(self, db: AsyncSession, pk: int, obj: UpdateGenColumnParam, pd_type: str | None) -> int:
         """

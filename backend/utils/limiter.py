@@ -1,5 +1,6 @@
 from collections.abc import Awaitable, Callable
 from math import ceil
+from typing import TypeAlias
 
 from fastapi import Request, Response
 from fastapi_pagination.utils import is_async_callable
@@ -13,8 +14,10 @@ from backend.core.conf import settings
 from backend.database.redis import redis_client
 from backend.utils.request_parse import get_request_ip
 
-IdentifierCallable = Callable[[Request], str] | Callable[[Request], Awaitable[str]]
-CallbackCallable = Callable[[Request, Response, int], None] | Callable[[Request, Response, int], Awaitable[None]]
+IdentifierCallable: TypeAlias = Callable[[Request], str] | Callable[[Request], Awaitable[str]]
+CallbackCallable: TypeAlias = (
+    Callable[[Request, Response, int], None] | Callable[[Request, Response, int], Awaitable[None]]
+)
 
 
 def default_identifier(request: Request) -> str:

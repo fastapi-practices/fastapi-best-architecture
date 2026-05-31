@@ -10,6 +10,10 @@ class Role(Base, TenantMixin):
     """角色表"""
 
     __tablename__ = 'sys_role'
+    __table_args__ = (
+        sa.UniqueConstraint('name', 'deleted', name='uk_sys_role_name_deleted'),
+        {'comment': '角色表'},
+    )
 
     if settings.TENANT_ENABLED:
         __table_args__ = (sa.UniqueConstraint('name', 'tenant_id'),)

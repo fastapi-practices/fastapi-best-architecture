@@ -6,18 +6,6 @@ from backend.core.conf import settings
 from backend.plugin.core import check_plugin_installed
 from backend.utils.serializers import select_list_serialize
 
-_config_plugin_installed = check_plugin_installed('config')
-
-if _config_plugin_installed:
-    try:
-        from backend.plugin.config.enums import ConfigType
-        from backend.plugin.config.service.config_service import config_service
-    except ImportError:
-        raise ImportError('参数配置插件用法导入失败，请联系系统管理员')
-else:
-    ConfigType = None
-    config_service = None
-
 
 def _to_bool(value: str) -> bool:
     """将字符串转换为布尔值"""
@@ -26,22 +14,29 @@ def _to_bool(value: str) -> bool:
 
 async def _load_config(
     db: AsyncSession,
-    config_type: ConfigType,
-    mapping: dict[str, Callable],
+    config_type_attr: str,
+    mapping: dict[str, Callable[[str], object]],
     status_key: str,
 ) -> None:
     """
     根据配置类型加载配置
 
     :param db: 数据库会话
-    :param config_type: 配置类型枚举
+    :param config_type_attr: 配置类型属性名
     :param mapping: 配置映射 {config_key: converter}
     :param status_key: 状态键
     :return:
     """
-    if not _config_plugin_installed or config_service is None:
+    if not check_plugin_installed('config'):
         return
 
+    try:
+        from backend.plugin.config.enums import ConfigType
+        from backend.plugin.config.service.config_service import config_service
+    except ImportError as e:
+        raise ImportError('参数配置插件用法导入失败，请联系系统管理员') from e
+
+    config_type = getattr(ConfigType, config_type_attr)
     dynamic_config = await config_service.get_all(db=db, type=config_type)
     if not dynamic_config:
         return
@@ -63,9 +58,6 @@ async def load_user_security_config(db: AsyncSession) -> None:
     :param db: 数据库会话
     :return:
     """
-    if ConfigType is None:
-        return
-
     mapping = {
         'USER_LOCK_THRESHOLD': int,
         'USER_LOCK_SECONDS': int,
@@ -76,7 +68,7 @@ async def load_user_security_config(db: AsyncSession) -> None:
         'USER_PASSWORD_MAX_LENGTH': int,
         'USER_PASSWORD_REQUIRE_SPECIAL_CHAR': _to_bool,
     }
-    await _load_config(db, ConfigType.user_security, mapping, 'USER_SECURITY_CONFIG_STATUS')
+    await _load_config(db, 'user_security', mapping, 'USER_SECURITY_CONFIG_STATUS')
 
 
 async def load_login_config(db: AsyncSession) -> None:
@@ -86,13 +78,10 @@ async def load_login_config(db: AsyncSession) -> None:
     :param db: 数据库会话
     :return:
     """
-    if ConfigType is None:
-        return
-
     mapping = {
         'LOGIN_CAPTCHA_ENABLED': _to_bool,
     }
-    await _load_config(db, ConfigType.login, mapping, 'LOGIN_CONFIG_STATUS')
+    await _load_config(db, 'login', mapping, 'LOGIN_CONFIG_STATUS')
 
 
 async def load_email_config(db: AsyncSession) -> None:
@@ -102,9 +91,6 @@ async def load_email_config(db: AsyncSession) -> None:
     :param db: 数据库会话
     :return:
     """
-    if ConfigType is None:
-        return
-
     mapping = {
         'EMAIL_HOST': str,
         'EMAIL_PORT': int,
@@ -112,4 +98,4 @@ async def load_email_config(db: AsyncSession) -> None:
         'EMAIL_USERNAME': str,
         'EMAIL_PASSWORD': str,
     }
-    await _load_config(db, ConfigType.email, mapping, 'EMAIL_CONFIG_STATUS')
+    await _load_config(db, 'email', mapping, 'EMAIL_CONFIG_STATUS')

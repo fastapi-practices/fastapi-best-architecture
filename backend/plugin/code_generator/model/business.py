@@ -9,10 +9,14 @@ class GenBusiness(Base):
     """代码生成业务表"""
 
     __tablename__ = 'gen_business'
+    __table_args__ = (
+        sa.UniqueConstraint('table_name', 'deleted', name='uk_gen_business_table_name_deleted'),
+        {'comment': '代码生成业务表'},
+    )
 
     id: Mapped[id_key] = mapped_column(init=False)
     app_name: Mapped[str] = mapped_column(sa.String(64), comment='应用名称')
-    table_name: Mapped[str] = mapped_column(sa.String(256), unique=True, comment='表名称')
+    table_name: Mapped[str] = mapped_column(sa.String(256), comment='表名称')
     doc_comment: Mapped[str] = mapped_column(sa.String(256), comment='文档注释')
     table_comment: Mapped[str | None] = mapped_column(sa.String(256), default=None, comment='表描述')
     class_name: Mapped[str | None] = mapped_column(sa.String(64), default=None, comment='基础类名')

@@ -18,9 +18,13 @@ class TaskScheduler(Base):
     """任务调度表"""
 
     __tablename__ = 'task_scheduler'
+    __table_args__ = (
+        sa.UniqueConstraint('name', 'deleted', name='uk_task_scheduler_name_deleted'),
+        {'comment': '任务调度表'},
+    )
 
     id: Mapped[id_key] = mapped_column(init=False)
-    name: Mapped[str] = mapped_column(sa.String(64), unique=True, comment='任务名称')
+    name: Mapped[str] = mapped_column(sa.String(64), comment='任务名称')
     task: Mapped[str] = mapped_column(sa.String(256), comment='要运行的 Celery 任务')
     args: Mapped[str | None] = mapped_column(sa.JSON(), comment='任务可接收的位置参数')
     kwargs: Mapped[str | None] = mapped_column(sa.JSON(), comment='任务可接收的关键字参数')

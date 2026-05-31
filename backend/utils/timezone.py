@@ -2,11 +2,21 @@ import zoneinfo
 
 from datetime import datetime
 from datetime import timezone as datetime_timezone
+from typing import Final
 
 from backend.core.conf import settings
 
 # 基于 wikipedia：https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
-_UTC_IDENTIFIERS = frozenset({'Etc/UCT', 'Etc/Universal', 'Etc/UTC', 'Etc/Zulu', 'UCT', 'Universal', 'UTC', 'Zulu'})
+_UTC_IDENTIFIERS: Final = frozenset({
+    'Etc/UCT',
+    'Etc/Universal',
+    'Etc/UTC',
+    'Etc/Zulu',
+    'UCT',
+    'Universal',
+    'UTC',
+    'Zulu',
+})
 
 
 class TimeZone:

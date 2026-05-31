@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.common.enums import DataBaseType
 from backend.common.exception import errors
 from backend.core.conf import settings
+from backend.plugin.code_generator.crud.crud_business import gen_business_dao
 from backend.plugin.code_generator.crud.crud_column import gen_column_dao
 from backend.plugin.code_generator.enums import GenMySQLColumnType, GenPostgreSQLColumnType
 from backend.plugin.code_generator.model import GenColumn
@@ -28,6 +29,8 @@ class GenColumnService:
         column = await gen_column_dao.get(db, pk)
         if not column:
             raise errors.NotFoundError(msg='代码生成模型列不存在')
+        if not await gen_business_dao.get(db, column.gen_business_id):
+            raise errors.NotFoundError(msg='代码生成业务不存在')
         return column
 
     @staticmethod
@@ -50,6 +53,8 @@ class GenColumnService:
         :return:
         """
 
+        if not await gen_business_dao.get(db, business_id):
+            raise errors.NotFoundError(msg='代码生成业务不存在')
         return await gen_column_dao.get_all_by_business(db, business_id)
 
     @staticmethod
@@ -61,6 +66,9 @@ class GenColumnService:
         :param obj: 创建模型列参数
         :return:
         """
+
+        if not await gen_business_dao.get(db, obj.gen_business_id):
+            raise errors.NotFoundError(msg='代码生成业务不存在')
 
         gen_columns = await gen_column_dao.get_all_by_business(db, obj.gen_business_id)
         if obj.name in [gen_column.name for gen_column in gen_columns]:
@@ -81,6 +89,12 @@ class GenColumnService:
         """
 
         column = await gen_column_dao.get(db, pk)
+        if not column:
+            raise errors.NotFoundError(msg='代码生成模型列不存在')
+        if not await gen_business_dao.get(db, column.gen_business_id):
+            raise errors.NotFoundError(msg='代码生成业务不存在')
+        if not await gen_business_dao.get(db, obj.gen_business_id):
+            raise errors.NotFoundError(msg='代码生成业务不存在')
         if obj.name != column.name:
             gen_columns = await gen_column_dao.get_all_by_business(db, obj.gen_business_id)
             if obj.name in [gen_column.name for gen_column in gen_columns]:
@@ -99,6 +113,11 @@ class GenColumnService:
         :return:
         """
 
+        column = await gen_column_dao.get(db, pk)
+        if not column:
+            raise errors.NotFoundError(msg='代码生成模型列不存在')
+        if not await gen_business_dao.get(db, column.gen_business_id):
+            raise errors.NotFoundError(msg='代码生成业务不存在')
         return await gen_column_dao.delete(db, pk)
 
 

@@ -6,7 +6,7 @@ import math
 
 from datetime import datetime, timedelta
 from multiprocessing.util import Finalize
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from celery import current_app, schedules
 from celery.beat import ScheduleEntry, Scheduler
@@ -31,10 +31,10 @@ if TYPE_CHECKING:
     from redis.asyncio.lock import Lock
 
 # 此计划程序必须比常规的 5 分钟更频繁地唤醒，因为它需要考虑对计划的外部更改
-DEFAULT_MAX_INTERVAL = 5  # seconds
+_DEFAULT_MAX_INTERVAL: Final = 5  # seconds
 
 # 计划锁时长，避免重复创建
-DEFAULT_MAX_LOCK_TIMEOUT = DEFAULT_MAX_INTERVAL * 5  # seconds
+_DEFAULT_MAX_LOCK_TIMEOUT: Final = _DEFAULT_MAX_INTERVAL * 5  # seconds
 
 logger = get_logger('fba.schedulers')
 
@@ -97,7 +97,7 @@ class ModelEntry(ScheduleEntry):
         model.no_changes = True
         self.model.enabled = self.enabled = model.enabled = False
         async with async_db_session.begin() as db:
-            stmt = select(TaskScheduler).where(TaskScheduler.id == model.id)
+            stmt = select(TaskScheduler).where(TaskScheduler.id == model.id, TaskScheduler.deleted == 0)
             query = await db.execute(stmt)
             task = query.scalars().first()
             if task:
@@ -145,7 +145,11 @@ class ModelEntry(ScheduleEntry):
         :return:
         """
         async with async_db_session.begin() as db:
-            stmt = select(TaskScheduler).where(TaskScheduler.id == self.model.id).with_for_update()
+            stmt = (
+                select(TaskScheduler)
+                .where(TaskScheduler.id == self.model.id, TaskScheduler.deleted == 0)
+                .with_for_update()
+            )
             query = await db.execute(stmt)
             task = query.scalars().first()
             if task:
@@ -160,7 +164,7 @@ class ModelEntry(ScheduleEntry):
     async def from_entry(cls, name, app=None, **entry) -> ModelEntry:  # noqa: ANN001
         """保存或更新本地任务调度"""
         async with async_db_session.begin() as db:
-            stmt = select(TaskScheduler).where(TaskScheduler.name == name)
+            stmt = select(TaskScheduler).where(TaskScheduler.name == name, TaskScheduler.deleted == 0)
             query = await db.execute(stmt)
             task = query.scalars().first()
             temp = await cls._unpack_fields(name, **entry)
@@ -186,7 +190,7 @@ class ModelEntry(ScheduleEntry):
                     'interval_every': every,
                     'interval_period': PeriodType.SECONDS.value,
                 }
-                stmt = select(TaskScheduler).filter_by(**spec)
+                stmt = select(TaskScheduler).filter_by(**spec, deleted=0)
                 query = await db.execute(stmt)
                 obj = query.scalars().first()
                 if not obj:
@@ -199,7 +203,7 @@ class ModelEntry(ScheduleEntry):
                     'type': TaskSchedulerType.CRONTAB.value,
                     'crontab': crontab,
                 }
-                stmt = select(TaskScheduler).filter_by(**spec)
+                stmt = select(TaskScheduler).filter_by(**spec, deleted=0)
                 query = await db.execute(stmt)
                 obj = query.scalars().first()
                 if not obj:
@@ -222,7 +226,7 @@ class ModelEntry(ScheduleEntry):
     ) -> dict:
         model_schedule = await cls.to_model_schedule(name, task, schedule)
         model_dict = select_as_dict(model_schedule)
-        for k in ['id', 'created_time', 'updated_time']:
+        for k in ['id', 'created_time', 'updated_time', 'deleted', 'deleted_time']:
             try:
                 del model_dict[k]
             except KeyError:  # noqa:PERF203
@@ -284,7 +288,7 @@ class DatabaseScheduler(Scheduler):
         self._dirty = set()
         super().__init__(*args, **kwargs)
         self._finalize = Finalize(self, self.sync, exitpriority=5)
-        self.max_interval = kwargs.get('max_interval') or self.app.conf.beat_max_loop_interval or DEFAULT_MAX_INTERVAL
+        self.max_interval = kwargs.get('max_interval') or self.app.conf.beat_max_loop_interval or _DEFAULT_MAX_INTERVAL
 
     def schedules_equal(self, *args, **kwargs) -> bool:
         """重写父函数"""
@@ -334,7 +338,7 @@ class DatabaseScheduler(Scheduler):
         """重写父函数"""
         if self.lock:
             logger.debug('beat: Extending lock...')
-            run_await(self.lock.extend)(DEFAULT_MAX_LOCK_TIMEOUT, replace_ttl=True)
+            run_await(self.lock.extend)(_DEFAULT_MAX_LOCK_TIMEOUT, replace_ttl=True)
 
         return super().tick(**kwargs)
 
@@ -383,7 +387,10 @@ class DatabaseScheduler(Scheduler):
         """获取所有任务调度"""
         async with async_db_session() as db:
             logger.debug('DatabaseScheduler: Fetching database schedule')
-            stmt = select(TaskScheduler).where(TaskScheduler.enabled == True)  # noqa: E712
+            stmt = select(TaskScheduler).where(
+                TaskScheduler.enabled.is_(True),
+                TaskScheduler.deleted == 0,
+            )
             query = await db.execute(stmt)
             schedulers = query.scalars().all()
             s = {}
@@ -435,7 +442,7 @@ def acquire_distributed_beat_lock(sender=None, **kwargs) -> None:  # noqa: ANN00
     logger.debug('beat: Acquiring lock...')
     lock = redis_client.lock(
         scheduler.lock_key,
-        timeout=DEFAULT_MAX_LOCK_TIMEOUT,
+        timeout=_DEFAULT_MAX_LOCK_TIMEOUT,
         sleep=scheduler.max_interval,
     )
 

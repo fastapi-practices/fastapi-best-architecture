@@ -7,6 +7,7 @@ from sqlalchemy_crud_plus import CRUDPlus
 from backend.plugin.dict.crud.crud_dict_data import dict_data_dao
 from backend.plugin.dict.model import DictType
 from backend.plugin.dict.schema.dict_type import CreateDictTypeParam, UpdateDictTypeParam
+from backend.utils.timezone import timezone
 
 
 class CRUDDictType(CRUDPlus[DictType]):
@@ -20,7 +21,7 @@ class CRUDDictType(CRUDPlus[DictType]):
         :param pk: 字典类型 ID
         :return:
         """
-        return await self.select_model(db, pk)
+        return await self.select_model(db, pk, deleted=0)
 
     async def get_all(self, db: AsyncSession) -> Sequence[DictType]:
         """
@@ -29,7 +30,7 @@ class CRUDDictType(CRUDPlus[DictType]):
         :param db: 数据库会话
         :return:
         """
-        return await self.select_models(db)
+        return await self.select_models(db, deleted=0)
 
     async def get_select(self, name: str | None, code: str | None) -> Select:
         """
@@ -39,7 +40,7 @@ class CRUDDictType(CRUDPlus[DictType]):
         :param code: 字典类型编码
         :return:
         """
-        filters = {}
+        filters = {'deleted': 0}
 
         if name is not None:
             filters['name__like'] = f'%{name}%'
@@ -56,7 +57,7 @@ class CRUDDictType(CRUDPlus[DictType]):
         :param code: 字典编码
         :return:
         """
-        return await self.select_model_by_column(db, code=code)
+        return await self.select_model_by_column(db, code=code, deleted=0)
 
     async def create(self, db: AsyncSession, obj: CreateDictTypeParam) -> None:
         """
@@ -77,7 +78,7 @@ class CRUDDictType(CRUDPlus[DictType]):
         :param obj: 更新字典类型参数
         :return:
         """
-        return await self.update_model(db, pk, obj)
+        return await self.update_model_by_column(db, obj, id=pk, deleted=0)
 
     async def delete(self, db: AsyncSession, pks: list[int]) -> int:
         """
@@ -88,7 +89,17 @@ class CRUDDictType(CRUDPlus[DictType]):
         :return:
         """
         await dict_data_dao.delete_by_type_id(db, pks)
-        return await self.delete_model_by_column(db, allow_multiple=True, id__in=pks)
+        return await self.delete_model_by_column(
+            db,
+            allow_multiple=True,
+            logical_deletion=True,
+            deleted_flag_column='deleted',
+            deleted_flag_value=self.model.id,
+            deleted_at_column='deleted_time',
+            deleted_at_factory=timezone.now(),
+            id__in=pks,
+            deleted=0,
+        )
 
 
 dict_type_dao: CRUDDictType = CRUDDictType(DictType)

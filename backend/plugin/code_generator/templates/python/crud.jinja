@@ -6,6 +6,7 @@ from sqlalchemy_crud_plus import CRUDPlus
 
 from backend.app.{{ app_name }}.model import {{ class_name }}
 from backend.app.{{ app_name }}.schema.{{ filename }} import Create{{ schema_name }}Param, Update{{ schema_name }}Param
+from backend.utils.timezone import timezone
 
 
 class CRUD{{ class_name }}(CRUDPlus[{{ class_name }}]):
@@ -17,11 +18,11 @@ class CRUD{{ class_name }}(CRUDPlus[{{ class_name }}]):
         :param pk: {{ doc_comment }} ID
         :return:
         """
-        return await self.select_model(db, pk)
+        return await self.select_model(db, pk, deleted=0)
 
     async def get_select(self) -> Select:
         """获取{{ doc_comment }}列表查询表达式"""
-        return await self.select_order('id', 'desc')
+        return await self.select_order('id', 'desc', deleted=0)
 
     async def get_all(self, db: AsyncSession) -> Sequence[{{ class_name }}]:
         """
@@ -30,7 +31,7 @@ class CRUD{{ class_name }}(CRUDPlus[{{ class_name }}]):
         :param db: 数据库会话
         :return:
         """
-        return await self.select_models(db)
+        return await self.select_models(db, deleted=0)
 
     async def create(self, db: AsyncSession, obj: Create{{ schema_name }}Param) -> None:
         """
@@ -51,7 +52,7 @@ class CRUD{{ class_name }}(CRUDPlus[{{ class_name }}]):
         :param obj: 更新 {{ doc_comment }}参数
         :return:
         """
-        return await self.update_model(db, pk, obj)
+        return await self.update_model_by_column(db, obj, id=pk, deleted=0)
 
     async def delete(self, db: AsyncSession, pks: list[int]) -> int:
         """
@@ -61,7 +62,17 @@ class CRUD{{ class_name }}(CRUDPlus[{{ class_name }}]):
         :param pks: {{ doc_comment }} ID 列表
         :return:
         """
-        return await self.delete_model_by_column(db, allow_multiple=True, id__in=pks)
+        return await self.delete_model_by_column(
+            db,
+            allow_multiple=True,
+            logical_deletion=True,
+            deleted_flag_column='deleted',
+            deleted_flag_value=self.model.id,
+            deleted_at_column='deleted_time',
+            deleted_at_factory=timezone.now(),
+            id__in=pks,
+            deleted=0,
+        )
 
 
 {{ table_name }}_dao: CRUD{{ class_name }} = CRUD{{ class_name }}({{ class_name }})

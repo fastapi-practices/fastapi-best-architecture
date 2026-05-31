@@ -121,9 +121,9 @@ class DataScopeService:
         data_scope = await data_scope_dao.get(db, pk)
         if not data_scope:
             raise errors.NotFoundError(msg='数据范围不存在')
-        for rule_id in rule_ids.rules:
-            rule = await data_rule_dao.get(db, rule_id)
-            if not rule:
+        if rule_ids.rules:
+            rules = await data_rule_dao.get_all_by_ids(db, list(set(rule_ids.rules)))
+            if {rule.id for rule in rules} != set(rule_ids.rules):
                 raise errors.NotFoundError(msg='数据规则不存在')
         count = await data_scope_dao.update_rules(db, pk, rule_ids)
         await user_cache_manager.clear_by_data_scope_id(db, [pk])

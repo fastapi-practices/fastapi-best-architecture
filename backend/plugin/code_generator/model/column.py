@@ -9,6 +9,10 @@ class GenColumn(DataClassBase):
     """代码生成模型列表"""
 
     __tablename__ = 'gen_column'
+    __table_args__ = (
+        sa.UniqueConstraint('gen_business_id', 'name', name='uk_gen_column_business_id_name'),
+        {'comment': '代码生成模型列表'},
+    )
 
     id: Mapped[id_key] = mapped_column(init=False)
     name: Mapped[str] = mapped_column(sa.String(64), comment='列名称')

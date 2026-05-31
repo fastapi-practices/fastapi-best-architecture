@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from backend.common.model import MappedBase
 from backend.core import path_conf
 from backend.core.path_conf import BASE_PATH
-from backend.database.db import SQLALCHEMY_DATABASE_URL
+from backend.database.db import get_database_url
 
 if not os.path.exists(path_conf.ALEMBIC_VERSION_DIR):
     os.makedirs(path_conf.ALEMBIC_VERSION_DIR)
@@ -35,7 +35,7 @@ target_metadata = MappedBase.metadata
 # ... etc.
 config.set_main_option(
     'sqlalchemy.url',
-    SQLALCHEMY_DATABASE_URL.render_as_string(hide_password=False).replace('%', '%%'),
+    get_database_url().render_as_string(hide_password=False).replace('%', '%%'),
 )
 
 

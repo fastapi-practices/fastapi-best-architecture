@@ -21,6 +21,8 @@ async def get_sessions(
     token_keys = await redis_client.get_prefix(f'{settings.TOKEN_REDIS_PREFIX}:*')
     online_clients = await redis_client.smembers(settings.TOKEN_ONLINE_REDIS_PREFIX)
     data: list[GetTokenDetail] = []
+    if not token_keys:
+        return response_base.success(data=data)
 
     def append_token_detail() -> None:
         data.append(
@@ -37,8 +39,12 @@ async def get_sessions(
             ),
         )
 
-    for key in token_keys:
-        token = await redis_client.get(key)
+    token_values = await redis_client.mget(*token_keys)
+    token_details: list[GetTokenDetail] = []
+    extra_info_keys: list[str] = []
+    for token in token_values:
+        if not token:
+            continue
         token_payload = jwt_decode(token)
         user_id = token_payload.user_id
         session_uuid = token_payload.session_uuid
@@ -55,7 +61,11 @@ async def get_sessions(
             last_login_time='未知',
             expire_time=token_payload.expire_time,
         )
-        extra_info = await redis_client.get(f'{settings.TOKEN_EXTRA_INFO_REDIS_PREFIX}:{user_id}:{session_uuid}')
+        token_details.append(token_detail)
+        extra_info_keys.append(f'{settings.TOKEN_EXTRA_INFO_REDIS_PREFIX}:{user_id}:{session_uuid}')
+
+    extra_infos = await redis_client.mget(*extra_info_keys) if extra_info_keys else []
+    for token_detail, extra_info in zip(token_details, extra_infos, strict=True):
         if extra_info:
             extra_info = json.loads(extra_info)
             # 排除 swagger 登录生成的 token

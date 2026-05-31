@@ -32,9 +32,10 @@ class GetDeptDetail(DeptSchemaBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(description='部门 ID')
-    del_flag: bool = Field(description='是否删除')
+    deleted: int = Field(description='是否已删除（0：否；id：是）')
     created_time: datetime = Field(description='创建时间')
     updated_time: datetime | None = Field(None, description='更新时间')
+    deleted_time: datetime | None = Field(None, description='删除时间')
 
 
 class GetDeptTree(GetDeptDetail):

@@ -235,10 +235,9 @@ class AuthService:
             raise errors.AuthorizationError(msg='用户已被锁定, 请联系统管理员')
 
         await check_tenant_status(db, user.tenant_id)
+        token_keys = await redis_client.get_prefix(f'{settings.TOKEN_REDIS_PREFIX}:{user.id}:*')
         if not user.is_multi_login and [
-            key
-            for key in await redis_client.get_prefix(f'{settings.TOKEN_REDIS_PREFIX}:{user.id}:*')
-            if not key.endswith(f':{token_payload.session_uuid}')
+            key for key in token_keys if not key.endswith(f':{token_payload.session_uuid}')
         ]:
             raise errors.ForbiddenError(msg='此用户已在异地登录，请重新登录并及时修改密码')
         new_token = await create_new_token(

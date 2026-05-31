@@ -143,7 +143,8 @@ class Settings(BaseSettings):
     DATA_PERMISSION_COLUMN_EXCLUDE: list[str] = [  # 排除允许进行数据过滤的 SQLA 模型列
         'id',
         'sort',
-        'del_flag',
+        'deleted',
+        'deleted_time',
         'created_time',
         'updated_time',
     ]
@@ -241,6 +242,7 @@ class Settings(BaseSettings):
     OPERA_LOG_QUEUE_MAXSIZE: int = 100000
     OPERA_LOG_QUEUE_BATCH_CONSUME_SIZE: int = 100
     OPERA_LOG_QUEUE_TIMEOUT: int = 60  # 1 分钟
+    OPERA_LOG_BODY_MAX_SIZE: int = 10240  # 10 KB
 
     # 租户
     TENANT_ENABLED: bool = True
@@ -259,6 +261,17 @@ class Settings(BaseSettings):
     # Grafana
     GRAFANA_METRICS_ENABLE: bool = False
     GRAFANA_OTLP_GRPC_ENDPOINT: str = 'fba_alloy:4317'
+    # 以下配置为静态定义，修改后需要手动同步相关 Grafana 配置：
+    # - GRAFANA_PROMETHEUS_APP_NAME：deploy/backend/grafana/fba_datasource.yml
+    #   deploy/backend/grafana/dashboards/fba_server.json
+    # - GRAFANA_CELERY_OTEL_SERVICE_NAME：deploy/backend/grafana/dashboards/fba_celery.json
+    # - GRAFANA_METRICS_PATH：deploy/backend/grafana/fba_config.alloy
+    #   deploy/backend/grafana/dashboards/fba_server.json
+    # - GRAFANA_PROMETHEUS_EXEMPLAR_TRACE_ID_KEY：deploy/backend/grafana/fba_datasource.yml
+    GRAFANA_PROMETHEUS_APP_NAME: str = 'fba_server'
+    GRAFANA_CELERY_OTEL_SERVICE_NAME: str = 'fba_celery_worker'
+    GRAFANA_METRICS_PATH: str = '/metrics'
+    GRAFANA_PROMETHEUS_EXEMPLAR_TRACE_ID_KEY: str = 'TraceID'
 
     ##################################################
     # [ App ] task

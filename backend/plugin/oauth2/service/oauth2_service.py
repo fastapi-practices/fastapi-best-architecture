@@ -115,8 +115,16 @@ class OAuth2Service:
 
             # 创建系统用户
             if not sys_user:
-                while await user_dao.get_by_username(db, username):
-                    username = f'{username}_{text_captcha(5)}'
+                base_username = username or text_captcha(5)
+                username_candidates = [base_username, *[f'{base_username}_{text_captcha(5)}' for _ in range(10)]]
+                existing_users = await user_dao.get_all_by_usernames(db, username_candidates)
+                existing_usernames = {user.username for user in existing_users}
+                username = next(
+                    (candidate for candidate in username_candidates if candidate not in existing_usernames),
+                    None,
+                )
+                if username is None:
+                    raise errors.ConflictError(msg='用户名已存在，请重试')
                 new_sys_user = AddOAuth2UserParam(
                     username=username,
                     password=None,

@@ -90,12 +90,15 @@ class UserService:
         """
         if await user_dao.get_by_username(db, obj.username):
             raise errors.ConflictError(msg='用户名已注册')
+        if obj.email and await user_dao.check_email(db, obj.email):
+            raise errors.ConflictError(msg='邮箱已被绑定')
         if not obj.password:
             raise errors.RequestError(msg='密码不允许为空')
         if not await dept_dao.get(db, obj.dept_id):
             raise errors.NotFoundError(msg='部门不存在')
-        for role_id in obj.roles:
-            if not await role_dao.get(db, role_id):
+        if obj.roles:
+            roles = await role_dao.get_all_by_ids(db, list(set(obj.roles)))
+            if {role.id for role in roles} != set(obj.roles):
                 raise errors.NotFoundError(msg='角色不存在')
         obj.nickname = obj.nickname or obj.username
         await user_dao.add(db, obj)
@@ -115,10 +118,15 @@ class UserService:
             raise errors.NotFoundError(msg='用户不存在')
         if obj.username != user.username and await user_dao.get_by_username(db, obj.username):
             raise errors.ConflictError(msg='用户名已注册')
+        if obj.email and obj.email != user.email:
+            email_user = await user_dao.check_email(db, obj.email)
+            if email_user:
+                raise errors.ConflictError(msg='邮箱已被绑定')
         if obj.dept_id and obj.dept_id != user.dept_id and not await dept_dao.get(db, dept_id=obj.dept_id):
             raise errors.NotFoundError(msg='部门不存在')
-        for role_id in obj.roles:
-            if not await role_dao.get(db, role_id):
+        if obj.roles:
+            roles = await role_dao.get_all_by_ids(db, list(set(obj.roles)))
+            if {role.id for role in roles} != set(obj.roles):
                 raise errors.NotFoundError(msg='角色不存在')
         count = await user_dao.update(db, user.id, obj)
         await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user.id}')
@@ -205,14 +213,9 @@ class UserService:
         history_obj = CreateUserPasswordHistoryParam(user_id=user.id, password=user.password)
         await password_security_service.save_password_history(db, history_obj)
         await user_dao.update_password_changed_time(db, user.id)
-
-        key_prefix = [
-            f'{settings.TOKEN_REDIS_PREFIX}:{user.id}',
-            f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user.id}',
-            f'{settings.JWT_USER_REDIS_PREFIX}:{user.id}',
-        ]
-        for prefix in key_prefix:
-            await redis_client.delete_prefix(prefix)
+        await redis_client.delete_prefix(f'{settings.TOKEN_REDIS_PREFIX}:{user.id}')
+        await redis_client.delete_prefix(f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user.id}')
+        await redis_client.delete_prefix(f'{settings.JWT_USER_REDIS_PREFIX}:{user.id}')
         return count
 
     @staticmethod
@@ -259,6 +262,9 @@ class UserService:
             raise errors.RequestError(msg='验证码已失效，请重新获取')
         if captcha != captcha_code:
             raise errors.CustomError(error=CustomErrorCode.CAPTCHA_ERROR)
+        email_user = await user_dao.check_email(db, email)
+        if email_user and email_user.id != user_id:
+            raise errors.ConflictError(msg='邮箱已被绑定')
         await redis_client.delete(f'{settings.EMAIL_CAPTCHA_REDIS_PREFIX}:{ctx.ip}')
         count = await user_dao.update_email(db, user_id, email)
         await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}')
@@ -288,14 +294,9 @@ class UserService:
         history_obj = CreateUserPasswordHistoryParam(user_id=user.id, password=user.password)
         await password_security_service.save_password_history(db, history_obj)
         await user_dao.update_password_changed_time(db, user.id)
-
-        key_prefix = [
-            f'{settings.TOKEN_REDIS_PREFIX}:{user_id}',
-            f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user_id}',
-            f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}',
-        ]
-        for prefix in key_prefix:
-            await redis_client.delete_prefix(prefix)
+        await redis_client.delete_prefix(f'{settings.TOKEN_REDIS_PREFIX}:{user_id}')
+        await redis_client.delete_prefix(f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user_id}')
+        await redis_client.delete_prefix(f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}')
         return count
 
     @staticmethod
@@ -311,13 +312,9 @@ class UserService:
         if not user:
             raise errors.NotFoundError(msg='用户不存在')
         count = await user_dao.delete(db, user.id)
-        key_prefix = [
-            f'{settings.TOKEN_REDIS_PREFIX}:{user.id}',
-            f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user.id}',
-            f'{settings.JWT_USER_REDIS_PREFIX}:{user.id}',
-        ]
-        for key in key_prefix:
-            await redis_client.delete_prefix(key)
+        await redis_client.delete_prefix(f'{settings.TOKEN_REDIS_PREFIX}:{user.id}')
+        await redis_client.delete_prefix(f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user.id}')
+        await redis_client.delete_prefix(f'{settings.JWT_USER_REDIS_PREFIX}:{user.id}')
         return count
 
 

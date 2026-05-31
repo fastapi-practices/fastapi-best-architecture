@@ -1,3 +1,33 @@
+<a id="v1.14.0"></a>
+# [v1.14.0](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v1.14.0) - 2026-05-30
+
+## What's Changed
+* Update changelog for v1.13.4 by [@wu-clan](https://github.com/wu-clan) in [#1170](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1170)
+* Update xdb dependency and database file by [@wu-clan](https://github.com/wu-clan) in [#1171](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1171)
+* Optimize database operations within loops by [@wu-clan](https://github.com/wu-clan) in [#1177](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1177)
+* Optimize some global variable definitions by [@wu-clan](https://github.com/wu-clan) in [#1178](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1178)
+* Optimize SQL script execution in the CLI by [@wu-clan](https://github.com/wu-clan) in [#1181](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1181)
+* Fix cache invalidation decorator usage by [@wu-clan](https://github.com/wu-clan) in [#1182](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1182)
+* Optimize user session logging and deletion by [@wu-clan](https://github.com/wu-clan) in [#1185](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1185)
+* Optimize operation log truncation handling by [@wu-clan](https://github.com/wu-clan) in [#1186](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1186)
+* Add opera log task cancel to lifespan by [@wu-clan](https://github.com/wu-clan) in [#1187](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1187)
+* Optimize Grafana observability metrics and config by [@wu-clan](https://github.com/wu-clan) in [#1188](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1188)
+* Bump dependencies and pre-commits by [@wu-clan](https://github.com/wu-clan) in [#1189](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1189)
+* Optimize the usage of setex for redis by [@wu-clan](https://github.com/wu-clan) in [#1190](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1190)
+* Refactor physical deletion to logical deletion by [@wu-clan](https://github.com/wu-clan) in [#1191](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1191)
+* Fix task scheduler unpack fields by [@wu-clan](https://github.com/wu-clan) in [#1192](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1192)
+* Update the version number to 1.14.0 by [@wu-clan](https://github.com/wu-clan) in [#1193](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1193)
+
+
+**Full Changelog**: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.13.4...v1.14.0
+
+## Contributors
+
+<a href="https://github.com/wu-clan"><img src="https://wsrv.nl/?url=https%3A%2F%2Fgithub.com%2Fwu-clan.png&w=128&h=128&fit=cover&mask=circle" width="64" height="64" alt="@wu-clan"></a>
+
+[Changes][v1.14.0]
+
+
 <a id="v1.13.4"></a>
 # [v1.13.4](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v1.13.4) - 2026-04-28
 
@@ -1511,6 +1541,7 @@
 [Changes][v1.0.0]
 
 
+[v1.14.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.13.4...v1.14.0
 [v1.13.4]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.13.3...v1.13.4
 [v1.13.3]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.13.2...v1.13.3
 [v1.13.2]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.13.1...v1.13.2

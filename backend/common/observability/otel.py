@@ -20,7 +20,6 @@ from redis.observability.config import OTelConfig
 from redis.observability.providers import get_observability_instance
 
 from backend.common.log import log, request_id_filter
-from backend.common.observability.prometheus.config import PROMETHEUS_APP_NAME
 from backend.core.conf import settings
 from backend.database.db import async_engine
 from backend.database.redis import redis_client
@@ -103,8 +102,7 @@ def init_otel(app: FastAPI) -> None:
     :param app: FastAPI 应用实例
     :return:
     """
-    resource = init_resource(PROMETHEUS_APP_NAME)
-
+    resource = init_resource(settings.GRAFANA_PROMETHEUS_APP_NAME)
     init_tracer(resource)
     init_metrics(resource)
     init_logging(resource)

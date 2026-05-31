@@ -14,14 +14,8 @@ from backend.app.admin.service.opera_log_service import opera_log_service
 from backend.common.context import ctx
 from backend.common.enums import StatusType
 from backend.common.log import log
-from backend.common.observability.prometheus.fastapi import (
-    dec_fastapi_request_in_progress,
-    inc_fastapi_exception,
-    inc_fastapi_response,
-    observe_fastapi_request_cost_time,
-)
 from backend.common.observability.prometheus.queue import observe_queue_size
-from backend.common.queue import batch_dequeue
+from backend.common.queue import batch_consume
 from backend.common.response.response_code import StandardResponseCode
 from backend.core.conf import settings
 from backend.database.db import async_db_session
@@ -32,7 +26,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
     """操作日志中间件"""
 
     opera_log_queue_name = 'opera_log_queue'
-    opera_log_queue: Queue = Queue(maxsize=settings.OPERA_LOG_QUEUE_MAXSIZE)
+    opera_log_queue: Queue[CreateOperaLogParam] = Queue(maxsize=settings.OPERA_LOG_QUEUE_MAXSIZE)
 
     async def dispatch(self, request: Request, call_next: Any) -> Response:  # noqa: C901
         """
@@ -68,9 +62,6 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                 msg = getattr(e, 'msg', str(e))
                 status = StatusType.disable
 
-            if path.startswith(settings.FASTAPI_API_V1_PATH):
-                inc_fastapi_exception(method=method, path=path, exception_type=type(e).__name__)
-
             raise
         else:
             elapsed = round((time.perf_counter() - ctx.perf_time) * 1000, 3)
@@ -82,6 +73,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                     '__request_validation_exception__',
                     '__request_assertion_error__',
                     '__request_custom_exception__',
+                    '__request_unknown_exception__',
                 ]:
                     exception = ctx.get(exception_key)
                     if exception:
@@ -90,11 +82,6 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                         status = StatusType.disable
                         log.error(f'请求异常: {msg}')
                         break
-
-            if path.startswith(settings.FASTAPI_API_V1_PATH):
-                observe_fastapi_request_cost_time(
-                    method=method, path=path, elapsed=elapsed, trace_id=get_request_trace_id()
-                )
         finally:
             # summary 只能在请求后获取
             route = request.scope.get('route')
@@ -141,11 +128,8 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
 
                 opera_log_in = CreateOperaLogParam(**opera_log_data)
                 await self.opera_log_queue.put(opera_log_in)
-                observe_queue_size(self.opera_log_queue, queue_name=self.opera_log_queue_name)
-
-            if path.startswith(settings.FASTAPI_API_V1_PATH):
-                inc_fastapi_response(method=method, path=path, status_code=code)
-                dec_fastapi_request_in_progress(method=method, path=path)
+                if settings.GRAFANA_METRICS_ENABLE:
+                    observe_queue_size(self.opera_log_queue, queue_name=self.opera_log_queue_name)
 
         return response
 
@@ -170,13 +154,23 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
 
         # Tip: .body() 必须在 .form() 之前获取
         # https://github.com/encode/starlette/discussions/1933
-        content_type = request.headers.get('Content-Type', '').split(';')
+        content_types = [item.strip().lower() for item in request.headers.get('Content-Type', '').split(';')]
+        is_multipart = 'multipart/form-data' in content_types
+        is_form = is_multipart or 'application/x-www-form-urlencoded' in content_types
+        content_length = self.get_content_length(request)
+        if content_length is not None and content_length > settings.OPERA_LOG_BODY_MAX_SIZE:
+            args['body'] = self.build_truncated_body(content_length, settings.OPERA_LOG_BODY_MAX_SIZE)
+            return args or None
+
+        if is_multipart and content_length is None:
+            args['body'] = self.build_truncated_body(None, settings.OPERA_LOG_BODY_MAX_SIZE)
+            return args or None
 
         # 请求体
         body_data = await request.body()
-        if body_data:
+        if body_data and not is_form:
             # 注意：非 json 数据默认使用 data 作为键
-            if 'application/json' not in content_type:
+            if 'application/json' not in content_types:
                 args['data'] = body_data.decode('utf-8', 'ignore') if isinstance(body_data, bytes) else str(body_data)
             else:
                 json_data = await request.json()
@@ -185,56 +179,64 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                 else:
                     args['data'] = str(json_data)
 
-        # 表单参数
-        form_data = await request.form()
-        if len(form_data) > 0:
-            serialized_form = {}
-            for k, v in form_data.items():
-                if isinstance(v, UploadFile):
-                    serialized_form[k] = {
-                        'filename': v.filename,
-                        'content_type': v.content_type,
-                        'size': v.size,
-                    }
+        if is_form:
+            # 表单参数
+            form_data = await request.form()
+            if len(form_data) > 0:
+                serialized_form = {}
+                for k, v in form_data.items():
+                    if isinstance(v, UploadFile):
+                        serialized_form[k] = {
+                            'filename': v.filename,
+                            'content_type': v.content_type,
+                            'size': v.size,
+                        }
+                    else:
+                        serialized_form[k] = v
+                if not is_multipart:
+                    args['x-www-form-urlencoded'] = self.desensitization(serialized_form)
                 else:
-                    serialized_form[k] = v
-            if 'multipart/form-data' not in content_type:
-                args['x-www-form-urlencoded'] = self.desensitization(serialized_form)
-            else:
-                args['form-data'] = self.desensitization(serialized_form)
+                    args['form-data'] = self.desensitization(serialized_form)
 
         if args:
-            args = self.truncate(args)
+            try:
+                args_str = json.dumps(args, ensure_ascii=False)
+                args_size = len(args_str.encode('utf-8'))
+                if args_size > settings.OPERA_LOG_BODY_MAX_SIZE:
+                    args = self.build_truncated_body(args_size, settings.OPERA_LOG_BODY_MAX_SIZE)
+            except Exception as e:
+                log.error(f'请求参数截断处理失败：{e}')
 
         return args or None
 
     @staticmethod
-    def truncate(args: dict[str, Any]) -> dict[str, Any]:
+    def get_content_length(request: Request) -> int | None:
         """
-        截断处理
+        获取请求体大小
 
-        :param args: 需要截断的请求参数字典
+        :param request: FastAPI 请求对象
         :return:
         """
-        max_size = 10240  # 数据最大大小（字节）
+        content_length = request.headers.get('Content-Length')
+        if not content_length:
+            return None
+        return int(content_length)
 
-        try:
-            args_str = json.dumps(args, ensure_ascii=False)
-            args_size = len(args_str.encode('utf-8'))
+    @staticmethod
+    def build_truncated_body(original_size: int | None, max_size: int) -> dict[str, Any]:
+        """
+        构建请求体截断信息
 
-            if args_size > max_size:
-                truncated_str = args_str[:max_size]
-                return {
-                    '_truncated': True,
-                    '_original_size': args_size,
-                    '_max_size': max_size,
-                    '_message': f'数据过大已截断：原始大小 {args_size} 字节，限制 {max_size} 字节',
-                    'data_preview': truncated_str,
-                }
-        except Exception as e:
-            log.error(f'请求参数截断处理失败：{e}')
-
-        return args
+        :param original_size: 原始请求体大小
+        :param max_size: 最大允许记录大小
+        :return:
+        """
+        return {
+            '_truncated': True,
+            '_original_size': original_size,
+            '_max_size': max_size,
+            '_message': '请求体过大或大小未知，已跳过操作日志请求体记录',
+        }
 
     @staticmethod
     def desensitization(args: dict[str, Any]) -> dict[str, Any]:
@@ -252,22 +254,20 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
     @classmethod
     async def consumer(cls) -> None:
         """操作日志消费者"""
-        while True:
-            logs = await batch_dequeue(
-                cls.opera_log_queue,
-                max_items=settings.OPERA_LOG_QUEUE_BATCH_CONSUME_SIZE,
-                timeout=settings.OPERA_LOG_QUEUE_TIMEOUT,
-                queue_name=cls.opera_log_queue_name,
-            )
-            if logs:
-                try:
-                    if settings.DATABASE_ECHO:
-                        log.info('自动执行【操作日志批量创建】任务...')
-                    async with async_db_session.begin() as db:
-                        await opera_log_service.bulk_create(db=db, objs=logs)
-                except Exception as e:
-                    log.error(f'操作日志入库失败，丢失 {len(logs)} 条日志: {e}')
-                finally:
-                    for _ in range(len(logs)):
-                        cls.opera_log_queue.task_done()
-                        observe_queue_size(cls.opera_log_queue, queue_name=cls.opera_log_queue_name)
+
+        async def bulk_create_opera_log(logs: list[CreateOperaLogParam]) -> None:
+            """批量创建操作日志"""
+            if settings.DATABASE_ECHO:
+                log.info('自动执行【操作日志批量创建】任务...')
+            async with async_db_session.begin() as db:
+                await opera_log_service.bulk_create(db=db, objs=logs)
+
+        await batch_consume(
+            cls.opera_log_queue,
+            max_items=settings.OPERA_LOG_QUEUE_BATCH_CONSUME_SIZE,
+            timeout=settings.OPERA_LOG_QUEUE_TIMEOUT,
+            handler=bulk_create_opera_log,
+            queue_name=cls.opera_log_queue_name,
+            error_message='操作日志入库失败',
+            item_name='日志',
+        )

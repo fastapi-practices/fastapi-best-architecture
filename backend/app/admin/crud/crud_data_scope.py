@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import Any
 
-from sqlalchemy import Select, delete, insert
+from sqlalchemy import Select, and_, delete, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy_crud_plus import CRUDPlus, JoinConfig
 
@@ -13,6 +13,7 @@ from backend.app.admin.schema.data_scope import (
     UpdateDataScopeRuleParam,
 )
 from backend.utils.serializers import select_join_serialize
+from backend.utils.timezone import timezone
 
 
 class CRUDDataScope(CRUDPlus[DataScope]):
@@ -26,7 +27,7 @@ class CRUDDataScope(CRUDPlus[DataScope]):
         :param pk: 范围 ID
         :return:
         """
-        return await self.select_model(db, pk)
+        return await self.select_model(db, pk, deleted=0)
 
     async def get_by_name(self, db: AsyncSession, name: str) -> DataScope | None:
         """
@@ -36,7 +37,7 @@ class CRUDDataScope(CRUDPlus[DataScope]):
         :param name: 范围名称
         :return:
         """
-        return await self.select_model_by_column(db, name=name)
+        return await self.select_model_by_column(db, name=name, deleted=0)
 
     async def get_join(self, db: AsyncSession, pk: int) -> Any:
         """
@@ -49,9 +50,14 @@ class CRUDDataScope(CRUDPlus[DataScope]):
         result = await self.select_models(
             db,
             id=pk,
+            deleted=0,
             join_conditions=[
                 JoinConfig(model=data_scope_rule, join_on=data_scope_rule.c.data_scope_id == self.model.id),
-                JoinConfig(model=DataRule, join_on=DataRule.id == data_scope_rule.c.data_rule_id, fill_result=True),
+                JoinConfig(
+                    model=DataRule,
+                    join_on=and_(DataRule.id == data_scope_rule.c.data_rule_id, DataRule.deleted == 0),
+                    fill_result=True,
+                ),
             ],
         )
 
@@ -64,7 +70,17 @@ class CRUDDataScope(CRUDPlus[DataScope]):
         :param db: 数据库会话
         :return:
         """
-        return await self.select_models(db)
+        return await self.select_models(db, deleted=0)
+
+    async def get_all_by_ids(self, db: AsyncSession, pks: list[int]) -> Sequence[DataScope]:
+        """
+        通过 ID 列表批量获取数据范围
+
+        :param db: 数据库会话
+        :param pks: 范围 ID 列表
+        :return:
+        """
+        return await self.select_models(db, id__in=pks, deleted=0)
 
     async def get_select(self, name: str | None, status: int | None) -> Select:
         """
@@ -74,7 +90,7 @@ class CRUDDataScope(CRUDPlus[DataScope]):
         :param status: 范围状态
         :return:
         """
-        filters = {}
+        filters = {'deleted': 0}
 
         if name is not None:
             filters['name__like'] = f'%{name}%'
@@ -102,7 +118,7 @@ class CRUDDataScope(CRUDPlus[DataScope]):
         :param obj: 更新数据范围参数
         :return:
         """
-        return await self.update_model(db, pk, obj)
+        return await self.update_model_by_column(db, obj, id=pk, deleted=0)
 
     @staticmethod
     async def update_rules(db: AsyncSession, pk: int, rule_ids: UpdateDataScopeRuleParam) -> int:
@@ -135,7 +151,17 @@ class CRUDDataScope(CRUDPlus[DataScope]):
         :param pks: 范围 ID 列表
         :return:
         """
-        return await self.delete_model_by_column(db, allow_multiple=True, id__in=pks)
+        return await self.delete_model_by_column(
+            db,
+            allow_multiple=True,
+            logical_deletion=True,
+            deleted_flag_column='deleted',
+            deleted_flag_value=self.model.id,
+            deleted_at_column='deleted_time',
+            deleted_at_factory=timezone.now(),
+            id__in=pks,
+            deleted=0,
+        )
 
 
 data_scope_dao: CRUDDataScope = CRUDDataScope(DataScope)

@@ -1,7 +1,7 @@
 from collections import defaultdict, namedtuple
 from collections.abc import Sequence
 from decimal import Decimal
-from typing import Any, TypeVar
+from typing import Any, TypeAlias, TypeVar
 
 from fastapi.encoders import decimal_encoder
 from msgspec import json
@@ -11,7 +11,7 @@ from starlette.responses import JSONResponse
 
 from backend.common.log import log
 
-RowData = Row[Any] | RowMapping | Any
+RowData: TypeAlias = Row[Any] | RowMapping | Any
 
 R = TypeVar('R', bound=RowData)
 

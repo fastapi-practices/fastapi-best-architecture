@@ -6,6 +6,7 @@ from sqlalchemy_crud_plus import CRUDPlus
 
 from backend.app.admin.model import Menu, role_menu
 from backend.app.admin.schema.menu import CreateMenuParam, UpdateMenuParam
+from backend.utils.timezone import timezone
 
 
 class CRUDMenu(CRUDPlus[Menu]):
@@ -19,7 +20,7 @@ class CRUDMenu(CRUDPlus[Menu]):
         :param menu_id: 菜单 ID
         :return:
         """
-        return await self.select_model(db, menu_id)
+        return await self.select_model(db, menu_id, deleted=0)
 
     async def get_by_title(self, db: AsyncSession, title: str) -> Menu | None:
         """
@@ -29,7 +30,7 @@ class CRUDMenu(CRUDPlus[Menu]):
         :param title: 菜单标题
         :return:
         """
-        return await self.select_model_by_column(db, title=title, type__ne=2)
+        return await self.select_model_by_column(db, title=title, type__ne=2, deleted=0)
 
     async def get_all(self, db: AsyncSession, title: str | None, status: int | None) -> Sequence[Menu]:
         """
@@ -40,7 +41,7 @@ class CRUDMenu(CRUDPlus[Menu]):
         :param status: 菜单状态
         :return:
         """
-        filters = {}
+        filters = {'deleted': 0}
 
         if title is not None:
             filters['title__like'] = f'%{title}%'
@@ -57,12 +58,22 @@ class CRUDMenu(CRUDPlus[Menu]):
         :param menu_ids: 菜单 ID 列表
         :return:
         """
-        filters = {'type__in': [0, 1, 3, 4]}
+        filters = {'type__in': [0, 1, 3, 4], 'deleted': 0}
 
         if menu_ids:
             filters['id__in'] = menu_ids
 
         return await self.select_models_order(db, 'sort', 'asc', **filters)
+
+    async def get_all_by_ids(self, db: AsyncSession, menu_ids: list[int]) -> Sequence[Menu]:
+        """
+        通过 ID 列表批量获取菜单
+
+        :param db: 数据库会话
+        :param menu_ids: 菜单 ID 列表
+        :return:
+        """
+        return await self.select_models(db, id__in=menu_ids, deleted=0)
 
     async def create(self, db: AsyncSession, obj: CreateMenuParam) -> None:
         """
@@ -83,7 +94,7 @@ class CRUDMenu(CRUDPlus[Menu]):
         :param obj: 更新菜单参数
         :return:
         """
-        return await self.update_model(db, menu_id, obj)
+        return await self.update_model_by_column(db, obj, id=menu_id, deleted=0)
 
     async def delete(self, db: AsyncSession, menu_id: int) -> int:
         """
@@ -96,7 +107,16 @@ class CRUDMenu(CRUDPlus[Menu]):
         role_menu_stmt = delete(role_menu).where(role_menu.c.menu_id == menu_id)
         await db.execute(role_menu_stmt)
 
-        return await self.delete_model(db, menu_id)
+        return await self.delete_model_by_column(
+            db,
+            logical_deletion=True,
+            deleted_flag_column='deleted',
+            deleted_flag_value=self.model.id,
+            deleted_at_column='deleted_time',
+            deleted_at_factory=timezone.now(),
+            id=menu_id,
+            deleted=0,
+        )
 
     async def get_children(self, db: AsyncSession, menu_id: int) -> Sequence[Menu | None]:
         """
@@ -106,7 +126,7 @@ class CRUDMenu(CRUDPlus[Menu]):
         :param menu_id: 菜单 ID
         :return:
         """
-        return await self.select_models(db, parent_id=menu_id)
+        return await self.select_models(db, parent_id=menu_id, deleted=0)
 
 
 menu_dao: CRUDMenu = CRUDMenu(Menu)

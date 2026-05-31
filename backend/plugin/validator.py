@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -9,10 +9,10 @@ from backend.plugin.errors import PluginConfigError
 from backend.utils.pattern_validate import match_string
 
 # 支持的标签类型
-_VALID_TAGS = frozenset({'ai', 'mcp', 'agent', 'auth', 'storage', 'notification', 'task', 'payment', 'other'})
+_VALID_TAGS: Final = frozenset({'ai', 'mcp', 'agent', 'auth', 'storage', 'notification', 'task', 'payment', 'other'})
 
 # 支持的数据库类型
-_VALID_DATABASES = frozenset({'mysql', 'postgresql'})
+_VALID_DATABASES: Final = frozenset({'mysql', 'postgresql'})
 
 
 class PluginInfoSchema(BaseModel):
