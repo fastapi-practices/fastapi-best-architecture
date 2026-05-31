@@ -268,7 +268,7 @@ async def get_current_user(db: AsyncSession, pk: int) -> User:
         raise errors.AuthorizationError(msg='用户已被锁定，请联系系统管理员')
 
     if settings.TENANT_ENABLED:
-        await check_tenant_status(db, user.tenant_id)
+        await check_tenant_status(db, ctx.tenant_id)
 
     if user.dept_id and not user.dept:
         raise errors.AuthorizationError(msg='用户所属部门不存在或已被删除，请联系系统管理员')

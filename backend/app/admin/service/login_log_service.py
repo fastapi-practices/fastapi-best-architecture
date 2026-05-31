@@ -8,7 +8,6 @@ from backend.app.admin.schema.login_log import CreateLoginLogParam, DeleteLoginL
 from backend.common.context import ctx
 from backend.common.log import log
 from backend.common.pagination import paging_data
-from backend.core.conf import settings
 from backend.database.db import async_db_session
 
 
@@ -37,7 +36,6 @@ class LoginLogService:
         login_time: datetime,
         status: int,
         msg: str,
-        tenant_id: int = settings.TENANT_DEFAULT_ID,
     ) -> None:
         """
         创建登录日志
@@ -47,7 +45,6 @@ class LoginLogService:
         :param login_time: 登录时间
         :param status: 状态
         :param msg: 消息
-        :param tenant_id: 租户 ID
         :return:
         """
         try:
@@ -66,8 +63,6 @@ class LoginLogService:
                 'msg': msg,
                 'login_time': login_time,
             }
-            if settings.TENANT_ENABLED:
-                data['tenant_id'] = tenant_id
             obj = CreateLoginLogParam(**data)
             async with async_db_session.begin() as db:
                 await login_log_dao.create(db, obj)

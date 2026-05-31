@@ -10,15 +10,17 @@ class Role(Base, TenantMixin):
     """角色表"""
 
     __tablename__ = 'sys_role'
-    __table_args__ = (
-        sa.UniqueConstraint('name', 'deleted', name='uk_sys_role_name_deleted'),
-        {'comment': '角色表'},
-    )
 
     if settings.TENANT_ENABLED:
-        __table_args__ = (sa.UniqueConstraint('name', 'tenant_id'),)
+        __table_args__ = (
+            sa.UniqueConstraint('name', 'tenant_id', 'deleted', name='uk_sys_role_name_tenant_deleted'),
+            {'comment': '角色表'},
+        )
     else:
-        __table_args__ = (sa.UniqueConstraint('name'),)
+        __table_args__ = (
+            sa.UniqueConstraint('name', 'deleted', name='uk_sys_role_name_deleted'),
+            {'comment': '角色表'},
+        )
 
     id: Mapped[id_key] = mapped_column(init=False)
     name: Mapped[str] = mapped_column(sa.String(32), comment='角色名称')

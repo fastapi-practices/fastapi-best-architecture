@@ -87,7 +87,14 @@ class TenantMixin(MappedAsDataclass):
     """租户 Mixin 数据类"""
 
     if settings.TENANT_ENABLED:
-        tenant_id: Mapped[int] = mapped_column(BigInteger, index=True, sort_order=997, comment='租户ID')
+        tenant_id: Mapped[int] = mapped_column(
+            BigInteger,
+            init=False,
+            nullable=False,
+            index=True,
+            sort_order=997,
+            comment='租户ID',
+        )
 
 
 class DateTimeMixin(MappedAsDataclass):

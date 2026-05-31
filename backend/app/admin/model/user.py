@@ -14,21 +14,18 @@ class User(Base, TenantMixin):
     """用户表"""
 
     __tablename__ = 'sys_user'
-    __table_args__ = (
-        sa.UniqueConstraint('username', 'deleted', name='uk_sys_user_username_deleted'),
-        sa.UniqueConstraint('email', 'deleted', name='uk_sys_user_email_deleted'),
-        {'comment': '用户表'},
-    )
 
     if settings.TENANT_ENABLED:
         __table_args__ = (
-            sa.UniqueConstraint('username', 'tenant_id'),
-            sa.UniqueConstraint('email', 'tenant_id'),
+            sa.UniqueConstraint('username', 'tenant_id', 'deleted', name='uk_sys_user_username_tenant_deleted'),
+            sa.UniqueConstraint('email', 'tenant_id', 'deleted', name='uk_sys_user_email_tenant_deleted'),
+            {'comment': '用户表'},
         )
     else:
         __table_args__ = (
-            sa.UniqueConstraint('username'),
-            sa.UniqueConstraint('email'),
+            sa.UniqueConstraint('username', 'deleted', name='uk_sys_user_username_deleted'),
+            sa.UniqueConstraint('email', 'deleted', name='uk_sys_user_email_deleted'),
+            {'comment': '用户表'},
         )
 
     id: Mapped[id_key] = mapped_column(init=False)

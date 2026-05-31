@@ -150,7 +150,6 @@ class CRUDUser(CRUDPlus[User]):
 
         dict_obj = obj.model_dump(exclude={'roles'})
         dict_obj.update({'salt': salt})
-        dict_obj = inject_tenant_dict(dict_obj)
 
         new_user = self.model(**dict_obj)
         db.add(new_user)
@@ -179,7 +178,6 @@ class CRUDUser(CRUDPlus[User]):
         """
         dict_obj = obj.model_dump()
         dict_obj.update({'is_staff': True, 'salt': None})
-        dict_obj = inject_tenant_dict(dict_obj)
 
         new_user = self.model(**dict_obj)
         db.add(new_user)

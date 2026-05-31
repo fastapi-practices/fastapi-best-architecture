@@ -62,6 +62,8 @@ class OAuth2Service:
                 tenant = await tenant_service.get_by_domain(db=db, domain=tenant_domain)
                 if tenant:
                     tenant_id = tenant.id
+            if tenant_id == settings.TENANT_DEFAULT_ID:
+                raise errors.ForbiddenError(msg='OAuth2 登录缺少有效租户上下文')
 
         state = str(uuid.uuid4())
         await redis_client.setex(
@@ -78,7 +80,6 @@ class OAuth2Service:
         db: AsyncSession,
         response: Response,
         background_tasks: BackgroundTasks,
-        tenant_id: int,
         sid: str,
         source: UserSocialType,
         username: str | None = None,
@@ -92,7 +93,6 @@ class OAuth2Service:
         :param db: 数据库会话
         :param response: FastAPI 响应对象
         :param background_tasks: FastAPI 后台任务
-        :param tenant_id: 租户 ID
         :param sid: 社交账号唯一编码
         :param source: 社交平台
         :param username: 用户名
@@ -101,7 +101,7 @@ class OAuth2Service:
         :param avatar: 头像地址
         :return:
         """
-        user_social = await user_social_dao.get_by_sid(db, tenant_id, sid, source.value)
+        user_social = await user_social_dao.get_by_sid(db, ctx.tenant_id, sid, source.value)
         if user_social:
             sys_user = await user_dao.get(db, user_social.user_id)
             # 更新用户头像
@@ -143,7 +143,7 @@ class OAuth2Service:
         # 创建 token
         access_token_data = await jwt.create_access_token(
             sys_user.id,
-            sys_user.tenant_id,
+            ctx.tenant_id,
             multi_login=sys_user.is_multi_login,
             # extra info
             username=sys_user.username,
@@ -157,7 +157,7 @@ class OAuth2Service:
         refresh_token_data = await jwt.create_refresh_token(
             access_token_data.session_uuid,
             sys_user.id,
-            sys_user.tenant_id,
+            ctx.tenant_id,
             multi_login=sys_user.is_multi_login,
         )
         await user_dao.update_login_time(db, sys_user.username)
@@ -169,7 +169,6 @@ class OAuth2Service:
             login_time=timezone.now(),
             status=LoginLogStatusType.success.value,
             msg=t('success.login.oauth2_success'),
-            tenant_id=tenant_id,
         )
         await redis_client.delete(f'{settings.LOGIN_CAPTCHA_REDIS_PREFIX}:{ctx.ip}')
         response.set_cookie(
@@ -208,7 +207,6 @@ class OAuth2Service:
         :param state: OAuth2 state 参数
         :return:
         """
-
         sid = user.get('uuid')
         username = user.get('username')
         nickname = user.get('nickname')
@@ -237,7 +235,10 @@ class OAuth2Service:
 
         state_info = json.loads(state_data)
         await redis_client.delete(f'{settings.OAUTH2_STATE_REDIS_PREFIX}:{state}')
-        tenant_id = int(state_info.get('tenant_id', settings.TENANT_DEFAULT_ID))
+        tenant_id = state_info.get('tenant_id')
+        if tenant_id is None:
+            raise errors.ForbiddenError(msg='OAuth2 状态信息缺少租户 ID')
+        tenant_id = int(tenant_id)
         current_tenant_id = ctx.tenant_id
         ctx.tenant_id = tenant_id
 
@@ -254,7 +255,6 @@ class OAuth2Service:
                     user_id=user_id,
                     sid=str(sid),
                     source=social,
-                    tenant_id=tenant_id,
                 )
                 return None
 
@@ -266,7 +266,6 @@ class OAuth2Service:
                 db=db,
                 response=response,
                 background_tasks=background_tasks,
-                tenant_id=tenant_id,
                 sid=str(sid),
                 source=social,
                 username=username,

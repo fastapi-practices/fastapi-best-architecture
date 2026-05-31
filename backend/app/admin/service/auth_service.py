@@ -75,7 +75,7 @@ class AuthService:
         await user_dao.update_login_time(db, obj.username)
         access_token_data = await create_access_token(
             user.id,
-            user.tenant_id,
+            ctx.tenant_id,
             multi_login=user.is_multi_login,
             # extra info
             swagger=True,
@@ -100,7 +100,6 @@ class AuthService:
         :return:
         """
         user = None
-        tenant_id = settings.TENANT_DEFAULT_ID
 
         try:
             await load_login_config(db)
@@ -115,18 +114,20 @@ class AuthService:
                 await redis_client.delete(f'{settings.LOGIN_CAPTCHA_REDIS_PREFIX}:{obj.uuid}')
 
             if settings.TENANT_ENABLED:
-                tenant_id = obj.tenant_id
-                await check_tenant_status(db, tenant_id)
-
-            # 登录前先写入当前租户，供后续登录请求流程使用
-            ctx.tenant_id = tenant_id
+                if obj.tenant_id is None:
+                    raise errors.RequestError(msg='租户 ID 不能为空')
+                ctx.tenant_id = obj.tenant_id
+                await check_tenant_status(db, ctx.tenant_id)
+            else:
+                # 登录前先写入当前租户，供后续登录请求流程使用
+                ctx.tenant_id = settings.TENANT_DEFAULT_ID
 
             user, days_remaining = await self.user_verify(db, obj.username, obj.password)
             await user_dao.update_login_time(db, obj.username)
             await db.refresh(user)
             access_token_data = await create_access_token(
                 user.id,
-                user.tenant_id,
+                ctx.tenant_id,
                 multi_login=user.is_multi_login,
                 # extra info
                 username=user.username,
@@ -140,7 +141,7 @@ class AuthService:
             refresh_token_data = await create_refresh_token(
                 access_token_data.session_uuid,
                 user.id,
-                user.tenant_id,
+                ctx.tenant_id,
                 multi_login=user.is_multi_login,
             )
             response.set_cookie(
@@ -163,7 +164,6 @@ class AuthService:
                 login_time=timezone.now(),
                 status=LoginLogStatusType.fail.value,
                 msg=e.msg,
-                tenant_id=tenant_id,
             )
             raise errors.RequestError(code=e.code, msg=e.msg, background=task)
         except Exception as e:
@@ -177,7 +177,6 @@ class AuthService:
                 login_time=timezone.now(),
                 status=LoginLogStatusType.success.value,
                 msg=t('success.login.success'),
-                tenant_id=tenant_id,
             )
             data = GetLoginToken(
                 access_token=access_token_data.access_token,
@@ -228,13 +227,14 @@ class AuthService:
             raise errors.RequestError(msg='Refresh Token 已过期，请重新登录')
 
         token_payload = jwt_decode(refresh_token)
+        ctx.tenant_id = token_payload.tenant_id
         user = await user_dao.get(db, token_payload.user_id)
         if not user:
             raise errors.NotFoundError(msg='用户不存在')
         if not user.status:
-            raise errors.AuthorizationError(msg='用户已被锁定, 请联系统管理员')
+            raise errors.AuthorizationError(msg='用户已被锁定, 请联系系统管理员')
 
-        await check_tenant_status(db, user.tenant_id)
+        await check_tenant_status(db, ctx.tenant_id)
         token_keys = await redis_client.get_prefix(f'{settings.TOKEN_REDIS_PREFIX}:{user.id}:*')
         if not user.is_multi_login and [
             key for key in token_keys if not key.endswith(f':{token_payload.session_uuid}')
@@ -244,7 +244,7 @@ class AuthService:
             refresh_token,
             token_payload.session_uuid,
             user.id,
-            user.tenant_id,
+            ctx.tenant_id,
             multi_login=user.is_multi_login,
             # extra info
             username=user.username,

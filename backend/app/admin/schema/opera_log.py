@@ -5,7 +5,6 @@ from pydantic import ConfigDict, Field
 
 from backend.common.enums import StatusType
 from backend.common.schema import SchemaBase
-from backend.core.conf import settings
 
 
 class OperaLogSchemaBase(SchemaBase):
@@ -34,9 +33,6 @@ class OperaLogSchemaBase(SchemaBase):
 
 class CreateOperaLogParam(OperaLogSchemaBase):
     """创建操作日志参数"""
-
-    if settings.TENANT_ENABLED:
-        tenant_id: int = Field(description='租户 ID')
 
 
 class UpdateOperaLogParam(OperaLogSchemaBase):

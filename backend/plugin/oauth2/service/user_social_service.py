@@ -3,6 +3,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.common.context import ctx
 from backend.common.exception import errors
 from backend.core.conf import settings
 from backend.database.redis import redis_client
@@ -20,7 +21,7 @@ class UserSocialService:
 
         :param db: 数据库会话
         :param user_id: 用户 ID
-        :return: 绑定列表，每个元素包含 sid、source 等信息
+        :return:
         """
         bindings = await user_social_dao.get_by_user_id(db, user_id)
         return [binding.source for binding in bindings]
@@ -30,7 +31,6 @@ class UserSocialService:
         *,
         db: AsyncSession,
         user_id: int,
-        tenant_id: int,
         sid: str,
         source: UserSocialType,
     ) -> None:
@@ -39,7 +39,6 @@ class UserSocialService:
 
         :param db: 数据库会话
         :param user_id: 用户 ID
-        :param tenant_id: 租户 ID
         :param sid: 社交账号唯一编码
         :param source: 绑定源
         :return:
@@ -47,7 +46,7 @@ class UserSocialService:
         if await user_social_dao.check_binding(db, user_id, source.value):
             raise errors.RequestError(msg=f'用户已绑定 {source.value} 账号')
 
-        if await user_social_dao.get_by_sid(db, tenant_id, sid, source.value):
+        if await user_social_dao.get_by_sid(db, ctx.tenant_id, sid, source.value):
             raise errors.RequestError(msg=f'该 {source.value} 账号已被其他用户绑定')
 
         new_user_social = CreateUserSocialParam(sid=sid, source=source.value, user_id=user_id)

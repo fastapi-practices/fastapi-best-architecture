@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy_crud_plus import CRUDPlus, JoinConfig
 
 from backend.app.admin.model import User
+from backend.core.conf import settings
 from backend.plugin.oauth2.model import UserSocial
 from backend.plugin.oauth2.schema.user_social import CreateUserSocialParam
 from backend.utils.timezone import timezone
@@ -40,9 +41,10 @@ class CRUDUserSocial(CRUDPlus[UserSocial]):
         :param source: 社交账号类型
         :return:
         """
+        conditions = [User.tenant_id == tenant_id] if settings.TENANT_ENABLED else []
         return await self.select_model_by_column(
             db,
-            User.tenant_id == tenant_id,
+            *conditions,
             sid=sid,
             source=source,
             deleted=0,

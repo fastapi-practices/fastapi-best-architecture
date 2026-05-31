@@ -22,7 +22,7 @@ class AuthLoginParam(AuthSchemaBase):
     """用户登录参数"""
 
     if settings.TENANT_ENABLED:
-        tenant_id: int = Field(settings.TENANT_DEFAULT_ID, description='租户 ID')
+        tenant_id: int = Field(description='租户 ID')
 
     uuid: str | None = Field(None, description='验证码 UUID')
     captcha: str | None = Field(None, description='验证码')

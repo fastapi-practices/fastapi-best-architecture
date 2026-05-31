@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request
 
+from backend.common.context import ctx
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
 from backend.common.security.jwt import DependsJwtAuth
 from backend.database.db import CurrentSession, CurrentSessionTransaction
@@ -19,7 +20,7 @@ async def get_user_bindings(db: CurrentSession, request: Request) -> ResponseSch
 async def get_binding_auth_url(request: Request, source: UserSocialType) -> ResponseSchemaModel[str]:
     binding_url = await user_social_service.get_binding_auth_url(
         user_id=request.user.id,
-        tenant_id=request.user.tenant_id,
+        tenant_id=ctx.tenant_id,
         source=source,
     )
     return response_base.success(data=binding_url)

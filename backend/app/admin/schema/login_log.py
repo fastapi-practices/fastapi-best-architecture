@@ -3,7 +3,6 @@ from datetime import datetime
 from pydantic import ConfigDict, Field
 
 from backend.common.schema import SchemaBase
-from backend.core.conf import settings
 
 
 class LoginLogSchemaBase(SchemaBase):
@@ -26,9 +25,6 @@ class LoginLogSchemaBase(SchemaBase):
 
 class CreateLoginLogParam(LoginLogSchemaBase):
     """创建登录日志参数"""
-
-    if settings.TENANT_ENABLED:
-        tenant_id: int = Field(description='租户 ID')
 
 
 class UpdateLoginLogParam(LoginLogSchemaBase):
