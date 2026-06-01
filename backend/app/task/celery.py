@@ -13,14 +13,21 @@ from backend.common.observability.otel import init_resource, init_tracer
 from backend.core.conf import settings
 from backend.core.path_conf import BASE_PATH
 
+_celery_otel_initialized = False
+
 
 @worker_process_init.connect(weak=False)
 def init_celery_tracing(*args, **kwargs) -> None:
     """初始化 Celery 追踪"""
-    if settings.GRAFANA_METRICS_ENABLE:
-        resource = init_resource(settings.GRAFANA_CELERY_OTEL_SERVICE_NAME)
-        init_tracer(resource)
-        CeleryInstrumentor().instrument()
+    global _celery_otel_initialized
+
+    if not settings.GRAFANA_METRICS_ENABLE or _celery_otel_initialized:
+        return
+
+    resource = init_resource(settings.GRAFANA_CELERY_OTEL_SERVICE_NAME)
+    init_tracer(resource)
+    CeleryInstrumentor().instrument()
+    _celery_otel_initialized = True
 
 
 def find_task_packages() -> list[str]:
