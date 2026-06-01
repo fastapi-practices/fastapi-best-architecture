@@ -7,9 +7,10 @@ venv/
 .python-version
 .ruff_cache/
 .pytest_cache/
+logs/
 .claude/
 .serena/
 .agents/
-logs/
 .superpowers/
 superpowers/
+.codegraph/

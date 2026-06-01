@@ -45,15 +45,13 @@ from backend.database.db import (
 )
 from backend.database.redis import RedisCli, redis_client
 from backend.plugin.core import (
-    build_sql_filename,
-    get_plugin_destroy_sql,
-    get_plugin_sql,
     get_plugins,
     get_required_plugins,
 )
 from backend.plugin.installer import install_git_frontend_plugin, install_git_plugin, install_zip_plugin, zip_plugin
 from backend.plugin.installer import remove_plugin as _remove_plugin
 from backend.plugin.requirements import uninstall_requirements_async
+from backend.plugin.sql import build_sql_filename, get_plugin_destroy_sql, get_plugin_sql
 from backend.utils.console import console
 from backend.utils.dynamic_import import import_module_cached
 from backend.utils.sql_parser import parse_sql_script
