@@ -50,7 +50,7 @@ from backend.plugin.core import (
 )
 from backend.plugin.installer import install_git_frontend_plugin, install_git_plugin, install_zip_plugin, zip_plugin
 from backend.plugin.installer import remove_plugin as _remove_plugin
-from backend.plugin.requirements import uninstall_requirements_async
+from backend.plugin.requirements import install_requirements_async, uninstall_requirements_async
 from backend.plugin.sql import build_sql_filename, get_plugin_destroy_sql, get_plugin_sql
 from backend.utils.console import console
 from backend.utils.dynamic_import import import_module_cached
@@ -417,6 +417,22 @@ async def install_plugin(  # noqa: C901
         raise cappa.Exit(e.msg if isinstance(e, BaseExceptionError) else str(e), code=1)
 
 
+async def install_plugin_deps(plugin: str | None = None) -> None:
+    """安装插件依赖"""
+    plugins = get_plugins()
+    if not plugins:
+        raise cappa.Exit('当前没有已安装的插件', code=1)
+    if plugin is not None and plugin not in plugins:
+        raise cappa.Exit(f'插件 {plugin} 不存在', code=1)
+
+    console.note(f'正在安装插件 {plugin} 依赖...' if plugin else '正在安装所有插件依赖...')
+    try:
+        await install_requirements_async(plugin)
+    except Exception as e:
+        raise cappa.Exit(e.msg if isinstance(e, BaseExceptionError) else str(e), code=1)
+    console.tip(f'插件 {plugin} 依赖安装完成' if plugin else '所有插件依赖安装完成')
+
+
 async def remove_plugin(plugin: str | None, *, no_sql: bool = False) -> None:  # noqa: C901
     """卸载插件"""
     if settings.ENVIRONMENT != 'dev':
@@ -723,6 +739,24 @@ class Remove:
         await remove_plugin(self.plugin, no_sql=self.no_sql)
 
 
+@cappa.command(help='安装或同步插件依赖', default_long=True)
+@dataclass
+class Deps:
+    plugin: Annotated[
+        str | None,
+        cappa.Arg(default=None, help='指定插件名称，不指定则安装所有插件依赖'),
+    ]
+
+    async def __call__(self) -> None:
+        await install_plugin_deps(self.plugin)
+
+
+@cappa.command(help='插件管理')
+@dataclass
+class Plugin:
+    subcmd: cappa.Subcommands[Deps]
+
+
 @cappa.command(help='格式化代码')
 @dataclass
 class Format:
@@ -926,7 +960,9 @@ class FbaCli:
         str,
         cappa.Arg(value_name='PATH', default='', show_default=False, help='在事务中执行 SQL 脚本'),
     ]
-    subcmd: cappa.Subcommands[Init | Run | Add | Remove | Format | Celery | CodeGenerator | Alembic | None] = None
+    subcmd: cappa.Subcommands[Init | Run | Add | Remove | Plugin | Format | Celery | CodeGenerator | Alembic | None] = (
+        None
+    )
 
     async def __call__(self) -> None:
         if self.sql:
