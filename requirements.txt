@@ -304,7 +304,7 @@ python-engineio==4.13.2
     # via python-socketio
 python-jose==3.5.0
     # via fastapi-best-architecture
-python-multipart==0.0.29
+python-multipart==0.0.31
     # via fastapi
 python-socketio==5.16.2
     # via fastapi-best-architecture
