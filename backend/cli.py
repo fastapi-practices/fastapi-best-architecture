@@ -417,20 +417,53 @@ async def install_plugin(  # noqa: C901
         raise cappa.Exit(e.msg if isinstance(e, BaseExceptionError) else str(e), code=1)
 
 
-async def install_plugin_deps(plugin: str | None = None) -> None:
-    """安装插件依赖"""
+def should_sync_plugin_deps(plugin: str | None, *, allow_empty: bool) -> bool:
+    """检查是否需要同步插件依赖"""
     plugins = get_plugins()
-    if not plugins:
-        raise cappa.Exit('当前没有已安装的插件', code=1)
     if plugin is not None and plugin not in plugins:
         raise cappa.Exit(f'插件 {plugin} 不存在', code=1)
+    if not plugins:
+        if allow_empty:
+            console.warning('当前没有已安装的插件，跳过插件依赖同步')
+            return False
+        raise cappa.Exit('当前没有已安装的插件', code=1)
+    return True
 
+
+async def sync_project_deps() -> None:
+    """同步项目依赖"""
+    console.note('正在同步项目依赖...')
+    try:
+        await run_in_threadpool(subprocess.run, ['uv', 'sync'], cwd=BASE_PATH.parent, check=True)
+    except FileNotFoundError:
+        raise cappa.Exit('uv 未安装，请先安装 uv', code=1)
+    except subprocess.CalledProcessError as e:
+        raise cappa.Exit('项目依赖同步失败', code=e.returncode)
+    console.tip('项目依赖同步完成')
+
+
+async def sync_plugin_deps(plugin: str | None = None) -> None:
+    """同步插件依赖"""
     console.note(f'正在安装插件 {plugin} 依赖...' if plugin else '正在安装所有插件依赖...')
     try:
         await install_requirements_async(plugin)
     except Exception as e:
         raise cappa.Exit(e.msg if isinstance(e, BaseExceptionError) else str(e), code=1)
     console.tip(f'插件 {plugin} 依赖安装完成' if plugin else '所有插件依赖安装完成')
+
+
+async def sync_deps(plugin: str | None, *, no_project: bool = False, no_plugin: bool = False) -> None:
+    """同步项目和插件依赖"""
+    if no_project and no_plugin:
+        raise cappa.Exit('--no-project 和 --no-plugin 不能同时使用', code=1)
+    if plugin is not None and no_plugin:
+        raise cappa.Exit('--plugin 和 --no-plugin 不能同时使用', code=1)
+
+    should_sync_plugins = False if no_plugin else should_sync_plugin_deps(plugin, allow_empty=not no_project)
+    if not no_project:
+        await sync_project_deps()
+    if should_sync_plugins:
+        await sync_plugin_deps(plugin)
 
 
 async def remove_plugin(plugin: str | None, *, no_sql: bool = False) -> None:  # noqa: C901
@@ -739,22 +772,24 @@ class Remove:
         await remove_plugin(self.plugin, no_sql=self.no_sql)
 
 
-@cappa.command(help='安装或同步插件依赖', default_long=True)
+@cappa.command(help='同步项目和插件依赖', default_long=True)
 @dataclass
 class Deps:
     plugin: Annotated[
         str | None,
-        cappa.Arg(default=None, help='指定插件名称，不指定则安装所有插件依赖'),
+        cappa.Arg(default=None, help='指定插件名称，不指定则同步所有插件依赖'),
+    ]
+    no_project: Annotated[
+        bool,
+        cappa.Arg(default=False, help='跳过项目依赖同步'),
+    ]
+    no_plugin: Annotated[
+        bool,
+        cappa.Arg(default=False, help='跳过插件依赖同步'),
     ]
 
     async def __call__(self) -> None:
-        await install_plugin_deps(self.plugin)
-
-
-@cappa.command(help='插件管理')
-@dataclass
-class Plugin:
-    subcmd: cappa.Subcommands[Deps]
+        await sync_deps(self.plugin, no_project=self.no_project, no_plugin=self.no_plugin)
 
 
 @cappa.command(help='格式化代码')
@@ -960,7 +995,7 @@ class FbaCli:
         str,
         cappa.Arg(value_name='PATH', default='', show_default=False, help='在事务中执行 SQL 脚本'),
     ]
-    subcmd: cappa.Subcommands[Init | Run | Add | Remove | Plugin | Format | Celery | CodeGenerator | Alembic | None] = (
+    subcmd: cappa.Subcommands[Init | Run | Add | Remove | Deps | Format | Celery | CodeGenerator | Alembic | None] = (
         None
     )
 
