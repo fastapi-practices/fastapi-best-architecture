@@ -359,7 +359,7 @@ tomli==2.4.1 ; python_full_version < '3.11'
     #   alembic
     #   fastapi-cli
     #   pytest
-tornado==6.5.6
+tornado==6.5.7
     # via flower
 type-lens==0.2.6
     # via cappa
