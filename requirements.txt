@@ -75,7 +75,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   pytest
     #   typer
     #   uvicorn
-cryptography==48.0.0
+cryptography==48.0.1
     # via fastapi-best-architecture
 dnspython==2.8.0
     # via email-validator

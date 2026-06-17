@@ -20,7 +20,7 @@ dependencies = [
   # When celery version < 6.0.0
   # https://github.com/celery/celery/issues/7874
   "celery-aio-pool>=0.1.0rc8",
-  "cryptography>=47.0.0",
+  "cryptography>=48.0.1",
   "dulwich>=1.2.5",
   "fast-captcha>=0.3.2",
   "fastapi-pagination[sqlalchemy]>=0.15.13",
