@@ -14,20 +14,20 @@ dependencies = [
   "asyncpg>=0.31.0",
   "bcrypt>=5.0.0",
   # If there is a serious problem, we will try `moka-py`
-  "cachebox>=5.2.3",
-  "cappa>=0.31.0",
+  "cachebox>=6.1.2",
+  "cappa>=0.32.1",
   "celery>=5.6.3",
   # When celery version < 6.0.0
   # https://github.com/celery/celery/issues/7874
   "celery-aio-pool>=0.1.0rc8",
   "cryptography>=47.0.0",
-  "dulwich>=1.2.5",
+  "dulwich>=1.2.6",
   "fast-captcha>=0.3.2",
-  "fastapi-pagination[sqlalchemy]>=0.15.13",
-  "fastapi[standard-no-fastapi-cloud-cli]>=0.136.3",
+  "fastapi-pagination[sqlalchemy]>=0.15.15",
+  "fastapi[standard-no-fastapi-cloud-cli]>=0.137.2",
   "flower>=2.0.1",
   "gevent>=26.5.0",
-  "granian>=2.7.5",
+  "granian>=2.7.6",
   "itsdangerous>=2.2.0",
   "jinja2>=3.1.6",
   "loguru>=0.7.3",
@@ -50,13 +50,13 @@ dependencies = [
   "pydantic>=2.13.4",
   "pydantic-settings>=2.14.1",
   "pymysql>=1.1.2",
-  "pyrate-limiter>=4.0.2",
+  "pyrate-limiter>=4.4.0",
   "python-jose>=3.5.0",
-  "python-socketio>=5.16.2",
+  "python-socketio>=5.16.3",
   "redis[hiredis]>=8.0.0",
   "rtoml>=0.13.0",
   "sqlalchemy-crud-plus>=1.13.3",
-  "sqlalchemy[asyncio]>=2.0.50",
+  "sqlalchemy[asyncio]>=2.0.51",
   "sqlparse>=0.5.5",
   "starlette-context>=0.5.1",
   "user-agents>=2.2.0",
@@ -72,7 +72,7 @@ dev = [
   "pytest-sugar>=1.1.1",
 ]
 lint = [
-  "prek>=0.4.3",
+  "prek>=0.4.5",
 ]
 server = [
   "aio-pika>=9.6.1",
