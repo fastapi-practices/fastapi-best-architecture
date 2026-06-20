@@ -16,7 +16,7 @@ class RedisCli(Redis):
         port: int = settings.REDIS_PORT,
         password: str = settings.REDIS_PASSWORD,
         db: int = settings.REDIS_DATABASE,
-        socket_timeout: int = settings.REDIS_TIMEOUT,
+        socket_timeout: int | None = settings.REDIS_TIMEOUT,
         socket_connect_timeout: int = settings.REDIS_TIMEOUT,
         *,
         socket_keepalive: bool = True,

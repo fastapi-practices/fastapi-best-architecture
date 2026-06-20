@@ -38,7 +38,7 @@ class CachePubSubManager:
 
             try:
                 # 使用独立连接
-                pubsub_client = RedisCli()
+                pubsub_client = RedisCli(socket_timeout=None)
                 pubsub = pubsub_client.pubsub()
                 await pubsub.subscribe(settings.CACHE_PUBSUB_CHANNEL)
 

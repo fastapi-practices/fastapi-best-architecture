@@ -14,6 +14,10 @@ from backend.database.redis import redis_client
 sio = socketio.AsyncServer(
     client_manager=socketio.AsyncRedisManager(
         f'redis://:{urllib.parse.quote(settings.REDIS_PASSWORD)}@{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DATABASE}',
+        redis_options={
+            'socket_timeout': None,
+            'socket_connect_timeout': settings.REDIS_TIMEOUT,
+        },
     ),
     async_mode='asgi',
     cors_allowed_origins=settings.CORS_ALLOWED_ORIGINS,
