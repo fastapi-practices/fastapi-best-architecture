@@ -277,7 +277,7 @@ pydantic-core==2.46.4
     # via pydantic
 pydantic-extra-types==2.11.1
     # via fastapi
-pydantic-settings==2.14.1
+pydantic-settings==2.14.2
     # via
     #   fastapi
     #   fastapi-best-architecture
