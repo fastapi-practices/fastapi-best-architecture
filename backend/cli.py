@@ -23,6 +23,7 @@ from starlette.concurrency import run_in_threadpool
 from watchfiles import Change, PythonFilter
 
 from backend import __version__
+from backend.common.dataclasses import PluginEntry
 from backend.common.enums import DataBaseType, PrimaryKeyType
 from backend.common.exception.errors import BaseExceptionError
 from backend.common.model import MappedBase
@@ -47,11 +48,14 @@ from backend.database.redis import RedisCli, redis_client
 from backend.plugin.core import (
     get_plugins,
     get_required_plugins,
+    load_plugin_config,
+    resolve_plugin_order,
 )
 from backend.plugin.installer import install_git_frontend_plugin, install_git_plugin, install_zip_plugin, zip_plugin
 from backend.plugin.installer import remove_plugin as _remove_plugin
 from backend.plugin.requirements import install_requirements_async, uninstall_requirements_async
 from backend.plugin.sql import build_sql_filename, get_plugin_destroy_sql, get_plugin_sql
+from backend.plugin.validator import validate_plugin_config
 from backend.utils.console import console
 from backend.utils.dynamic_import import import_module_cached
 from backend.utils.sql_parser import parse_sql_script
@@ -539,8 +543,14 @@ async def get_sql_scripts() -> list[str]:
     if await anyio.Path(main_sql_file).exists():
         sql_scripts.append(str(main_sql_file))
 
+    plugins = []
     for plugin in get_plugins():
-        plugin_sql = await get_plugin_sql(plugin, settings.DATABASE_TYPE, settings.DATABASE_PK_MODE)
+        plugin_config = load_plugin_config(plugin)
+        validate_plugin_config(plugin, plugin_config)
+        plugins.append(PluginEntry(name=plugin, depends_on=plugin_config['plugin'].get('depends_on')))
+
+    for plugin in resolve_plugin_order(plugins):
+        plugin_sql = await get_plugin_sql(plugin.name, settings.DATABASE_TYPE, settings.DATABASE_PK_MODE)
         if plugin_sql:
             sql_scripts.append(plugin_sql)
 
