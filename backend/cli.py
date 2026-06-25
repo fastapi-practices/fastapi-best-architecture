@@ -264,7 +264,7 @@ async def init(db: AsyncSession, redis: RedisCli) -> None:
                 settings.TOKEN_REDIS_PREFIX,
                 settings.TOKEN_REFRESH_REDIS_PREFIX,
             ]:
-                await redis.delete_prefix(prefix)
+                await redis.delete_by_prefix(prefix)
 
             console.note('重建数据库表')
             conn = await db.connection()

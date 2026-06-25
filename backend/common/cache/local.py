@@ -36,17 +36,23 @@ class LocalCacheManager:
         """清空缓存"""
         self.hot_cache.clear()
 
-    def delete_prefix(self, prefix: str, exclude: str | list[str] | None = None) -> None:
+    def delete_by_prefix(self, key_prefix: str, exclude_keys: str | list[str] | None = None) -> None:
         """
         删除指定前缀的缓存
 
-        :param prefix: 要删除的键前缀
-        :param exclude: 要排除的键或键列表
+        :param key_prefix: 要删除的键前缀
+        :param exclude_keys: 要排除的键或键列表
         :return:
         """
-        exclude_set = set(exclude) if isinstance(exclude, list) else {exclude} if isinstance(exclude, str) else set()
+        exclude_set = (
+            set(exclude_keys)
+            if isinstance(exclude_keys, list)
+            else {exclude_keys}
+            if isinstance(exclude_keys, str)
+            else set()
+        )
         for key in list(self.hot_cache.keys()):
-            if key.startswith(prefix) and key not in exclude_set:
+            if (key == key_prefix or key.startswith(f'{key_prefix}:')) and key not in exclude_set:
                 try:
                     del self.hot_cache[key]
                 except KeyError:

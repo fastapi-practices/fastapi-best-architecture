@@ -218,7 +218,7 @@ class AuthService:
             raise errors.NotFoundError(msg='用户不存在')
         if not user.status:
             raise errors.AuthorizationError(msg='用户已被锁定, 请联系统管理员')
-        token_keys = await redis_client.get_prefix(f'{settings.TOKEN_REDIS_PREFIX}:{user.id}:*')
+        token_keys = await redis_client.get_by_prefix(f'{settings.TOKEN_REDIS_PREFIX}:{user.id}')
         if not user.is_multi_login and [
             key for key in token_keys if not key.endswith(f':{token_payload.session_uuid}')
         ]:

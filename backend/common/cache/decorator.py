@@ -1,6 +1,7 @@
 import functools
 
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
+from inspect import isawaitable
 from typing import Any, ParamSpec, TypeVar
 
 from msgspec import json
@@ -16,12 +17,13 @@ from backend.utils.serializers import select_columns_serialize, select_list_seri
 
 P = ParamSpec('P')
 T = TypeVar('T')
+_MISSING = object()
 
 
-def _build_cache_key(
-    name: str,
+async def _build_cache_key(
+    namespace: str,
     key: str | None,
-    key_builder: Callable[..., str] | None,
+    key_builder: Callable[..., str | Awaitable[str]] | None,
     *args: Any,
     **kwargs: Any,
 ) -> str:
@@ -29,9 +31,9 @@ def _build_cache_key(
     if key:
         if '.' in key:
             param, field = key.split('.', 1)
-            value = kwargs.get(param)
-            if value is None:
-                raise errors.ServerError(msg=f'缓存键构建失败，参数 "{param}" 不存在或值为空')
+            value = kwargs.get(param, _MISSING)
+            if value is _MISSING:
+                raise errors.ServerError(msg=f'缓存键构建失败，参数 "{param}" 不存在')
 
             if isinstance(value, list):
                 raise errors.ServerError(msg='缓存键构建失败：不支持从列表中提取字段，请使用 key_builder 处理列表参数')
@@ -43,16 +45,19 @@ def _build_cache_key(
             else:
                 raise errors.ServerError(msg=f'缓存键构建失败，对象中不存在字段 "{field}"')
         else:
-            value = kwargs.get(key)
-            if value is None:
-                raise errors.ServerError(msg=f'缓存键构建失败，参数 "{key}" 不存在或值为空')
+            value = kwargs.get(key, _MISSING)
+            if value is _MISSING:
+                raise errors.ServerError(msg=f'缓存键构建失败，参数 "{key}" 不存在')
 
-        return f'{name}:{value}'
+        return f'{namespace}:{value if value is not None else "none"}'
 
     if key_builder:
-        return f'{name}:{key_builder(*args, **kwargs)}'
+        value = key_builder(*args, **kwargs)
+        if isawaitable(value):
+            value = await value
+        return f'{namespace}:{value}'
 
-    return name
+    return namespace
 
 
 def _serialize_result(result: Any) -> bytes:
@@ -101,15 +106,15 @@ def user_key_builder() -> str:
 
 
 def cached(  # noqa: C901
-    name: str,
+    namespace: str,
     *,
     key: str | None = None,
-    key_builder: Callable[..., str] | None = None,
+    key_builder: Callable[..., str | Awaitable[str]] | None = None,
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """
     缓存装饰器
 
-    :param name: 缓存名称（通常为缓存 Key 前缀）
+    :param namespace: 缓存命名空间（通常为缓存 Key 前缀）
     :param key: 从方法参数中获取指定参数名的值作为缓存 Key，与 key_builder 互斥
     :param key_builder: 自定义 Key 生成函数，与 key 互斥
     :return:
@@ -120,7 +125,7 @@ def cached(  # noqa: C901
     def decorator(func: Callable[P, T]) -> Callable[P, T]:  # noqa: C901
         @functools.wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            cache_key = _build_cache_key(name, key, key_builder, *args, **kwargs)
+            cache_key = await _build_cache_key(namespace, key, key_builder, *args, **kwargs)
 
             # L1: 本地缓存
             if settings.CACHE_LOCAL_ENABLED:
@@ -168,16 +173,16 @@ def cached(  # noqa: C901
 
 
 def cache_invalidate(  # noqa: C901
-    name: str,
+    namespace: str,
     *,
     key: str | None = None,
-    key_builder: Callable[..., str] | None = None,
+    key_builder: Callable[..., str | Awaitable[str]] | None = None,
     atomic: bool = True,
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """
     缓存失效装饰器
 
-    :param name: 缓存名称（通常为缓存 Key 前缀）
+    :param namespace: 缓存命名空间（通常为缓存 Key 前缀）
     :param key: 从方法参数中获取指定参数名的值作为缓存 Key，与 key_builder 互斥
     :param key_builder: 自定义 Key 生成函数，与 key 互斥
     :param atomic: 是否保证缓存原子性
@@ -196,25 +201,25 @@ def cache_invalidate(  # noqa: C901
             invalidate_error = None
 
             try:
-                invalidate_key = _build_cache_key(name, key, key_builder, *args, **kwargs)
+                invalidate_key = await _build_cache_key(namespace, key, key_builder, *args, **kwargs)
 
                 # L1 缓存失效
                 if settings.CACHE_LOCAL_ENABLED:
-                    if invalidate_key == name:
-                        local_cache_manager.delete_prefix(invalidate_key)
+                    if invalidate_key == namespace:
+                        local_cache_manager.delete_by_prefix(invalidate_key)
                     else:
                         local_cache_manager.delete(invalidate_key)
 
                 # 广播失效消息（通知其他节点清除本地缓存）
                 if settings.CACHE_LOCAL_ENABLED:
-                    if invalidate_key == name:
-                        await cache_pubsub_manager.publish_invalidation(invalidate_key, is_delete_prefix=True)
+                    if invalidate_key == namespace:
+                        await cache_pubsub_manager.publish_invalidation(invalidate_key, delete_by_prefix=True)
                     else:
-                        await cache_pubsub_manager.publish_invalidation(invalidate_key, is_delete_prefix=False)
+                        await cache_pubsub_manager.publish_invalidation(invalidate_key, delete_by_prefix=False)
 
                 # L2 缓存失效
-                if invalidate_key == name:
-                    await redis_client.delete_prefix(invalidate_key)
+                if invalidate_key == namespace:
+                    await redis_client.delete_by_prefix(invalidate_key)
                 else:
                     await redis_client.delete(invalidate_key)
 

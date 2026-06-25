@@ -27,7 +27,7 @@ class PluginService:
         """获取所有插件"""
 
         changed_key = f'{settings.PLUGIN_REDIS_PREFIX}:changed'
-        keys = [key for key in await redis_client.get_prefix(f'{settings.PLUGIN_REDIS_PREFIX}:') if key != changed_key]
+        keys = [key for key in await redis_client.get_by_prefix(settings.PLUGIN_REDIS_PREFIX) if key != changed_key]
         if not keys:
             return []
 

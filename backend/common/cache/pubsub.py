@@ -13,16 +13,16 @@ class CachePubSubManager:
     _pubsub_task: asyncio.Task | None = None
 
     @staticmethod
-    async def publish_invalidation(key: str, *, is_delete_prefix: bool) -> None:
+    async def publish_invalidation(cache_key: str, *, delete_by_prefix: bool) -> None:
         """
         发布缓存失效通知
 
-        :param key: 缓存键
-        :param is_delete_prefix: 是否删除符合前缀的所有缓存
+        :param cache_key: 缓存键
+        :param delete_by_prefix: 是否删除符合前缀的所有缓存
         :return:
         """
         try:
-            message = json.dumps({'key': key, 'is_delete_prefix': is_delete_prefix})
+            message = json.dumps({'cache_key': cache_key, 'delete_by_prefix': delete_by_prefix})
             await redis_client.publish(settings.CACHE_PUBSUB_CHANNEL, message)
         except Exception as e:
             log.warning(f'[CachePubSub] 发布通知失败: {e}')
@@ -49,11 +49,11 @@ class CachePubSubManager:
                     if message['type'] == 'message':
                         try:
                             data = json.loads(message['data'])
-                            key = data['key']
-                            if not data['is_delete_prefix']:
-                                local_cache_manager.delete(key)
+                            cache_key = data['cache_key']
+                            if not data['delete_by_prefix']:
+                                local_cache_manager.delete(cache_key)
                             else:
-                                local_cache_manager.delete_prefix(key)
+                                local_cache_manager.delete_by_prefix(cache_key)
                         except json.JSONDecodeError as e:
                             log.warning(f'[CachePubSub] 消息格式错误 {e}')
                         except Exception as e:

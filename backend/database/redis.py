@@ -62,19 +62,33 @@ class RedisCli(Redis):
             log.error('Redis 服务器连接异常 {}', e)
             sys.exit()
 
-    async def delete_prefix(self, prefix: str, exclude: str | list[str] | None = None, batch_size: int = 1000) -> None:
+    async def delete_by_prefix(
+        self,
+        key_prefix: str,
+        exclude_keys: str | list[str] | None = None,
+        batch_size: int = 1000,
+    ) -> None:
         """
         删除指定前缀的所有 key
 
-        :param prefix: 要删除的键前缀
-        :param exclude: 要排除的键或键列表
+        :param key_prefix: 要删除的键前缀
+        :param exclude_keys: 要排除的键或键列表
         :param batch_size: 批量删除的大小，避免一次性删除过多键导致 Redis 阻塞
         :return:
         """
-        exclude_set = set(exclude) if isinstance(exclude, list) else {exclude} if isinstance(exclude, str) else set()
+        exclude_set = (
+            set(exclude_keys)
+            if isinstance(exclude_keys, list)
+            else {exclude_keys}
+            if isinstance(exclude_keys, str)
+            else set()
+        )
         batch_keys = []
 
-        async for key in self.scan_iter(match=f'{prefix}*'):
+        if key_prefix not in exclude_set and await self.exists(key_prefix):
+            batch_keys.append(key_prefix)
+
+        async for key in self.scan_iter(match=f'{key_prefix}:*'):
             if key not in exclude_set:
                 batch_keys.append(key)
 
@@ -85,15 +99,15 @@ class RedisCli(Redis):
         if batch_keys:
             await self.delete(*batch_keys)
 
-    async def get_prefix(self, prefix: str, count: int = 100) -> list[str]:
+    async def get_by_prefix(self, key_prefix: str, count: int = 100) -> list[str]:
         """
         获取指定前缀的所有 key
 
-        :param prefix: 要搜索的键前缀
+        :param key_prefix: 要搜索的键前缀
         :param count: 每次扫描批次的数量，值越大扫描速度越快，但会占用更多服务器资源
         :return:
         """
-        return [key async for key in self.scan_iter(match=f'{prefix}*', count=count)]
+        return [key async for key in self.scan_iter(match=f'{key_prefix}:*', count=count)]
 
 
 # 创建 redis 客户端单例
