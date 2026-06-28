@@ -36,6 +36,12 @@ class RedisBucketState:
 
 
 async def _maybe_await(value: T | Awaitable[T]) -> T:
+    """
+    兼容同步值和异步值
+
+    :param value: 同步值或 Awaitable 对象
+    :return:
+    """
     if isawaitable(value):
         return await value
     return value
@@ -66,9 +72,22 @@ class RedisBucketFactory(BucketFactory):
         self.buckets: OrderedDict[str, RedisBucketState] = OrderedDict()
 
     def wrap_item(self, name: str, weight: int = 1) -> RateItem:
+        """
+        包装限流项
+
+        :param name: 限流标识符
+        :param weight: 请求权重
+        :return:
+        """
         return RateItem(name, time_ns() // 1000000, weight=weight)
 
     async def get(self, item: RateItem) -> RedisBucket:
+        """
+        获取标识符对应的 Redis bucket
+
+        :param item: 限流项
+        :return:
+        """
         bucket_key = self._bucket_key(item.name)
         now = time_ns() // 1000000
 
@@ -91,9 +110,21 @@ class RedisBucketFactory(BucketFactory):
             return bucket
 
     async def get_bucket(self, name: str) -> RedisBucket:
+        """
+        获取标识符对应的 Redis bucket
+
+        :param name: 限流标识符
+        :return:
+        """
         return await self.get(self.wrap_item(name))
 
     async def _evict(self, now: int) -> None:
+        """
+        淘汰本地 bucket 缓存
+
+        :param now: 当前时间戳，单位毫秒
+        :return:
+        """
         for bucket_key, state in list(self.buckets.items()):
             if now - state.last_seen <= self.cache_ttl:
                 continue
@@ -104,6 +135,15 @@ class RedisBucketFactory(BucketFactory):
             await self._dispose(bucket_key, state, now, cleanup=False)
 
     async def _dispose(self, bucket_key: str, state: RedisBucketState, now: int, *, cleanup: bool) -> None:
+        """
+        移除本地 bucket 并按需清理 Redis 过期数据
+
+        :param bucket_key: Redis bucket key
+        :param state: Redis bucket 缓存状态
+        :param now: 当前时间戳，单位毫秒
+        :param cleanup: 是否执行 Redis 过期数据清理
+        :return:
+        """
         self.buckets.pop(bucket_key, None)
         self.dispose(state.bucket)
         if cleanup:
@@ -112,11 +152,23 @@ class RedisBucketFactory(BucketFactory):
                 await _maybe_await(state.bucket.flush())
 
     def _bucket_key(self, name: str) -> str:
+        """
+        生成标识符对应的 Redis bucket key
+
+        :param name: 限流标识符
+        :return:
+        """
         digest = sha256(name.encode()).hexdigest()
         return f'{self.bucket_key}:{digest}'
 
     @staticmethod
     def _rate_key(rates: list[Rate]) -> str:
+        """
+        生成限流策略对应的 Redis key 片段
+
+        :param rates: pyrate_limiter Rate 对象列表
+        :return:
+        """
         value = ':'.join(f'{rate.limit}:{rate.interval}' for rate in sorted(rates, key=lambda rate: rate.interval))
         return sha256(value.encode()).hexdigest()
 
@@ -179,6 +231,13 @@ class RateLimiter:
         self.bucket_factory: RedisBucketFactory | None = None
 
     async def __call__(self, request: Request, response: Response) -> None:
+        """
+        执行请求限流检查
+
+        :param request: FastAPI 请求对象
+        :param response: FastAPI 响应对象
+        :return:
+        """
         if self.limiter is None:
             if self.bucket is None:
                 self.bucket_factory = RedisBucketFactory(
@@ -203,6 +262,12 @@ class RateLimiter:
                 await run_in_threadpool(self.callback, request, response, retry_after)
 
     async def _retry_after(self, identifier: str) -> int:
+        """
+        计算限流重试等待时间
+
+        :param identifier: 限流标识符
+        :return:
+        """
         if self.bucket_factory is not None:
             failing_rate = (await self.bucket_factory.get_bucket(identifier)).failing_rate
         elif self.bucket is not None:
