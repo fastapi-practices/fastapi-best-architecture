@@ -5,13 +5,13 @@ from dataclasses import dataclass
 from hashlib import sha256
 from inspect import isawaitable
 from math import ceil
-from time import time_ns
 from typing import TypeAlias, TypeVar
 
 from fastapi import Request, Response
 from fastapi_pagination.utils import is_async_callable
 from pyrate_limiter import AbstractBucket, BucketFactory, Limiter, Rate, RateItem
 from pyrate_limiter.buckets import RedisBucket
+from redis.asyncio import Redis
 from starlette.concurrency import run_in_threadpool
 
 from backend.common.exception import errors
@@ -25,6 +25,9 @@ CallbackCallable: TypeAlias = (
     Callable[[Request, Response, int], None] | Callable[[Request, Response, int], Awaitable[None]]
 )
 T = TypeVar('T')
+
+REQUEST_LIMITER_BUCKET_CACHE_MAX_SIZE = 4096
+REQUEST_LIMITER_BUCKET_CACHE_BUFFER_MS = 10_000
 
 
 @dataclass(slots=True)
@@ -47,6 +50,24 @@ async def _maybe_await(value: T | Awaitable[T]) -> T:
     return value
 
 
+async def _redis_time_ms(redis: Redis) -> int:
+    """
+    获取 Redis 服务端当前时间
+
+    :return:
+    """
+    seconds, microseconds = await redis.time()
+    return seconds * 1000 + microseconds // 1000
+
+
+class RedisTimeBucket(RedisBucket):
+    """使用 Redis 服务端时间的 Redis bucket"""
+
+    async def now(self) -> int:
+        """获取 Redis 服务端当前时间"""
+        return await _redis_time_ms(self.redis)
+
+
 class RedisBucketFactory(BucketFactory):
     """按请求标识符路由到独立 Redis bucket"""
 
@@ -54,7 +75,7 @@ class RedisBucketFactory(BucketFactory):
         self,
         rates: list[Rate],
         bucket_key: str,
-        max_cache_size: int = 4096,
+        max_cache_size: int = REQUEST_LIMITER_BUCKET_CACHE_MAX_SIZE,
     ) -> None:
         """
         初始化 Redis bucket 工厂
@@ -67,11 +88,11 @@ class RedisBucketFactory(BucketFactory):
         self.rates = rates
         self.bucket_key = f'{bucket_key}:{self._rate_key(rates)}'
         self.max_cache_size = max(1, max_cache_size)
-        self.cache_ttl = max(rate.interval for rate in rates) + 10_000
+        self.cache_ttl = max(rate.interval for rate in rates) + REQUEST_LIMITER_BUCKET_CACHE_BUFFER_MS
         self.lock = Lock()
         self.buckets: OrderedDict[str, RedisBucketState] = OrderedDict()
 
-    def wrap_item(self, name: str, weight: int = 1) -> RateItem:
+    async def wrap_item(self, name: str, weight: int = 1) -> RateItem:
         """
         包装限流项
 
@@ -79,7 +100,7 @@ class RedisBucketFactory(BucketFactory):
         :param weight: 请求权重
         :return:
         """
-        return RateItem(name, time_ns() // 1000000, weight=weight)
+        return RateItem(name, await _redis_time_ms(redis_client), weight=weight)
 
     async def get(self, item: RateItem) -> RedisBucket:
         """
@@ -89,7 +110,7 @@ class RedisBucketFactory(BucketFactory):
         :return:
         """
         bucket_key = self._bucket_key(item.name)
-        now = time_ns() // 1000000
+        now = await _redis_time_ms(redis_client)
 
         async with self.lock:
             state = self.buckets.get(bucket_key)
@@ -98,7 +119,7 @@ class RedisBucketFactory(BucketFactory):
                 self.buckets.move_to_end(bucket_key)
                 return state.bucket
 
-            bucket_result = RedisBucket.init(
+            bucket_result = RedisTimeBucket.init(
                 rates=self.rates,
                 redis=redis_client,
                 bucket_key=bucket_key,
@@ -116,7 +137,7 @@ class RedisBucketFactory(BucketFactory):
         :param name: 限流标识符
         :return:
         """
-        return await self.get(self.wrap_item(name))
+        return await self.get(await self.wrap_item(name))
 
     async def _evict(self, now: int) -> None:
         """
