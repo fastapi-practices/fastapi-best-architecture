@@ -33,7 +33,7 @@ class User(Base, TenantMixin):
     username: Mapped[str] = mapped_column(sa.String(64), index=True, comment='用户名')
     nickname: Mapped[str] = mapped_column(sa.String(64), comment='昵称')
     password: Mapped[str | None] = mapped_column(sa.String(256), comment='密码')
-    salt: Mapped[bytes | None] = mapped_column(sa.LargeBinary(255), comment='加密盐')
+    salt: Mapped[bytes | None] = mapped_column(sa.LargeBinary(256), comment='加密盐')
     email: Mapped[str | None] = mapped_column(sa.String(256), default=None, index=True, comment='邮箱')
     phone: Mapped[str | None] = mapped_column(sa.String(11), default=None, comment='手机号')
     avatar: Mapped[str | None] = mapped_column(sa.String(256), default=None, comment='头像')

@@ -18,7 +18,7 @@ router = APIRouter()
 async def get_sessions(
     username: Annotated[str | None, Query(description='用户名')] = None,
 ) -> ResponseSchemaModel[list[GetTokenDetail]]:
-    token_keys = await redis_client.get_prefix(f'{settings.TOKEN_REDIS_PREFIX}:*')
+    token_keys = await redis_client.get_by_prefix(settings.TOKEN_REDIS_PREFIX)
     online_clients = await redis_client.smembers(settings.TOKEN_ONLINE_REDIS_PREFIX)
     data: list[GetTokenDetail] = []
     if not token_keys:

@@ -94,7 +94,7 @@ async def create_access_token(
     })
 
     if not multi_login:
-        await redis_client.delete_prefix(f'{settings.TOKEN_REDIS_PREFIX}:{user_id}')
+        await redis_client.delete_by_prefix(f'{settings.TOKEN_REDIS_PREFIX}:{user_id}')
 
     await redis_client.set(
         f'{settings.TOKEN_REDIS_PREFIX}:{user_id}:{session_uuid}',
@@ -132,7 +132,7 @@ async def create_refresh_token(session_uuid: str, user_id: int, tenant_id: int, 
     })
 
     if not multi_login:
-        await redis_client.delete_prefix(f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user_id}')
+        await redis_client.delete_by_prefix(f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user_id}')
 
     await redis_client.set(
         f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user_id}:{session_uuid}',
