@@ -409,7 +409,7 @@ async def install_plugin(  # noqa: C901
                 await conn.run_sync(MappedBase.metadata.create_all)
 
         if not no_sql:
-            sql_file = await get_plugin_sql(plugin_name, db_type, pk_type)
+            sql_file = await get_plugin_sql(plugin_name, db_type, pk_type, tenant=settings.TENANT_ENABLED)
             if sql_file:
                 console.info(f'正在执行插件 {plugin_name} 初始化 SQL 脚本：{sql_file}')
                 async with async_db_session.begin() as db:
@@ -551,7 +551,12 @@ async def get_sql_scripts() -> list[str]:
         plugins.append(PluginEntry(name=plugin, depends_on=plugin_config['plugin'].get('depends_on')))
 
     for plugin in resolve_plugin_order(plugins):
-        plugin_sql = await get_plugin_sql(plugin.name, settings.DATABASE_TYPE, settings.DATABASE_PK_MODE)
+        plugin_sql = await get_plugin_sql(
+            plugin.name,
+            settings.DATABASE_TYPE,
+            settings.DATABASE_PK_MODE,
+            tenant=settings.TENANT_ENABLED,
+        )
         if plugin_sql:
             sql_scripts.append(plugin_sql)
 

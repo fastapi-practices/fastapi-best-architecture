@@ -7,7 +7,7 @@ values
 (2049629108257816578, '修改', 'EditNotice', null, 0, null, 2, null, 'sys:notice:edit', 1, 0, 1, '', null, 2049629108257816576, now(), null),
 (2049629108257816579, '删除', 'DeleteNotice', null, 0, null, 2, null, 'sys:notice:del', 1, 0, 1, '', null, 2049629108257816576, now(), null);
 
-insert into sys_notice (id, title, type, status, content, created_time, updated_time)
+insert into sys_notice (id, title, type, status, content, created_time, updated_time, tenant_id)
 values (2112248797756129280, 'hahahahahaahahaha', 0, 1, '你好😄
 
 ```
