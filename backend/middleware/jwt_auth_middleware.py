@@ -93,7 +93,9 @@ class JwtAuthMiddleware(AuthenticationBackend):
         try:
             user = await jwt_authentication(token)
         except TokenError as exc:
-            raise AuthenticationError(code=exc.code, msg=exc.detail, headers=exc.headers)
+            if settings.TOKEN_REQUEST_UNDERLYING_SECURITY:
+                raise AuthenticationError(code=exc.code, msg=exc.detail, headers=exc.headers)
+            return None
         except Exception as e:
             log.exception(f'JWT 授权异常：{e}')
             raise AuthenticationError(code=getattr(e, 'code', 500), msg=getattr(e, 'msg', 'Internal Server Error'))
