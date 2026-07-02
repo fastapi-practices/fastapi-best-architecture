@@ -95,6 +95,7 @@ class JwtAuthMiddleware(AuthenticationBackend):
         except TokenError as exc:
             if settings.TOKEN_REQUEST_UNDERLYING_SECURITY:
                 raise AuthenticationError(code=exc.code, msg=exc.detail, headers=exc.headers)
+            ctx.__request_jwt_authentication_exception__ = exc
             return None
         except Exception as e:
             log.exception(f'JWT 授权异常：{e}')

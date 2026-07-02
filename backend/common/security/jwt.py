@@ -2,10 +2,10 @@ import json
 import uuid
 
 from datetime import timedelta
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import Depends, Request
-from fastapi.security import HTTPBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from jose import ExpiredSignatureError, JWTError, jwt
 from pydantic_core import from_json
@@ -21,9 +21,6 @@ from backend.core.conf import settings
 from backend.database.db import async_db_session
 from backend.database.redis import redis_client
 from backend.utils.timezone import timezone
-
-# JWT dependency injection
-DependsJwtAuth = Depends(HTTPBearer())
 
 
 def jwt_encode(payload: dict[str, Any]) -> str:
@@ -259,6 +256,28 @@ async def jwt_authentication(token: str) -> GetUserInfoWithRelationDetail:
         raise errors.TokenError(msg='Token 已失效')
 
     return await get_jwt_user(ctx.user_id)
+
+
+def jwt_authentication_verify(
+    request: Request,
+    token: Annotated[HTTPAuthorizationCredentials, Depends(HTTPBearer())],
+) -> str:
+    """
+    JWT 认证依赖
+
+    :param request: FastAPI 请求对象
+    :param token: HTTP Bearer 认证信息
+    :return:
+    """
+    if isinstance(request.user, UnauthenticatedUser):
+        if token_exception := ctx.get('__request_jwt_authentication_exception__'):
+            raise token_exception
+        raise errors.TokenError
+    return token.credentials
+
+
+# JWT 依赖注入
+DependsJwtAuth = Depends(jwt_authentication_verify)
 
 
 def superuser_verify(request: Request, _token: str = DependsJwtAuth) -> bool:
