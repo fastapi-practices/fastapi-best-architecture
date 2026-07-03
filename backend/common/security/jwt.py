@@ -255,7 +255,9 @@ async def jwt_authentication(token: str) -> GetUserInfoWithRelationDetail:
     if token != redis_token:
         raise errors.TokenError(msg='Token 已失效')
 
-    return await get_jwt_user(ctx.user_id)
+    user = await get_jwt_user(ctx.user_id)
+    ctx.is_superuser = user.is_superuser
+    return user
 
 
 def jwt_authentication_verify(
