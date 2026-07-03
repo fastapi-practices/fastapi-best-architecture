@@ -100,11 +100,9 @@ def inject_app_router(plugin: PluginEntry, target_router: APIRouter) -> None:
 
 def build_final_router() -> APIRouter:
     """构建最终路由"""
-    from backend.plugin.core import parse_plugin_config, resolve_plugin_order
+    from backend.plugin.core import parse_plugin_entries, resolve_plugin_order
 
-    extend_plugins, app_plugins = parse_plugin_config()
-    plugins = extend_plugins + app_plugins
-    ordered_plugins = resolve_plugin_order(plugins)
+    ordered_plugins = resolve_plugin_order(parse_plugin_entries())
 
     for plugin in ordered_plugins:
         if plugin.api is not None:
