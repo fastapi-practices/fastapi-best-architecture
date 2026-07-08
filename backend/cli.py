@@ -234,7 +234,7 @@ async def init(db: AsyncSession, redis: RedisCli) -> None:
     """交互式初始化数据库表结构和数据"""
     panel_content = _build_db_config_panel_content()
     pk_details = panel_content.from_markup(
-        '[link=https://fastapi-practices.github.io/fastapi_best_architecture_docs/backend/reference/pk.html]（了解详情）[/]'
+        '[link=https://docs.fba.wu-clan.cc/fastapi_best_architecture_docs/backend/reference/pk.html]（了解详情）[/]'
     )
     panel_content.append(pk_details)
     panel_content.append('\n\n【Redis 配置】', style='bold green')
@@ -316,7 +316,7 @@ def run(host: str, port: int, reload: bool, workers: int) -> None:  # noqa: FBT0
         panel_content.append(f'\n📡 OpenAPI JSON: {openapi_url}', style='bold magenta')
 
     panel_content.append('\n🌐 架构官方文档: ', style='bold magenta')
-    panel_content.append('https://fastapi-practices.github.io/fastapi_best_architecture_docs/')
+    panel_content.append('https://docs.fba.wu-clan.cc/fastapi_best_architecture_docs/')
 
     console.print(Panel(panel_content, title=f'fba (v{__version__})', border_style='purple', padding=(1, 2)))
     granian.Granian(
