@@ -4,7 +4,7 @@
   "description": "JSON Schema for FastAPI Best Architecture plugin.toml files. See: https://fastapi-practices.github.io/fastapi_best_architecture_docs/plugin/dev.html",
 
   "type": "object",
-  "required": ["plugin", "app"],
+  "required": ["plugin"],
   "additionalProperties": false,
 
   "properties": {

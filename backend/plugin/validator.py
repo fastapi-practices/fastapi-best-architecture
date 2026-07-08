@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, Final
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.common.enums import PluginLevelType
 from backend.core.path_conf import PLUGIN_DIR
@@ -164,7 +164,9 @@ class ExtendPluginConfigSchema(BaseModel):
 
 
 class CapabilityPluginConfigSchema(BaseModel):
-    """能力型插件配置模型。无页面、无路由，只提供可导入能力。"""
+    """能力型插件配置模型"""
+
+    model_config = ConfigDict(extra='forbid')
 
     plugin: PluginInfoSchema = Field(..., description='插件信息')
     settings: dict[str, Any] = Field(default_factory=dict, description='配置项')
@@ -180,20 +182,6 @@ class CapabilityPluginConfigSchema(BaseModel):
         return v
 
 
-def _validate_plugin_level(config: dict[str, Any]) -> PluginLevelType:
-    """校验插件级别配置。"""
-    if 'api' in config:
-        ExtendPluginConfigSchema.model_validate(config)
-        return PluginLevelType.extend
-
-    if 'app' in config:
-        AppPluginConfigSchema.model_validate(config)
-        return PluginLevelType.app
-
-    CapabilityPluginConfigSchema.model_validate(config)
-    return PluginLevelType.capability
-
-
 def validate_plugin_config(plugin_name: str, config: dict[str, Any]) -> PluginLevelType:
     """
     校验插件配置
@@ -202,8 +190,16 @@ def validate_plugin_config(plugin_name: str, config: dict[str, Any]) -> PluginLe
     :param config: 插件配置字典
     :return:
     """
+    plugin_schema, plugin_level = (
+        (ExtendPluginConfigSchema, PluginLevelType.extend)
+        if 'api' in config
+        else (AppPluginConfigSchema, PluginLevelType.app)
+        if 'app' in config
+        else (CapabilityPluginConfigSchema, PluginLevelType.capability)
+    )
+
     try:
-        plugin_level = _validate_plugin_level(config)
+        plugin_schema.model_validate(config)
     except Exception as e:
         error_msg = str(e)
         # 格式化 Pydantic 错误信息

@@ -12,20 +12,6 @@ from backend.database.redis import redis_client
 from backend.plugin.errors import PluginInjectError
 
 
-def build_plugin_cache_info(plugin: str) -> str:
-    """
-    构建插件状态缓存内容
-
-    :param plugin: 插件名称
-    :return:
-    """
-    from backend.plugin.core import load_plugin_config, normalize_plugin_config
-
-    plugin_config = load_plugin_config(plugin)
-    _, normalized_config = normalize_plugin_config(plugin, plugin_config)
-    return json.dumps(normalized_config, ensure_ascii=False)
-
-
 async def repair_plugin_cache(plugin: str) -> str:
     """
     修复丢失的插件状态缓存
@@ -33,7 +19,14 @@ async def repair_plugin_cache(plugin: str) -> str:
     :param plugin: 插件名称
     :return:
     """
-    plugin_info = build_plugin_cache_info(plugin)
+    from backend.plugin.core import load_plugin_config
+    from backend.plugin.validator import validate_plugin_config
+
+    plugin_config = load_plugin_config(plugin)
+    validate_plugin_config(plugin, plugin_config)
+    plugin_config['plugin']['name'] = plugin
+    plugin_config['plugin']['enable'] = str(StatusType.enable.value)
+    plugin_info = json.dumps(plugin_config, ensure_ascii=False)
     await redis_client.set(f'{settings.PLUGIN_REDIS_PREFIX}:{plugin}', plugin_info)
     return plugin_info
 

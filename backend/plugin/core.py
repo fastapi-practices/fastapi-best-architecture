@@ -1,7 +1,6 @@
 import json
 import os
 
-from copy import deepcopy
 from functools import lru_cache
 from typing import Any
 
@@ -103,37 +102,11 @@ def load_plugin_config(plugin: str) -> dict[str, Any]:
         return rtoml.load(f)
 
 
-def normalize_plugin_config(
-    plugin: str,
-    plugin_config: dict[str, Any],
-    plugin_cache_info: str | None = None,
-) -> tuple[PluginLevelType, dict[str, Any]]:
-    """校验并补齐插件运行时缓存信息。"""
-    plugin_type = validate_plugin_config(plugin, plugin_config)
-    normalized_config = deepcopy(plugin_config)
-    normalized_config['plugin']['name'] = plugin
-    normalized_config['plugin']['enable'] = get_plugin_enable(plugin_cache_info, StatusType.enable.value)
-    return plugin_type, normalized_config
-
-
-def build_plugin_entry(plugin: str, plugin_type: PluginLevelType, plugin_config: dict[str, Any]) -> PluginEntry:
-    """从已校验配置构建插件运行入口。"""
-    plugin_info = plugin_config['plugin']
-    app_config = plugin_config.get('app') or {}
-    return PluginEntry(
-        name=plugin,
-        level=plugin_type,
-        depends_on=plugin_info.get('depends_on'),
-        extend=app_config.get('extend') if plugin_type == PluginLevelType.extend else None,
-        routers=app_config.get('router') if plugin_type == PluginLevelType.app else None,
-        api=plugin_config.get('api') if plugin_type == PluginLevelType.extend else None,
-    )
-
-
-def parse_plugin_entries() -> list[PluginEntry]:
-    """解析全部插件配置。"""
+def parse_plugin_config() -> tuple[list[PluginEntry], list[PluginEntry]]:
+    """解析插件配置"""
     plugins = get_plugins()
-    plugin_entries: list[PluginEntry] = []
+    extend_plugins: list[PluginEntry] = []
+    app_plugins: list[PluginEntry] = []
 
     # 使用独立连接
     current_redis_client = RedisCli()
@@ -149,27 +122,40 @@ def parse_plugin_entries() -> list[PluginEntry]:
 
         for plugin in plugins:
             plugin_config = load_plugin_config(plugin)
+            plugin_type = validate_plugin_config(plugin, plugin_config)
+
+            # 补充插件信息
+            plugin_config['plugin']['name'] = plugin
             plugin_cache_key = f'{settings.PLUGIN_REDIS_PREFIX}:{plugin}'
             plugin_cache_info = run_await(current_redis_client.get)(plugin_cache_key)
-            plugin_type, normalized_config = normalize_plugin_config(plugin, plugin_config, plugin_cache_info)
-            plugin_entries.append(build_plugin_entry(plugin, plugin_type, normalized_config))
+            plugin_config['plugin']['enable'] = get_plugin_enable(plugin_cache_info, StatusType.enable.value)
+
+            if plugin_type == PluginLevelType.extend:
+                extend_plugins.append(
+                    PluginEntry(
+                        name=plugin,
+                        depends_on=plugin_config['plugin'].get('depends_on'),
+                        extend=plugin_config['app']['extend'],
+                        api=plugin_config['api'],
+                    )
+                )
+            elif plugin_type == PluginLevelType.app:
+                app_plugins.append(
+                    PluginEntry(
+                        name=plugin,
+                        depends_on=plugin_config['plugin'].get('depends_on'),
+                        routers=plugin_config['app']['router'],
+                    )
+                )
 
             # 缓存最新插件信息
-            run_await(current_redis_client.set)(plugin_cache_key, json.dumps(normalized_config, ensure_ascii=False))
+            run_await(current_redis_client.set)(plugin_cache_key, json.dumps(plugin_config, ensure_ascii=False))
 
         # 重置插件变更状态
         run_await(current_redis_client.delete)(f'{settings.PLUGIN_REDIS_PREFIX}:changed')
     finally:
         run_await(current_redis_client.aclose)()
 
-    return plugin_entries
-
-
-def parse_plugin_config() -> tuple[list[PluginEntry], list[PluginEntry]]:
-    """解析可注入路由的插件配置。"""
-    plugin_entries = parse_plugin_entries()
-    extend_plugins = [plugin for plugin in plugin_entries if plugin.level == PluginLevelType.extend]
-    app_plugins = [plugin for plugin in plugin_entries if plugin.level == PluginLevelType.app]
     return extend_plugins, app_plugins
 
 
@@ -214,7 +200,8 @@ def resolve_plugin_order(plugins: list[PluginEntry]) -> list[PluginEntry]:
 def get_ordered_enabled_plugins() -> list[PluginEntry]:
     """获取按依赖排序后的已启用插件"""
     enabled_plugins = get_enabled_plugins()
-    plugins = [plugin for plugin in parse_plugin_entries() if plugin.name in enabled_plugins]
+    extend_plugins, app_plugins = parse_plugin_config()
+    plugins: list[PluginEntry] = [plugin for plugin in extend_plugins + app_plugins if plugin.name in enabled_plugins]
 
     try:
         return resolve_plugin_order(plugins)

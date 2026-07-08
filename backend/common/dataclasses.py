@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import Response
 
-from backend.common.enums import PluginLevelType, StatusType
+from backend.common.enums import StatusType
 
 
 @dataclasses.dataclass
@@ -79,7 +79,6 @@ class SnowflakeInfo:
 @dataclasses.dataclass(slots=True)
 class PluginEntry:
     name: str
-    level: PluginLevelType = PluginLevelType.app
     depends_on: list[str] | None = None
     extend: str | None = None
     routers: list[str] | None = None
