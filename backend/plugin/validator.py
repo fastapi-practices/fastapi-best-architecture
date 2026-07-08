@@ -69,6 +69,12 @@ class PluginInfoSchema(BaseModel):
         return v
 
 
+class CapabilityPluginInfoSchema(PluginInfoSchema):
+    """能力型插件信息模型"""
+
+    database: list[str] = Field(default_factory=list, description='数据库支持')
+
+
 class AppPluginAppSchema(BaseModel):
     """应用级插件 app 配置模型"""
 
@@ -168,7 +174,7 @@ class CapabilityPluginConfigSchema(BaseModel):
 
     model_config = ConfigDict(extra='forbid')
 
-    plugin: PluginInfoSchema = Field(..., description='插件信息')
+    plugin: CapabilityPluginInfoSchema = Field(..., description='插件信息')
     settings: dict[str, Any] = Field(default_factory=dict, description='配置项')
 
     @field_validator('settings')
@@ -220,6 +226,9 @@ def validate_plugin_config(plugin_name: str, config: dict[str, Any]) -> PluginLe
     plugin_dir = Path(PLUGIN_DIR) / plugin_name
     model_dir = plugin_dir / 'model'
     if model_dir.is_dir():
+        if not config['plugin'].get('database'):
+            raise PluginConfigError(f'插件 {plugin_name} 包含 model 目录时必须声明支持的数据库')
+
         sql_dir = plugin_dir / 'sql'
         supported_db_types = []
         missing_details = []
