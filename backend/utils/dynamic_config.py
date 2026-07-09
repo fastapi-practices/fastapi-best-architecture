@@ -7,12 +7,12 @@ from backend.plugin.core import check_plugin_installed
 from backend.utils.serializers import select_list_serialize
 
 
-def _to_bool(value: str) -> bool:
+def str_to_bool(value: str) -> bool:
     """将字符串转换为布尔值"""
     return value == 'true'
 
 
-async def _load_config(
+async def load_config(
     db: AsyncSession,
     config_type_attr: str,
     mapping: dict[str, Callable[[str], object]],
@@ -66,9 +66,9 @@ async def load_user_security_config(db: AsyncSession) -> None:
         'USER_PASSWORD_HISTORY_CHECK_COUNT': int,
         'USER_PASSWORD_MIN_LENGTH': int,
         'USER_PASSWORD_MAX_LENGTH': int,
-        'USER_PASSWORD_REQUIRE_SPECIAL_CHAR': _to_bool,
+        'USER_PASSWORD_REQUIRE_SPECIAL_CHAR': str_to_bool,
     }
-    await _load_config(db, 'user_security', mapping, 'USER_SECURITY_CONFIG_STATUS')
+    await load_config(db, 'user_security', mapping, 'USER_SECURITY_CONFIG_STATUS')
 
 
 async def load_login_config(db: AsyncSession) -> None:
@@ -79,37 +79,6 @@ async def load_login_config(db: AsyncSession) -> None:
     :return:
     """
     mapping = {
-        'LOGIN_CAPTCHA_ENABLED': _to_bool,
+        'LOGIN_CAPTCHA_ENABLED': str_to_bool,
     }
-    await _load_config(db, 'login', mapping, 'LOGIN_CONFIG_STATUS')
-
-
-async def load_email_config(db: AsyncSession) -> None:
-    """
-    获取邮箱配置
-
-    :param db: 数据库会话
-    :return:
-    """
-    mapping = {
-        'EMAIL_HOST': str,
-        'EMAIL_PORT': int,
-        'EMAIL_SSL': _to_bool,
-        'EMAIL_USERNAME': str,
-        'EMAIL_PASSWORD': str,
-    }
-    await _load_config(db, 'email', mapping, 'EMAIL_CONFIG_STATUS')
-
-
-async def load_ai_config(db: AsyncSession) -> None:
-    """
-    获取 AI 配置
-
-    :param db: 数据库会话
-    :return:
-    """
-    mapping = {
-        'AI_EXA_API_KEY': str,
-        'AI_TAVILY_API_KEY': str,
-    }
-    await _load_config(db, 'ai', mapping, 'AI_CONFIG_STATUS')
+    await load_config(db, 'login', mapping, 'LOGIN_CONFIG_STATUS')
