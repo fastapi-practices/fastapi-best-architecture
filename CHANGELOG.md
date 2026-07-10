@@ -1,3 +1,42 @@
+<a id="v1.15.0"></a>
+# [v1.15.0](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v1.15.0) - 2026-07-10
+
+## What's Changed
+* Update changelog for v1.14.0 by [@wu-clan](https://github.com/wu-clan) in [#1194](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1194)
+* Add celery explicit idempotent protection by [@wu-clan](https://github.com/wu-clan) in [#1195](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1195)
+* Optimize plugin core and add otel hooks by [@wu-clan](https://github.com/wu-clan) in [#1196](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1196)
+* Fix user salt column LargeBinary length by [@IAseven](https://github.com/IAseven) in [#1197](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1197)
+* Add plugin deps command to the CLI by [@wu-clan](https://github.com/wu-clan) in [#1200](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1200)
+* Bump dependencies and pre-commits by [@wu-clan](https://github.com/wu-clan) in [#1205](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1205)
+* Fix redis pubsub socket timeout by [@wu-clan](https://github.com/wu-clan) in [#1206](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1206)
+* Add AI dynamic configuration menu by [@wu-clan](https://github.com/wu-clan) in [#1209](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1209)
+* Refactor cache key and prefix APIs by [@wu-clan](https://github.com/wu-clan) in [#1210](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1210)
+* Fix redis rate limiter bucket routing by [@wu-clan](https://github.com/wu-clan) in [#1212](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1212)
+* Add underlying security config for JWT by [@wu-clan](https://github.com/wu-clan) in [#1214](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1214)
+* Fix JWT auth dependency error propagation by [@wu-clan](https://github.com/wu-clan) in [#1215](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1215)
+* Add is superuser protocol to ctx by [@wu-clan](https://github.com/wu-clan) in [#1216](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1216)
+* Bump dependencies and pre-commits by [@wu-clan](https://github.com/wu-clan) in [#1218](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1218)
+* Add support for capability plugins by [@yzbf-lin](https://github.com/yzbf-lin) in [#1217](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1217)
+* Update capability plugin config validation by [@wu-clan](https://github.com/wu-clan) in [#1219](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1219)
+* Update document link addresses in the CLI by [@wu-clan](https://github.com/wu-clan) in [#1220](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1220)
+* Fix duplicate log reporting in OTEL by [@IAseven](https://github.com/IAseven) in [#1221](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1221)
+* Refactor plugin dynamic config loading by [@wu-clan](https://github.com/wu-clan) in [#1222](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1222)
+* Update xdb database file to release by [@wu-clan](https://github.com/wu-clan) in [#1223](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1223)
+* Update plugin config format validation by [@wu-clan](https://github.com/wu-clan) in [#1224](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1224)
+* Update the version number to 1.15.0 by [@wu-clan](https://github.com/wu-clan) in [#1225](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1225)
+
+
+**Full Changelog**: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.14.0...v1.15.0
+
+## Contributors
+
+<a href="https://github.com/IAseven"><img src="https://wsrv.nl/?url=https%3A%2F%2Fgithub.com%2FIAseven.png&w=128&h=128&fit=cover&mask=circle" width="64" height="64" alt="@IAseven"></a>
+<a href="https://github.com/wu-clan"><img src="https://wsrv.nl/?url=https%3A%2F%2Fgithub.com%2Fwu-clan.png&w=128&h=128&fit=cover&mask=circle" width="64" height="64" alt="@wu-clan"></a>
+<a href="https://github.com/yzbf-lin"><img src="https://wsrv.nl/?url=https%3A%2F%2Fgithub.com%2Fyzbf-lin.png&w=128&h=128&fit=cover&mask=circle" width="64" height="64" alt="@yzbf-lin"></a>
+
+[Changes][v1.15.0]
+
+
 <a id="v1.14.0"></a>
 # [v1.14.0](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v1.14.0) - 2026-05-30
 
@@ -1541,6 +1580,7 @@
 [Changes][v1.0.0]
 
 
+[v1.15.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.14.0...v1.15.0
 [v1.14.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.13.4...v1.14.0
 [v1.13.4]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.13.3...v1.13.4
 [v1.13.3]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.13.2...v1.13.3
