@@ -15,6 +15,25 @@ _VALID_TAGS: Final = frozenset({'ai', 'mcp', 'agent', 'auth', 'storage', 'notifi
 _VALID_DATABASES: Final = frozenset({'mysql', 'postgresql'})
 
 
+def _validate_settings(v: dict[str, Any]) -> dict[str, Any]:
+    """校验插件配置项名称和值类型"""
+    invalid_keys = [key for key in v if not key.isupper()]
+    if invalid_keys:
+        raise PluginConfigError(f'settings 配置项名称必须全大写，无效的配置项: {", ".join(invalid_keys)}')
+
+    invalid_values = [
+        key
+        for key, value in v.items()
+        if not isinstance(value, (str, int, float, bool))
+        and not (isinstance(value, list) and all(isinstance(item, str) for item in value))
+    ]
+    if invalid_values:
+        raise PluginConfigError(
+            f'settings 配置项值仅支持字符串、数字、布尔值或字符串列表，无效的配置项: {", ".join(invalid_values)}'
+        )
+    return v
+
+
 class PluginInfoSchema(BaseModel):
     """插件信息模型"""
 
@@ -125,12 +144,8 @@ class AppPluginConfigSchema(BaseModel):
     @field_validator('settings')
     @classmethod
     def validate_settings(cls, v: dict[str, Any]) -> dict[str, Any]:
-        """校验配置项名称必须全大写"""
-        if v:
-            invalid_keys = [key for key in v if not key.isupper()]
-            if invalid_keys:
-                raise PluginConfigError(f'settings 配置项名称必须全大写，无效的配置项: {", ".join(invalid_keys)}')
-        return v
+        """校验配置项"""
+        return _validate_settings(v)
 
 
 class ExtendPluginConfigSchema(BaseModel):
@@ -161,12 +176,8 @@ class ExtendPluginConfigSchema(BaseModel):
     @field_validator('settings')
     @classmethod
     def validate_settings(cls, v: dict[str, Any]) -> dict[str, Any]:
-        """校验配置项名称必须全大写"""
-        if v:
-            invalid_keys = [key for key in v if not key.isupper()]
-            if invalid_keys:
-                raise PluginConfigError(f'settings 配置项名称必须全大写，无效的配置项: {", ".join(invalid_keys)}')
-        return v
+        """校验配置项"""
+        return _validate_settings(v)
 
 
 class CapabilityPluginConfigSchema(BaseModel):
@@ -180,12 +191,8 @@ class CapabilityPluginConfigSchema(BaseModel):
     @field_validator('settings')
     @classmethod
     def validate_settings(cls, v: dict[str, Any]) -> dict[str, Any]:
-        """校验配置项名称必须全大写"""
-        if v:
-            invalid_keys = [key for key in v if not key.isupper()]
-            if invalid_keys:
-                raise PluginConfigError(f'settings 配置项名称必须全大写，无效的配置项: {", ".join(invalid_keys)}')
-        return v
+        """校验配置项"""
+        return _validate_settings(v)
 
 
 def validate_plugin_config(plugin_name: str, config: dict[str, Any]) -> PluginLevelType:

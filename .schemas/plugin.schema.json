@@ -111,7 +111,11 @@
         "oneOf": [
           { "type": "string" },
           { "type": "number" },
-          { "type": "boolean" }
+          { "type": "boolean" },
+          {
+            "type": "array",
+            "items": { "type": "string" }
+          }
         ]
       }
     },
