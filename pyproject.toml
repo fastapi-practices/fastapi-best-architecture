@@ -9,7 +9,7 @@ authors = [
 ]
 dependencies = [
   "alembic>=1.18.5",
-  "asgiref>=3.11.1",
+  "asgiref>=3.12.1",
   "asyncmy>=0.2.11",
   "asyncpg>=0.31.0",
   "bcrypt>=5.0.0",
@@ -21,10 +21,10 @@ dependencies = [
   # https://github.com/celery/celery/issues/7874
   "celery-aio-pool>=0.1.0rc8",
   "cryptography>=47.0.0",
-  "dulwich>=1.2.8",
+  "dulwich>=1.2.12",
   "fast-captcha>=0.3.2",
   "fastapi-pagination[sqlalchemy]>=0.15.15",
-  "fastapi[standard-no-fastapi-cloud-cli]>=0.139.0",
+  "fastapi[standard-no-fastapi-cloud-cli]>=0.139.2",
   "flower>=2.0.1",
   "gevent>=26.5.0",
   "granian>=2.7.9",
@@ -32,15 +32,15 @@ dependencies = [
   "jinja2>=3.1.6",
   "loguru>=0.7.3",
   "msgspec>=0.21.1",
-  "opentelemetry-exporter-otlp-proto-grpc>=1.43.0",
-  "opentelemetry-instrumentation-asyncio>=0.64b0",
-  "opentelemetry-instrumentation-celery>=0.64b0",
-  "opentelemetry-instrumentation-fastapi>=0.64b0",
-  "opentelemetry-instrumentation-httpx>=0.64b0",
-  "opentelemetry-instrumentation-logging>=0.64b0",
-  "opentelemetry-instrumentation-redis>=0.64b0",
-  "opentelemetry-instrumentation-sqlalchemy>=0.64b0",
-  "opentelemetry-sdk>=1.43.0",
+  "opentelemetry-exporter-otlp-proto-grpc>=1.44.0",
+  "opentelemetry-instrumentation-asyncio>=0.65b0",
+  "opentelemetry-instrumentation-celery>=0.65b0",
+  "opentelemetry-instrumentation-fastapi>=0.65b0",
+  "opentelemetry-instrumentation-httpx>=0.65b0",
+  "opentelemetry-instrumentation-logging>=0.65b0",
+  "opentelemetry-instrumentation-redis>=0.65b0",
+  "opentelemetry-instrumentation-sqlalchemy>=0.65b0",
+  "opentelemetry-sdk>=1.44.0",
   "prometheus-client>=0.25.0",
   "psutil>=7.2.2",
   # https://github.com/fastapi-practices/fastapi_best_architecture/issues/887
@@ -72,7 +72,7 @@ dev = [
   "pytest-sugar>=1.1.1",
 ]
 lint = [
-  "prek>=0.4.8",
+  "prek>=0.4.10",
 ]
 server = [
   "aio-pika>=9.6.2",
