@@ -4,7 +4,7 @@ from backend.common.exception import errors
 from backend.core.conf import settings
 
 
-async def demo_site(request: Request) -> None:  # noqa: RUF029
+async def demo_site(request: Request) -> None:  # ruff:ignore[unused-async]
     """
     演示站点
 

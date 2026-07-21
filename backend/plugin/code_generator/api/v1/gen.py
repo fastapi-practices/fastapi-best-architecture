@@ -68,7 +68,7 @@ async def generate_code(db: CurrentSession, pk: Annotated[int, Path(description=
 
 
 @router.get('/{pk}', summary='下载代码', dependencies=[DependsJwtAuth])
-async def download_code(db: CurrentSession, pk: Annotated[int, Path(description='业务 ID')]):  # noqa: ANN201
+async def download_code(db: CurrentSession, pk: Annotated[int, Path(description='业务 ID')]):  # ruff:ignore[missing-return-type-undocumented-public-function]
     bio = await gen_service.download(db=db, pk=pk)
     return StreamingResponse(
         bio,

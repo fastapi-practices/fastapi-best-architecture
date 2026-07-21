@@ -47,12 +47,12 @@ class TaskScheduler(Base):
     no_changes: bool = False
 
     @staticmethod
-    def before_insert_or_update(mapper, connection, target) -> None:  # noqa: ANN001
+    def before_insert_or_update(mapper, connection, target) -> None:  # ruff:ignore[missing-type-function-argument]
         if target.expire_seconds is not None and target.expire_time:
             raise errors.ConflictError(msg='expires 和 expire_seconds 只能设置一个')
 
     @classmethod
-    def changed(cls, mapper, connection, target) -> None:  # noqa: ANN001
+    def changed(cls, mapper, connection, target) -> None:  # ruff:ignore[missing-type-function-argument]
         if not target.no_changes:
             cls.update_changed(mapper, connection, target)
 
@@ -62,7 +62,7 @@ class TaskScheduler(Base):
         await redis_client.set(f'{settings.CELERY_REDIS_PREFIX}:last_update', timezone.to_str(now))
 
     @classmethod
-    def update_changed(cls, mapper, connection, target) -> None:  # noqa: ANN001
+    def update_changed(cls, mapper, connection, target) -> None:  # ruff:ignore[missing-type-function-argument]
         asyncio.create_task(cls.update_changed_async())
 
 

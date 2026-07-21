@@ -1,1 +1,1 @@
-from .actions import *  # noqa: F403
+from .actions import *  # ruff:ignore[undefined-local-with-import-star]

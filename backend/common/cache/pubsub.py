@@ -28,7 +28,7 @@ class CachePubSubManager:
             log.warning(f'[CachePubSub] 发布通知失败: {e}')
 
     @staticmethod
-    async def subscribe_and_listen() -> None:  # noqa: C901
+    async def subscribe_and_listen() -> None:  # ruff:ignore[complex-structure]
         """订阅并监听缓存失效通知"""
         reconnect_attempts = 0
 

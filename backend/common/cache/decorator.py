@@ -105,7 +105,7 @@ def user_key_builder() -> str:
     return str(user_id)
 
 
-def cached(  # noqa: C901
+def cached(  # ruff:ignore[complex-structure]
     namespace: str,
     *,
     key: str | None = None,
@@ -122,7 +122,7 @@ def cached(  # noqa: C901
     if key is not None and key_builder is not None:
         raise errors.ServerError(msg='缓存 key 和 key_builder 不能同时使用')
 
-    def decorator(func: Callable[P, T]) -> Callable[P, T]:  # noqa: C901
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:  # ruff:ignore[complex-structure]
         @functools.wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             cache_key = await _build_cache_key(namespace, key, key_builder, *args, **kwargs)
@@ -172,7 +172,7 @@ def cached(  # noqa: C901
     return decorator
 
 
-def cache_invalidate(  # noqa: C901
+def cache_invalidate(  # ruff:ignore[complex-structure]
     namespace: str,
     *,
     key: str | None = None,

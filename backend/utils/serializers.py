@@ -74,7 +74,7 @@ def select_as_dict(row: R, *, use_alias: bool = False) -> dict[str, Any]:
     return result
 
 
-def select_join_serialize(  # noqa: C901
+def select_join_serialize(  # ruff:ignore[complex-structure]
     row: R | Sequence[R],
     relationships: list[str] | None = None,
     *,
@@ -248,7 +248,7 @@ def select_join_serialize(  # noqa: C901
                     field_list.append(nt_key)
                 field_list = list(dict.fromkeys(field_list))
 
-            namedtuple_cache[model_name] = namedtuple(model_name.capitalize(), field_list)  # noqa: PYI024
+            namedtuple_cache[model_name] = namedtuple(model_name.capitalize(), field_list)  # ruff:ignore[collections-named-tuple]
 
     # 嵌套关系层级结构（一次性构建）
     hierarchy = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
@@ -262,7 +262,7 @@ def select_join_serialize(  # noqa: C901
             main_id = get_obj_id(row_elements[0])
             m_type_name = type(row_elements[0]).__name__.lower()
 
-            for idx, rel_obj in enumerate(row_elements[1:], 1):  # noqa: B007
+            for idx, rel_obj in enumerate(row_elements[1:], 1):  # ruff:ignore[unused-loop-control-variable]
                 if rel_obj is None:
                     continue
 
@@ -380,7 +380,7 @@ def select_join_serialize(  # noqa: C901
         result_data = build_nested(main_id, main_obj) if has_relationships else build_flat(main_id, main_obj)
 
         if not return_as_dict:
-            result_type = namedtuple('Result', result_data.keys())  # noqa: PYI024
+            result_type = namedtuple('Result', result_data.keys())  # ruff:ignore[collections-named-tuple]
             final_results.append(result_type(**result_data))
         else:
             final_results.append(result_data)

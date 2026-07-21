@@ -42,7 +42,7 @@ logger = get_logger('fba.schedulers')
 class ModelEntry(ScheduleEntry):
     """任务调度实体"""
 
-    def __init__(self, model: TaskScheduler, app=None) -> None:  # noqa:ANN001,C901
+    def __init__(self, model: TaskScheduler, app=None) -> None:  # ruff:ignore[missing-type-function-argument, complex-structure]
         super().__init__(
             app=app or current_app._get_current_object(),
             name=model.name,
@@ -129,7 +129,7 @@ class ModelEntry(ScheduleEntry):
 
         return self.schedule.is_due(self.last_run_at)
 
-    def __next__(self):  # noqa: ANN204
+    def __next__(self):  # ruff:ignore[missing-return-type-special-method]
         self.model.last_run_time = timezone.now()
         self.model.total_run_count += 1
         self.model.no_changes = True
@@ -161,7 +161,7 @@ class ModelEntry(ScheduleEntry):
                 logger.warning(f'任务 {self.model.name} 不存在，跳过更新')
 
     @classmethod
-    async def from_entry(cls, name, app=None, **entry) -> ModelEntry:  # noqa: ANN001
+    async def from_entry(cls, name, app=None, **entry) -> ModelEntry:  # ruff:ignore[missing-type-function-argument]
         """保存或更新本地任务调度"""
         async with async_db_session.begin() as db:
             stmt = select(TaskScheduler).where(TaskScheduler.name == name, TaskScheduler.deleted == 0)
@@ -196,7 +196,7 @@ class ModelEntry(ScheduleEntry):
                 if not obj:
                     obj = TaskScheduler(**CreateTaskSchedulerParam(task=task, **spec).model_dump())
             elif isinstance(schedule, schedules.crontab):
-                crontab = f'{schedule._orig_minute} {schedule._orig_hour} {schedule._orig_day_of_month} {schedule._orig_month_of_year} {schedule._orig_day_of_week}'  # noqa: E501
+                crontab = f'{schedule._orig_minute} {schedule._orig_hour} {schedule._orig_day_of_month} {schedule._orig_month_of_year} {schedule._orig_day_of_week}'  # ruff:ignore[line-too-long]
                 crontab_verify(crontab)
                 spec = {
                     'name': name,
@@ -229,7 +229,7 @@ class ModelEntry(ScheduleEntry):
         for k in ['id', 'created_time', 'updated_time', 'deleted', 'deleted_time']:
             try:
                 del model_dict[k]
-            except KeyError:  # noqa:PERF203
+            except KeyError:  # ruff:ignore[try-except-in-loop]
                 continue
         model_dict.update(
             args=json.dumps(args, ensure_ascii=False) if args else None,
@@ -297,7 +297,7 @@ class DatabaseScheduler(Scheduler):
             return False
         return super().schedules_equal(*args, **kwargs)
 
-    def reserve(self, entry):  # noqa: ANN001, ANN201
+    def reserve(self, entry):  # ruff:ignore[missing-type-function-argument, missing-return-type-undocumented-public-function]
         """重写父函数"""
         new_entry = next(entry)
         # 需要按名称存储条目，因为条目可能会发生变化
@@ -428,7 +428,7 @@ class DatabaseScheduler(Scheduler):
 
 
 @beat_init.connect
-def acquire_distributed_beat_lock(sender=None, **kwargs) -> None:  # noqa: ANN001
+def acquire_distributed_beat_lock(sender=None, **kwargs) -> None:  # ruff:ignore[missing-type-function-argument]
     """
     尝试在启动时获取锁
 

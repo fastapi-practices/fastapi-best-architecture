@@ -76,7 +76,7 @@ async def _validation_exception_handler(exc: RequestValidationError | Validation
     return MsgSpecJSONResponse(status_code=StandardResponseCode.HTTP_422, content=content)
 
 
-def register_exception(app: FastAPI) -> None:  # noqa: C901
+def register_exception(app: FastAPI) -> None:  # ruff:ignore[complex-structure]
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):
         """

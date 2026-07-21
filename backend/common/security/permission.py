@@ -54,7 +54,7 @@ def get_data_permission_models() -> dict[str, object]:
     return {getattr(model, '__name__', str(model)): model for model in get_all_models()}
 
 
-def filter_data_permission(  # noqa: C901
+def filter_data_permission(  # ruff:ignore[complex-structure]
     request: Request, *models: type[Model] | AliasedClass | Alias | Table
 ) -> ColumnElement[bool]:
     """

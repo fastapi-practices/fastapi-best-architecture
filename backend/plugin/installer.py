@@ -51,7 +51,7 @@ async def _append_env_example(plugin_path: anyio.Path) -> None:
         await f.write(new_content)
 
 
-async def install_zip_plugin(file: UploadFile | str) -> str:  # noqa: C901
+async def install_zip_plugin(file: UploadFile | str) -> str:  # ruff:ignore[complex-structure]
     """
     安装 ZIP 插件
 
@@ -209,7 +209,7 @@ def remove_plugin(plugin_dir: os.PathLike) -> None:
     """
     import shutil
 
-    def _on_error(func, path, _exc_info) -> None:  # noqa: ANN001
+    def _on_error(func, path, _exc_info) -> None:  # ruff:ignore[missing-type-function-argument]
         os.chmod(path, stat.S_IWRITE)
         func(path)
 

@@ -8,7 +8,7 @@ from typing import Any
 from backend.common.log import log
 
 
-def timer(func) -> Callable:  # noqa: ANN001
+def timer(func) -> Callable:  # ruff:ignore[missing-type-function-argument]
     """函数耗时计时装饰器"""
 
     @functools.wraps(func)
@@ -27,7 +27,7 @@ def timer(func) -> Callable:  # noqa: ANN001
         _log_time(func, elapsed_seconds)
         return result
 
-    def _log_time(func, elapsed: float) -> None:  # noqa: ANN001
+    def _log_time(func, elapsed: float) -> None:  # ruff:ignore[missing-type-function-argument]
         # 智能选择单位（秒、毫秒、微秒、纳秒）
         if elapsed >= 1:
             unit, factor = 's', 1

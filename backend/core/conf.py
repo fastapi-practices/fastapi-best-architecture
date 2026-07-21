@@ -325,6 +325,21 @@ class Settings(BaseSettings):
     EMAIL_CAPTCHA_REDIS_PREFIX: str
     EMAIL_CAPTCHA_EXPIRE_SECONDS: int
 
+    ##################################################
+    # [ Plugin ] ai
+    ##################################################
+    # 动态配置
+    AI_EXA_API_KEY: str = ''
+    AI_TAVILY_API_KEY: str = ''
+
+    # 基础配置（in plugin.toml）
+    AI_CODE_MODE_DYNAMIC_CATALOG: bool = False
+    AI_CODE_MODE_MAX_RETRIES: int = 3
+    AI_CODE_MODE_TOOLS: list[str] = []
+    AI_CONTEXT_WARNING_THRESHOLD: float = 0.8
+    AI_HTTP_MAX_RETRIES: int = 5
+    AI_MCP_MAX_RETRIES: int = 1
+
     @model_validator(mode='before')
     @classmethod
     def check_env(cls, values: Any) -> Any:

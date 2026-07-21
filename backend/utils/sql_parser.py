@@ -36,7 +36,7 @@ async def parse_sql_script(filepath: str, *, is_destroy: bool = False) -> list[s
     for statement in statements:
         if not any(statement.strip().lower().startswith(prefix) for prefix in allowed_prefixes):
             raise errors.RequestError(
-                msg=f'SQL 脚本 {filepath} 存在非法操作，仅允许：{", ".join(item.upper() for item in sorted(allowed_prefixes))}'  # noqa: E501
+                msg=f'SQL 脚本 {filepath} 存在非法操作，仅允许：{", ".join(item.upper() for item in sorted(allowed_prefixes))}'  # ruff:ignore[line-too-long]
             )
 
     return statements

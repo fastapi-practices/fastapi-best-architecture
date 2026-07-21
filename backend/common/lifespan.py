@@ -58,7 +58,7 @@ class LifespanManager:
         """
 
         @asynccontextmanager
-        async def combined_lifespan(app: FastAPI):  # noqa: ANN202
+        async def combined_lifespan(app: FastAPI):  # ruff:ignore[missing-return-type-private-function]
             state: dict[str, Any] = {}
             async with AsyncExitStack() as exit_stack:
                 for stage in LifespanStage:
