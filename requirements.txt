@@ -74,7 +74,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   loguru
     #   pytest
     #   typer
-cryptography==49.0.0
+cryptography==50.0.0
     # via fastapi-best-architecture
 dnspython==2.8.0
     # via email-validator
