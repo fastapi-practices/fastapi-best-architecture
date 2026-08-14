@@ -184,6 +184,6 @@ for source, engine in _database_engines.items():
         partial(observe_sqlalchemy_pool_connections, pool=engine.sync_engine.pool, source=source),
     )
 
-# Session 类型别名
+# Session Annotated
 CurrentSession: TypeAlias = Annotated[AsyncSession, Depends(get_db)]
 CurrentSessionTransaction: TypeAlias = Annotated[AsyncSession, Depends(get_db_transaction)]
