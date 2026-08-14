@@ -114,6 +114,7 @@ class PluginLevelType(StrEnum):
     """插件级别类型"""
 
     app = 'app'
+    capability = 'capability'
     extend = 'extend'
 
 

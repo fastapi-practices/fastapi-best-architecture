@@ -45,7 +45,7 @@ class Task(MappedBase):
         return f'<Task {self.task_id} state: {self.status}>'
 
     @classmethod
-    def configure(cls, schema=None, name=None) -> None:  # noqa: ANN001
+    def configure(cls, schema=None, name=None) -> None:  # ruff:ignore[missing-type-function-argument]
         cls.__table__.schema = schema
         cls.id.default.schema = schema
         cls.__table__.name = name or cls.__tablename__
@@ -88,7 +88,7 @@ class TaskSet(MappedBase):
     result = sa.Column(PickleType, nullable=True)
     date_done = sa.Column(TimeZone, default=timezone.now, nullable=True)
 
-    def __init__(self, taskset_id, result) -> None:  # noqa: ANN001
+    def __init__(self, taskset_id, result) -> None:  # ruff:ignore[missing-type-function-argument]
         self.taskset_id = taskset_id
         self.result = result
 
@@ -103,7 +103,7 @@ class TaskSet(MappedBase):
         return f'<TaskSet: {self.taskset_id}>'
 
     @classmethod
-    def configure(cls, schema=None, name=None) -> None:  # noqa: ANN001
+    def configure(cls, schema=None, name=None) -> None:  # ruff:ignore[missing-type-function-argument]
         cls.__table__.schema = schema
         cls.id.default.schema = schema
         cls.__table__.name = name or cls.__tablename__

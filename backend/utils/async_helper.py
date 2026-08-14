@@ -57,7 +57,7 @@ def run_await(coro: Callable[..., Awaitable[T]] | Callable[..., Coroutine[Any, A
     """将协程包装在函数中，直到它执行完为止"""
 
     @wraps(coro)
-    def wrapped(*args, **kwargs):  # noqa: ANN202
+    def wrapped(*args, **kwargs):  # ruff:ignore[missing-return-type-private-function]
         inner = coro(*args, **kwargs)
         if not asyncio.iscoroutine(inner) and not asyncio.isfuture(inner):
             raise TypeError(f'Expected coroutine or future, got {type(inner)}')

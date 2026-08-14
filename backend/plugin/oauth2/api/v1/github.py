@@ -41,7 +41,7 @@ async def get_github_oauth2_url() -> ResponseSchemaModel[str]:
     description='Github 授权后，自动重定向到当前地址并获取用户信息，通过用户信息自动创建系统用户',
     dependencies=[Depends(RateLimiter(Rate(5, Duration.MINUTE)))],
 )
-async def github_oauth2_callback(  # noqa: ANN201
+async def github_oauth2_callback(  # ruff:ignore[missing-return-type-undocumented-public-function]
     db: CurrentSessionTransaction,
     response: Response,
     background_tasks: BackgroundTasks,

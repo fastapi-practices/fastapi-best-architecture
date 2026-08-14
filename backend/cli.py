@@ -234,7 +234,7 @@ async def init(db: AsyncSession, redis: RedisCli) -> None:
     """交互式初始化数据库表结构和数据"""
     panel_content = _build_db_config_panel_content()
     pk_details = panel_content.from_markup(
-        '[link=https://fastapi-practices.github.io/fastapi_best_architecture_docs/backend/reference/pk.html]（了解详情）[/]'
+        '[link=https://docs.fba.wu-clan.cc/fastapi_best_architecture_docs/backend/reference/pk.html]（了解详情）[/]'
     )
     panel_content.append(pk_details)
     panel_content.append('\n\n【Redis 配置】', style='bold green')
@@ -285,7 +285,7 @@ async def init(db: AsyncSession, redis: RedisCli) -> None:
         console.warning('已取消初始化操作')
 
 
-def run(host: str, port: int, reload: bool, workers: int) -> None:  # noqa: FBT001
+def run(host: str, port: int, reload: bool, workers: int) -> None:  # ruff:ignore[boolean-type-hint-positional-argument]
     """启动 API 服务"""
     url = f'http://{host}:{port}'
     docs_url = url + settings.FASTAPI_DOCS_URL
@@ -316,7 +316,7 @@ def run(host: str, port: int, reload: bool, workers: int) -> None:  # noqa: FBT0
         panel_content.append(f'\n📡 OpenAPI JSON: {openapi_url}', style='bold magenta')
 
     panel_content.append('\n🌐 架构官方文档: ', style='bold magenta')
-    panel_content.append('https://fastapi-practices.github.io/fastapi_best_architecture_docs/')
+    panel_content.append('https://docs.fba.wu-clan.cc/fastapi_best_architecture_docs/')
 
     console.print(Panel(panel_content, title=f'fba (v{__version__})', border_style='purple', padding=(1, 2)))
     granian.Granian(
@@ -361,11 +361,11 @@ def run_celery_flower(port: int, basic_auth: str) -> None:
         pass
 
 
-async def install_plugin(  # noqa: C901
+async def install_plugin(  # ruff:ignore[complex-structure]
     path: str | None,
     repo_url: str | None,
-    frontend: bool,  # noqa: FBT001
-    no_sql: bool,  # noqa: FBT001
+    frontend: bool,  # ruff:ignore[boolean-type-hint-positional-argument]
+    no_sql: bool,  # ruff:ignore[boolean-type-hint-positional-argument]
     db_type: DataBaseType,
     pk_type: PrimaryKeyType,
 ) -> None:
@@ -470,7 +470,7 @@ async def sync_deps(plugin: str | None, *, no_project: bool = False, no_plugin: 
         await sync_plugin_deps(plugin)
 
 
-async def remove_plugin(plugin: str | None, *, no_sql: bool = False) -> None:  # noqa: C901
+async def remove_plugin(plugin: str | None, *, no_sql: bool = False) -> None:  # ruff:ignore[complex-structure]
     """卸载插件"""
     if settings.ENVIRONMENT != 'dev':
         raise cappa.Exit('插件卸载仅在开发环境可用', code=1)

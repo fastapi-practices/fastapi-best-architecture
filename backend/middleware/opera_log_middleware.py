@@ -30,7 +30,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
     opera_log_queue_name = 'opera_log_queue'
     opera_log_queue: Queue[tuple[dict[str, Any], CreateOperaLogParam]] = Queue(maxsize=settings.OPERA_LOG_QUEUE_MAXSIZE)
 
-    async def dispatch(self, request: Request, call_next: Any) -> Response:  # noqa: C901
+    async def dispatch(self, request: Request, call_next: Any) -> Response:  # ruff:ignore[complex-structure]
         """
         处理请求并记录操作日志
 
@@ -134,7 +134,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
 
         return response
 
-    async def get_request_args(self, request: Request) -> dict[str, Any] | None:  # noqa: C901
+    async def get_request_args(self, request: Request) -> dict[str, Any] | None:  # ruff:ignore[complex-structure]
         """
         获取请求参数
 

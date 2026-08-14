@@ -133,7 +133,7 @@ class UserService:
         return count
 
     @staticmethod
-    async def update_permission(*, db: AsyncSession, request: Request, pk: int, type: UserPermissionType) -> int:  # noqa: C901
+    async def update_permission(*, db: AsyncSession, request: Request, pk: int, type: UserPermissionType) -> int:  # ruff:ignore[complex-structure]
         """
         更新用户权限
 

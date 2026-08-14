@@ -12,6 +12,25 @@ from backend.database.redis import redis_client
 from backend.plugin.errors import PluginInjectError
 
 
+async def repair_plugin_cache(plugin: str) -> str:
+    """
+    修复丢失的插件状态缓存
+
+    :param plugin: 插件名称
+    :return:
+    """
+    from backend.plugin.core import load_plugin_config
+    from backend.plugin.validator import validate_plugin_config
+
+    plugin_config = load_plugin_config(plugin)
+    validate_plugin_config(plugin, plugin_config)
+    plugin_config['plugin']['name'] = plugin
+    plugin_config['plugin']['enable'] = str(StatusType.enable.value)
+    plugin_info = json.dumps(plugin_config, ensure_ascii=False)
+    await redis_client.set(f'{settings.PLUGIN_REDIS_PREFIX}:{plugin}', plugin_info)
+    return plugin_info
+
+
 def get_plugin_enable(plugin_info: str | None, default_status: int) -> str:
     """
     解析插件启用状态
@@ -48,10 +67,14 @@ class PluginStatusChecker:
         :param request: FastAPI 请求对象
         :return:
         """
-        plugin_info = cast('str', await redis_client.get(f'{settings.PLUGIN_REDIS_PREFIX}:{self.plugin}'))
+        plugin_info = cast('str | None', await redis_client.get(f'{settings.PLUGIN_REDIS_PREFIX}:{self.plugin}'))
         if not plugin_info:
-            log.error('插件状态未初始化或丢失，需重启服务自动修复')
-            raise PluginInjectError('插件状态未初始化或丢失，请联系系统管理员')
+            log.warning('插件 {} 状态未初始化或丢失，尝试自动修复', self.plugin)
+            try:
+                plugin_info = await repair_plugin_cache(self.plugin)
+            except Exception as e:
+                log.exception('插件 {} 状态自动修复失败', self.plugin)
+                raise PluginInjectError('插件状态未初始化或丢失，请联系系统管理员') from e
 
         if get_plugin_enable(plugin_info, StatusType.disable.value) != str(StatusType.enable.value):
             raise errors.ServerError(msg=f'插件 {self.plugin} 未启用，请联系系统管理员')

@@ -8,11 +8,15 @@ from backend.core.conf import settings
 _PROMETHEUS_SQLALCHEMY_POOL_CONNECTIONS_GAUGE = Gauge(
     name='fba_sqlalchemy_pool_connections',
     documentation='SQLAlchemy 连接池状态',
-    labelnames=['app_name', 'state'],
+    labelnames=['app_name', 'source', 'state'],
 )
 
 
-def observe_sqlalchemy_pool_connections(*_event_args: Any, pool: QueuePool) -> None:
+def observe_sqlalchemy_pool_connections(
+    *_event_args: Any,
+    pool: QueuePool,
+    source: str = 'default',
+) -> None:
     """监听 SQLAlchemy 连接池状态"""
     total_size = pool.size()
     checked_out_size = pool.checkedout()
@@ -20,14 +24,14 @@ def observe_sqlalchemy_pool_connections(*_event_args: Any, pool: QueuePool) -> N
     idle_size = max(total_size + overflow_size - checked_out_size, 0)
 
     _PROMETHEUS_SQLALCHEMY_POOL_CONNECTIONS_GAUGE.labels(
-        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, state='size'
+        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, source=source, state='size'
     ).set(total_size)
     _PROMETHEUS_SQLALCHEMY_POOL_CONNECTIONS_GAUGE.labels(
-        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, state='checked_out'
+        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, source=source, state='checked_out'
     ).set(checked_out_size)
     _PROMETHEUS_SQLALCHEMY_POOL_CONNECTIONS_GAUGE.labels(
-        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, state='idle'
+        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, source=source, state='idle'
     ).set(idle_size)
     _PROMETHEUS_SQLALCHEMY_POOL_CONNECTIONS_GAUGE.labels(
-        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, state='overflow'
+        app_name=settings.GRAFANA_PROMETHEUS_APP_NAME, source=source, state='overflow'
     ).set(overflow_size)

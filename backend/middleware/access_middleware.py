@@ -22,7 +22,7 @@ from backend.utils.trace_id import get_request_trace_id
 class AccessMiddleware(BaseHTTPMiddleware):
     """访问日志中间件"""
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:  # noqa: C901
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:  # ruff:ignore[complex-structure]
         """
         处理请求并记录访问日志
 

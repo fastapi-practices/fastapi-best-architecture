@@ -28,8 +28,8 @@ router = APIRouter()
 
 
 @router.get('', summary='Server 监控', dependencies=[DependsSuperUser])
-async def get_server_info() -> ResponseSchemaModel[ServerMonitorInfo]:  # noqa: C901
-    def get_all_info() -> ServerMonitorInfo:  # noqa: C901
+async def get_server_info() -> ResponseSchemaModel[ServerMonitorInfo]:  # ruff:ignore[complex-structure]
+    def get_all_info() -> ServerMonitorInfo:  # ruff:ignore[complex-structure]
         # CPU 信息
         cpu_data = {
             'physical_num': psutil.cpu_count(logical=False) or 0,

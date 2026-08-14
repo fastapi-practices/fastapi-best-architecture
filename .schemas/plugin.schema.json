@@ -4,14 +4,14 @@
   "description": "JSON Schema for FastAPI Best Architecture plugin.toml files. See: https://fastapi-practices.github.io/fastapi_best_architecture_docs/plugin/dev.html",
 
   "type": "object",
-  "required": ["plugin", "app"],
+  "required": ["plugin"],
   "additionalProperties": false,
 
   "properties": {
     "plugin": {
       "type": "object",
       "description": "Plugin metadata",
-      "required": ["summary", "version", "description", "author", "tags", "database"],
+      "required": ["summary", "version", "description", "author", "tags"],
       "additionalProperties": false,
       "x-tombi-table-keys-order": "schema",
       "properties": {
@@ -55,7 +55,7 @@
         "database": {
           "type": "array",
           "minItems": 1,
-          "description": "Supported databases",
+          "description": "Supported databases. Required for app-level and extend-level plugins, optional for capability-level plugins without models.",
           "items": {
             "type": "string",
             "enum": ["mysql", "postgresql"]
@@ -111,7 +111,11 @@
         "oneOf": [
           { "type": "string" },
           { "type": "number" },
-          { "type": "boolean" }
+          { "type": "boolean" },
+          {
+            "type": "array",
+            "items": { "type": "string" }
+          }
         ]
       }
     },

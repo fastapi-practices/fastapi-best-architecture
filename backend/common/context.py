@@ -22,6 +22,7 @@ class TypedContextProtocol(Protocol):
     language: str
 
     user_id: int | None
+    is_superuser: bool
     tenant_id: int
 
 
