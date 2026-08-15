@@ -1,19 +1,19 @@
 import sys
 
 from collections.abc import AsyncGenerator, Mapping
+from contextlib import AbstractAsyncContextManager
 from functools import partial
 from typing import Annotated, Any, TypeAlias
 from uuid import uuid4
 
 from fastapi import Depends
-from sqlalchemy import URL, Engine, event
+from sqlalchemy import URL, event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import Session
 
 from backend.common.enums import DataBaseType
 from backend.common.log import log
@@ -74,56 +74,74 @@ def create_database_async_engine(url: str | URL) -> AsyncEngine:
         sys.exit()
 
 
-class DatabaseSession(Session):
-    """数据库数据源会话"""
+class DatabaseAsyncSessionMaker:
+    """按数据源名选择对应的 async_sessionmaker"""
 
-    def __init__(
-        self,
-        *,
-        source: str = 'default',
-        source_binds: Mapping[str, Engine] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        source_binds = source_binds or {}
+    def __init__(self, makers: Mapping[str, async_sessionmaker[AsyncSession]]) -> None:
+        if 'default' not in makers:
+            raise ValueError('会话工厂必须包含 default 数据源')
+        self._makers = dict(makers)
+
+    def _get_maker(self, source: str) -> async_sessionmaker[AsyncSession]:
+        """
+        获取指定数据源的会话工厂
+
+        :param source: 数据源名称
+        :return:
+        """
         try:
-            engine = source_binds[source]
+            return self._makers[source]
         except KeyError as e:
             raise ValueError(f'未知数据库数据源: {source}') from e
 
-        kwargs['bind'] = engine
-        kwargs['binds'] = {MappedBase: engine}
-        super().__init__(**kwargs)
+    def __call__(self, source: str = 'default', **kwargs: Any) -> AsyncSession:
+        """
+        创建数据库会话
+
+        :param source: 数据源名称
+        :return:
+        """
+        return self._get_maker(source)(**kwargs)
+
+    def begin(self, source: str = 'default') -> AbstractAsyncContextManager[AsyncSession]:
+        """
+        创建会话并开启事务，退出时提交并关闭
+
+        :param source: 数据源名称
+        :return:
+        """
+        return self._get_maker(source).begin()
 
 
 def create_database_async_session(
     async_engine: AsyncEngine,
     *,
     source_binds: Mapping[str, AsyncEngine] | None = None,
-) -> async_sessionmaker[AsyncSession | Any]:
-    """创建支持命名数据源的数据库异步会话"""
-    async_binds = dict(source_binds or {})
-    async_binds.setdefault('default', async_engine)
-    sync_binds = {source: bind.sync_engine for source, bind in async_binds.items()}
-    return async_sessionmaker(
-        bind=async_engine,
-        class_=AsyncSession,
-        sync_session_class=DatabaseSession,
-        source='default',
-        source_binds=sync_binds,
-        autoflush=False,  # 禁用自动刷新
-        expire_on_commit=False,  # 禁用提交时过期
-    )
+) -> DatabaseAsyncSessionMaker:
+    """
+    创建支持命名数据源的数据库异步会话
+
+    :param async_engine: 默认数据源异步引擎
+    :param source_binds: 额外数据源异步引擎
+    :return:
+    """
+    engines = dict(source_binds or {})
+    engines.setdefault('default', async_engine)
+    return DatabaseAsyncSessionMaker({
+        source: async_sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+        for source, engine in engines.items()
+    })
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """获取默认数据源会话"""
-    async with async_db_session(source='default') as session:
+    async with async_db_session() as session:
         yield session
 
 
 async def get_db_transaction() -> AsyncGenerator[AsyncSession, None]:
     """获取默认数据源事务会话"""
-    async with async_db_session(source='default').begin() as session:
+    async with async_db_session.begin() as session:
         yield session
 
 
