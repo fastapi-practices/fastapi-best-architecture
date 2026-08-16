@@ -1,3 +1,25 @@
+<a id="v1.15.1"></a>
+# [v1.15.1](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v1.15.1) - 2026-08-16
+
+## What's Changed
+* Update changelog for v1.15.0 by [@wu-clan](https://github.com/wu-clan) in [#1226](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1226)
+* Bump dependencies and pre-commits by [@wu-clan](https://github.com/wu-clan) in [#1228](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1228)
+* Bump dependencies and pre-commits by [@wu-clan](https://github.com/wu-clan) in [#1231](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1231)
+* Add multiple database data source config by [@wu-clan](https://github.com/wu-clan) in [#1232](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1232)
+* Optimize config of multiple database sources by [@wu-clan](https://github.com/wu-clan) in [#1233](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1233)
+* Bump ruff version for RUF201 rule by [@wu-clan](https://github.com/wu-clan) in [#1234](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1234)
+* Update the version number to 1.15.1 by [@wu-clan](https://github.com/wu-clan) in [#1235](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1235)
+
+
+**Full Changelog**: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.15.0...v1.15.1
+
+## Contributors
+
+<a href="https://github.com/wu-clan"><img src="https://wsrv.nl/?url=https%3A%2F%2Fgithub.com%2Fwu-clan.png&w=128&h=128&fit=cover&mask=circle" width="64" height="64" alt="@wu-clan"></a>
+
+[Changes][v1.15.1]
+
+
 <a id="v1.15.0"></a>
 # [v1.15.0](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v1.15.0) - 2026-07-10
 
@@ -1580,6 +1602,7 @@
 [Changes][v1.0.0]
 
 
+[v1.15.1]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.15.0...v1.15.1
 [v1.15.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.14.0...v1.15.0
 [v1.14.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.13.4...v1.14.0
 [v1.13.4]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.13.3...v1.13.4
