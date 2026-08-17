@@ -343,7 +343,7 @@ sqlalchemy==2.0.52
     #   sqlalchemy-crud-plus
 sqlalchemy-crud-plus==1.13.3
     # via fastapi-best-architecture
-sqlparse==0.5.5
+sqlparse==0.6.0
     # via fastapi-best-architecture
 starlette==1.6.0
     # via
