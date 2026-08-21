@@ -318,6 +318,9 @@ def run(host: str, port: int, reload: bool, workers: int) -> None:  # ruff:ignor
     panel_content.append('\n🌐 架构官方文档: ', style='bold magenta')
     panel_content.append('https://docs.fba.wu-clan.cc/fastapi_best_architecture_docs/')
 
+    panel_content.append('\n\n赞助商：', style='bold yellow')
+    panel_content.append('Claude.uy', style='link https://claude.uy/home')
+
     console.print(Panel(panel_content, title=f'fba (v{__version__})', border_style='purple', padding=(1, 2)))
     granian.Granian(
         target='backend.main:app',

@@ -41,6 +41,20 @@ mvc 架构作为常规设计模式，在 python web 中很常见，但是三层�
 
 更多详情请查看 [官方文档](https://fastapi-practices.github.io/fastapi_best_architecture_docs/)
 
+## 赞助商
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <a href="https://claude.uy/home">
+          <img src="https://purple-sun-4f5a.wuyao1243.workers.dev/" alt="Claude.uy" width="400">
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
+
 ## 贡献者
 
 <a href="https://github.com/fastapi-practices/fastapi_best_architecture/graphs/contributors">

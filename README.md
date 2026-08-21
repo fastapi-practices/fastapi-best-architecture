@@ -44,6 +44,20 @@ springBoot...). ), but a self-righteous directory structure that you can give it
 For more details, please check
 the [official documentation](https://fastapi-practices.github.io/fastapi_best_architecture_docs/)
 
+## Sponsors
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <a href="https://claude.uy/home">
+          <img src="https://purple-sun-4f5a.wuyao1243.workers.dev/" alt="Claude.uy" width="400">
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
+
 ## Contributors
 
 <a href="https://github.com/fastapi-practices/fastapi_best_architecture/graphs/contributors">
