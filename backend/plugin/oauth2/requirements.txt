@@ -1,1 +1,0 @@
-fastapi-oauth20>=0.0.2

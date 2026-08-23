@@ -3,13 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.security import HTTPBasicCredentials
 from pyrate_limiter import Duration, Rate
-from starlette.background import BackgroundTasks
 
 from backend.app.admin.schema.token import GetLoginToken, GetNewToken, GetSwaggerToken
 from backend.app.admin.schema.user import AuthLoginParam
 from backend.app.admin.service.auth_service import auth_service
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
-from backend.common.security.jwt import DependsJwtAuth
 from backend.database.db import CurrentSession, CurrentSessionTransaction
 from backend.utils.limiter import RateLimiter
 
@@ -34,16 +32,9 @@ async def login(
     db: CurrentSessionTransaction,
     response: Response,
     obj: AuthLoginParam,
-    background_tasks: BackgroundTasks,
 ) -> ResponseSchemaModel[GetLoginToken]:
-    data = await auth_service.login(db=db, response=response, obj=obj, background_tasks=background_tasks)
+    data = await auth_service.login(db=db, response=response, obj=obj)
     return response_base.success(data=data)
-
-
-@router.get('/codes', summary='获取所有授权码', description='适配 vben admin v5', dependencies=[DependsJwtAuth])
-async def get_codes(db: CurrentSession, request: Request) -> ResponseSchemaModel[list[str]]:
-    codes = await auth_service.get_codes(db=db, request=request)
-    return response_base.success(data=codes)
 
 
 @router.post('/refresh', summary='刷新 token')

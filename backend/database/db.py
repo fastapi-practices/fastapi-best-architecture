@@ -2,12 +2,11 @@ import sys
 
 from collections.abc import AsyncGenerator, Mapping
 from contextlib import AbstractAsyncContextManager
-from functools import partial
 from typing import Annotated, Any, TypeAlias
 from uuid import uuid4
 
 from fastapi import Depends
-from sqlalchemy import URL, event
+from sqlalchemy import URL
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -18,7 +17,6 @@ from sqlalchemy.ext.asyncio import (
 from backend.common.enums import DataBaseType
 from backend.common.log import log
 from backend.common.model import MappedBase
-from backend.common.observability.prometheus.sqlalchemy import observe_sqlalchemy_pool_connections
 from backend.core.conf import settings
 
 
@@ -183,24 +181,6 @@ async def dispose_database() -> None:
     for engine in _database_engines.values():
         await engine.dispose()
 
-
-# SQLA 连接池指标监听
-for source, engine in _database_engines.items():
-    event.listen(
-        engine.sync_engine.pool,
-        'connect',
-        partial(observe_sqlalchemy_pool_connections, pool=engine.sync_engine.pool, source=source),
-    )
-    event.listen(
-        engine.sync_engine.pool,
-        'checkout',
-        partial(observe_sqlalchemy_pool_connections, pool=engine.sync_engine.pool, source=source),
-    )
-    event.listen(
-        engine.sync_engine.pool,
-        'checkin',
-        partial(observe_sqlalchemy_pool_connections, pool=engine.sync_engine.pool, source=source),
-    )
 
 # Session Annotated
 CurrentSession: TypeAlias = Annotated[AsyncSession, Depends(get_db)]

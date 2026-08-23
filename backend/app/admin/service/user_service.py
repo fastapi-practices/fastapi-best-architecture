@@ -1,13 +1,10 @@
-from collections.abc import Sequence
 from typing import Any
 
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.admin.crud.crud_dept import dept_dao
-from backend.app.admin.crud.crud_role import role_dao
 from backend.app.admin.crud.crud_user import user_dao
-from backend.app.admin.model import Role, User
+from backend.app.admin.model import User
 from backend.app.admin.schema.user import (
     AddUserParam,
     ResetPasswordParam,
@@ -16,15 +13,12 @@ from backend.app.admin.schema.user import (
 from backend.app.admin.schema.user_password_history import CreateUserPasswordHistoryParam
 from backend.app.admin.service.user_password_history_service import password_security_service
 from backend.app.admin.utils.password_security import password_verify, validate_new_password
-from backend.common.context import ctx
 from backend.common.enums import UserPermissionType
 from backend.common.exception import errors
 from backend.common.pagination import paging_data
-from backend.common.response.response_code import CustomErrorCode
 from backend.common.security.jwt import get_token, jwt_decode
 from backend.core.conf import settings
 from backend.database.redis import redis_client
-from backend.utils.serializers import select_join_serialize
 
 
 class UserService:
@@ -40,44 +34,24 @@ class UserService:
         :param username: 用户名
         :return:
         """
-        user = await user_dao.get_join(db, user_id=pk, username=username)
+        user = await user_dao.get(db, pk) if pk else await user_dao.get_by_username(db, username or '')
         if not user:
             raise errors.NotFoundError(msg='用户不存在')
         return user
 
     @staticmethod
-    async def get_roles(*, db: AsyncSession, pk: int) -> Sequence[Role]:
-        """
-        获取用户所有角色
-
-        :param db: 数据库会话
-        :param pk: 用户 ID
-        :return:
-        """
-        user = await user_dao.get_join(db, user_id=pk)
-        if not user:
-            raise errors.NotFoundError(msg='用户不存在')
-        return user.roles
-
-    @staticmethod
-    async def get_list(*, db: AsyncSession, dept: int, username: str, phone: str, status: int) -> dict[str, Any]:
+    async def get_list(*, db: AsyncSession, username: str, phone: str, status: int) -> dict[str, Any]:
         """
         获取用户列表
 
         :param db: 数据库会话
-        :param dept: 部门 ID
         :param username: 用户名
         :param phone: 手机号
         :param status: 状态
         :return:
         """
-        user_select = await user_dao.get_select(dept=dept, username=username, phone=phone, status=status)
-        data = await paging_data(db, user_select)
-        if data['items']:
-            serialized_items = select_join_serialize(data['items'], relationships=['User-m2o-Dept', 'User-m2m-Role'])
-            # 确保返回的是列表，即使只有一个元素
-            data['items'] = [serialized_items] if not isinstance(serialized_items, list) else serialized_items
-        return data
+        user_select = await user_dao.get_select(username=username, phone=phone, status=status)
+        return await paging_data(db, user_select)
 
     @staticmethod
     async def create(*, db: AsyncSession, obj: AddUserParam) -> None:
@@ -94,12 +68,6 @@ class UserService:
             raise errors.ConflictError(msg='邮箱已被绑定')
         if not obj.password:
             raise errors.RequestError(msg='密码不允许为空')
-        if not await dept_dao.get(db, obj.dept_id):
-            raise errors.NotFoundError(msg='部门不存在')
-        if obj.roles:
-            roles = await role_dao.get_all_by_ids(db, list(set(obj.roles)))
-            if {role.id for role in roles} != set(obj.roles):
-                raise errors.NotFoundError(msg='角色不存在')
         obj.nickname = obj.nickname or obj.username
         await user_dao.add(db, obj)
 
@@ -113,7 +81,7 @@ class UserService:
         :param obj: 用户更新参数
         :return:
         """
-        user = await user_dao.get_join(db, user_id=pk)
+        user = await user_dao.get(db, pk)
         if not user:
             raise errors.NotFoundError(msg='用户不存在')
         if obj.username != user.username and await user_dao.get_by_username(db, obj.username):
@@ -122,12 +90,6 @@ class UserService:
             email_user = await user_dao.check_email(db, obj.email)
             if email_user:
                 raise errors.ConflictError(msg='邮箱已被绑定')
-        if obj.dept_id and obj.dept_id != user.dept_id and not await dept_dao.get(db, dept_id=obj.dept_id):
-            raise errors.NotFoundError(msg='部门不存在')
-        if obj.roles:
-            roles = await role_dao.get_all_by_ids(db, list(set(obj.roles)))
-            if {role.id for role in roles} != set(obj.roles):
-                raise errors.NotFoundError(msg='角色不存在')
         count = await user_dao.update(db, user.id, obj)
         await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user.id}')
         return count
@@ -247,25 +209,18 @@ class UserService:
         return count
 
     @staticmethod
-    async def update_email(*, db: AsyncSession, user_id: int, captcha: str, email: str) -> int:
+    async def update_email(*, db: AsyncSession, user_id: int, email: str) -> int:
         """
         更新当前用户邮箱
 
         :param db: 数据库会话
         :param user_id: 用户 ID
-        :param captcha: 邮箱验证码
         :param email: 邮箱
         :return:
         """
-        captcha_code = await redis_client.get(f'{settings.EMAIL_CAPTCHA_REDIS_PREFIX}:{ctx.ip}')
-        if not captcha_code:
-            raise errors.RequestError(msg='验证码已失效，请重新获取')
-        if captcha != captcha_code:
-            raise errors.CustomError(error=CustomErrorCode.CAPTCHA_ERROR)
         email_user = await user_dao.check_email(db, email)
         if email_user and email_user.id != user_id:
             raise errors.ConflictError(msg='邮箱已被绑定')
-        await redis_client.delete(f'{settings.EMAIL_CAPTCHA_REDIS_PREFIX}:{ctx.ip}')
         count = await user_dao.update_email(db, user_id, email)
         await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}')
         return count

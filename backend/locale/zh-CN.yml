@@ -110,5 +110,4 @@ response:
   success: 请求成功
 success:
   login:
-    oauth2_success: 登录成功（OAuth2）
     success: 登录成功

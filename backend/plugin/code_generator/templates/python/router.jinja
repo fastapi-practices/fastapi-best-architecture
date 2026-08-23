@@ -1,8 +1,0 @@
-from fastapi import APIRouter
-
-from backend.app.{{ app_name }}.api.{{ api_version }}.{{ filename }} import router as {{ table_name }}_router
-from backend.core.conf import settings
-
-v1 = APIRouter(prefix=settings.FASTAPI_API_V1_PATH{% if tag %}, tags=['{{ tag }}']{% endif %})
-
-v1.include_router({{ table_name }}_router, prefix='/{{ table_name.replace('_', '/') }}s')

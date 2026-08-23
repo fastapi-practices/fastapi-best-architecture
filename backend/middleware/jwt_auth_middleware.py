@@ -6,7 +6,7 @@ from starlette.authentication import AuthCredentials, AuthenticationBackend
 from starlette.authentication import AuthenticationError as StarletteAuthenticationError
 from starlette.requests import HTTPConnection
 
-from backend.app.admin.schema.user import GetUserInfoWithRelationDetail
+from backend.app.admin.schema.user import GetUserInfoDetail
 from backend.common.context import ctx
 from backend.common.exception.errors import TokenError
 from backend.common.log import log
@@ -79,7 +79,7 @@ class JwtAuthMiddleware(AuthenticationBackend):
 
         return token
 
-    async def authenticate(self, request: Request) -> tuple[AuthCredentials, GetUserInfoWithRelationDetail] | None:
+    async def authenticate(self, request: Request) -> tuple[AuthCredentials, GetUserInfoDetail] | None:
         """
         认证请求
 

@@ -6,7 +6,7 @@ import sys
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Final, Literal
+from typing import Annotated, Final
 
 import anyio
 import cappa
@@ -330,37 +330,6 @@ def run(host: str, port: int, reload: bool, workers: int) -> None:  # ruff:ignor
     ).serve()
 
 
-def run_celery_worker(log_level: Literal['info', 'debug']) -> None:
-    """启动 Celery worker 服务"""
-    try:
-        subprocess.run(['celery', '-A', 'backend.app.task.celery', 'worker', '-l', f'{log_level}', '-P', 'gevent'])
-    except KeyboardInterrupt:
-        pass
-
-
-def run_celery_beat(log_level: Literal['info', 'debug']) -> None:
-    """启动 Celery beat 定时任务服务"""
-    try:
-        subprocess.run(['celery', '-A', 'backend.app.task.celery', 'beat', '-l', f'{log_level}'])
-    except KeyboardInterrupt:
-        pass
-
-
-def run_celery_flower(port: int, basic_auth: str) -> None:
-    """启动 Celery flower 监控服务"""
-    try:
-        subprocess.run([
-            'celery',
-            '-A',
-            'backend.app.task.celery',
-            'flower',
-            f'--port={port}',
-            f'--basic-auth={basic_auth}',
-        ])
-    except KeyboardInterrupt:
-        pass
-
-
 async def install_plugin(  # ruff:ignore[complex-structure]
     path: str | None,
     repo_url: str | None,
@@ -584,104 +553,6 @@ async def execute_destroy_sql_scripts(db: AsyncSession, sql_scripts: str) -> Non
     console.tip('销毁 SQL 脚本已执行完成')
 
 
-async def import_table(
-    app: str,
-    table_schema: str,
-    table_name: str,
-) -> None:
-    """导入代码生成业务和模型列"""
-    if settings.ENVIRONMENT != 'dev':
-        raise cappa.Exit('代码生成仅在开发环境可用', code=1)
-
-    try:
-        from backend.plugin.code_generator.schema.gen import ImportParam
-        from backend.plugin.code_generator.service.gen_service import gen_service
-    except ImportError:
-        raise cappa.Exit('代码生成插件用法导入失败，请联系系统管理员', code=1)
-
-    try:
-        obj = ImportParam(app=app, table_schema=table_schema, table_name=table_name)
-        async with async_db_session.begin() as db:
-            await gen_service.import_business_and_model(db=db, obj=obj)
-        console.tip('代码生成业务和模型列导入成功')
-        console.log('\n快试试 [bold cyan]fba codegen[/bold cyan] 生成代码吧~')
-    except Exception as e:
-        raise cappa.Exit(e.msg if isinstance(e, BaseExceptionError) else str(e), code=1)
-
-
-async def generate(*, preview: bool = False) -> None:
-    """交互式代码生成"""
-    if settings.ENVIRONMENT != 'dev':
-        raise cappa.Exit('代码生成仅在开发环境可用', code=1)
-
-    try:
-        from backend.plugin.code_generator.service.business_service import gen_business_service
-        from backend.plugin.code_generator.service.gen_service import gen_service
-    except ImportError:
-        raise cappa.Exit('代码生成插件用法导入失败，请联系系统管理员', code=1)
-
-    try:
-        ids = []
-        async with async_db_session() as db:
-            results = await gen_business_service.get_all(db=db)
-
-        if not results:
-            raise cappa.Exit('[red]暂无可用的代码生成业务！请先通过 import 命令导入！[/]')
-
-        table = Table(show_header=True, header_style='bold magenta')
-        table.add_column('业务编号', style='cyan', no_wrap=True, justify='center')
-        table.add_column('应用名称', style='green', no_wrap=True)
-        table.add_column('生成路径', style='yellow')
-        table.add_column('备注', style='blue')
-
-        for result in results:
-            ids.append(result.id)
-            table.add_row(
-                str(result.id),
-                result.app_name,
-                result.gen_path or f'应用 {result.app_name} 根路径',
-                result.remark or '',
-            )
-
-        console.print(table)
-        business = IntPrompt.ask('请从中选择一个业务编号', choices=[str(id_) for id_ in ids])
-
-        # 预览
-        async with async_db_session() as db:
-            preview_data = await gen_service.preview(db=db, pk=business)
-
-        console.print('\n[bold yellow]将要生成以下文件：[/]')
-        file_table = Table(show_header=True, header_style='bold cyan')
-        file_table.add_column('文件路径', style='white')
-        file_table.add_column('大小', style='green', justify='right')
-
-        for filepath, content in sorted(preview_data.items()):
-            size = len(content)
-            size_str = f'{size} B' if size < 1024 else f'{size / 1024:.1f} KB'
-            file_table.add_row(filepath, size_str)
-
-        console.print(file_table)
-
-        if preview:
-            console.print('\n[bold cyan]预览模式：未执行实际生成操作[/]')
-            return
-
-        # 生成
-        console.print('\n[bold red]警告：代码生成将进行磁盘文件（覆盖）写入，切勿在生产环境中使用！！！[/]')
-        ok = Prompt.ask('\n确认继续生成代码吗？', choices=['y', 'n'], default='n')
-
-        if ok.lower() == 'y':
-            async with async_db_session.begin() as db:
-                gen_path = await gen_service.generate(db=db, pk=business)
-
-            console.print()
-            console.tip('代码已生成完成')
-            console.print(Text('\n详情请查看：'), Text(str(gen_path), style='bold white'))
-
-    except Exception as e:
-        raise cappa.Exit(e.msg if isinstance(e, BaseExceptionError) else str(e), code=1)
-
-
 def run_alembic(*args: str) -> None:
     """执行 alembic 命令"""
     try:
@@ -814,85 +685,6 @@ class Format:
             pass
 
 
-@cappa.command(help='从当前主机启动 Celery worker 服务', default_long=True)
-@dataclass
-class Worker:
-    log_level: Annotated[
-        Literal['info', 'debug'],
-        cappa.Arg(short='-l', default='info', help='日志输出级别'),
-    ]
-
-    def __call__(self) -> None:
-        run_celery_worker(log_level=self.log_level)
-
-
-@cappa.command(help='从当前主机启动 Celery beat 服务', default_long=True)
-@dataclass
-class Beat:
-    log_level: Annotated[
-        Literal['info', 'debug'],
-        cappa.Arg(short='-l', default='info', help='日志输出级别'),
-    ]
-
-    def __call__(self) -> None:
-        run_celery_beat(log_level=self.log_level)
-
-
-@cappa.command(help='从当前主机启动 Celery flower 服务', default_long=True)
-@dataclass
-class Flower:
-    port: Annotated[
-        int,
-        cappa.Arg(default=8555, help='提供服务的主机端口号'),
-    ]
-    basic_auth: Annotated[
-        str,
-        cappa.Arg(default='admin:123456', help='页面登录的用户名和密码'),
-    ]
-
-    def __call__(self) -> None:
-        run_celery_flower(port=self.port, basic_auth=self.basic_auth)
-
-
-@cappa.command(help='运行 Celery 服务')
-@dataclass
-class Celery:
-    subcmd: cappa.Subcommands[Worker | Beat | Flower]
-
-
-@cappa.command(help='导入代码生成业务和模型列', default_long=True)
-@dataclass
-class Import:
-    app: Annotated[
-        str,
-        cappa.Arg(help='应用名称，用于代码生成到指定 app'),
-    ]
-    table_schema: Annotated[
-        str,
-        cappa.Arg(short='tc', default='fba', help='数据库名'),
-    ]
-    table_name: Annotated[
-        str,
-        cappa.Arg(short='tn', help='数据库表名'),
-    ]
-
-    async def __call__(self) -> None:
-        await import_table(self.app, self.table_schema, self.table_name)
-
-
-@cappa.command(name='codegen', help='代码生成（体验完整功能，请自行部署 fba vben 前端工程）', default_long=True)
-@dataclass
-class CodeGenerator:
-    preview: Annotated[
-        bool,
-        cappa.Arg(short='-p', default=False, help='仅预览将要生成的文件，不执行实际生成操作'),
-    ]
-    subcmd: cappa.Subcommands[Import | None] = None
-
-    async def __call__(self) -> None:
-        await generate(preview=self.preview)
-
-
 @cappa.command(help='生成数据库迁移文件', default_long=True)
 @dataclass
 class Revision:
@@ -1005,9 +797,7 @@ class FbaCli:
         str,
         cappa.Arg(value_name='PATH', default='', show_default=False, help='在事务中执行 SQL 脚本'),
     ]
-    subcmd: cappa.Subcommands[Init | Run | Add | Remove | Deps | Format | Celery | CodeGenerator | Alembic | None] = (
-        None
-    )
+    subcmd: cappa.Subcommands[Init | Run | Add | Remove | Deps | Format | Alembic | None] = None
 
     async def __call__(self) -> None:
         if self.sql:

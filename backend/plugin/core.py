@@ -31,10 +31,7 @@ def check_plugin_installed(plugin_name: str) -> bool:
 
 def get_required_plugins() -> tuple[str, ...]:
     """获取必需插件列表"""
-    required_plugins = list(settings.PLUGIN_REQUIRED)
-    if not settings.RBAC_ROLE_MENU_MODE and 'casbin_rbac' not in required_plugins:
-        required_plugins.append('casbin_rbac')
-    return tuple(required_plugins)
+    return tuple(settings.PLUGIN_REQUIRED)
 
 
 def check_required_plugins() -> None:

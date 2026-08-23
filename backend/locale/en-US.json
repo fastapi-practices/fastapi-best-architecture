@@ -13,7 +13,6 @@
   },
   "success": {
     "login": {
-      "oauth2_success": "Login success (OAuth2)",
       "success": "Login success"
     }
   }

@@ -2,9 +2,7 @@
 #    uv export -o requirements.txt --no-hashes
 -e .
 alembic==1.19.1
-    # via fastapi-best-architecture
-amqp==5.3.1
-    # via kombu
+    # via fba-slim
 annotated-doc==0.0.5
     # via
     #   fastapi
@@ -17,57 +15,32 @@ anyio==4.14.2
     #   starlette
     #   watchfiles
 asgiref==3.12.1
-    # via
-    #   fastapi-best-architecture
-    #   opentelemetry-instrumentation-asgi
+    # via fba-slim
 async-timeout==5.0.1 ; python_full_version < '3.11.3'
     # via
     #   asyncpg
     #   redis
 asyncmy==0.2.13
-    # via fastapi-best-architecture
+    # via fba-slim
 asyncpg==0.31.0
-    # via fastapi-best-architecture
+    # via fba-slim
 bcrypt==5.0.0
-    # via fastapi-best-architecture
-bidict==0.23.1
-    # via python-socketio
-billiard==4.2.4
-    # via celery
+    # via fba-slim
 cachebox==6.2.5
-    # via fastapi-best-architecture
+    # via fba-slim
 cappa==0.32.2
-    # via fastapi-best-architecture
-celery==5.6.3
-    # via
-    #   celery-aio-pool
-    #   fastapi-best-architecture
-    #   flower
-celery-aio-pool==0.1.0rc8
-    # via fastapi-best-architecture
+    # via fba-slim
 certifi==2026.7.22
     # via
     #   httpcore
     #   httpx
 cffi==2.1.1 ; platform_python_implementation != 'PyPy'
-    # via
-    #   cryptography
-    #   gevent
+    # via cryptography
 click==8.4.2
     # via
-    #   celery
-    #   click-didyoumean
-    #   click-plugins
-    #   click-repl
     #   granian
     #   rich-toolkit
     #   uvicorn
-click-didyoumean==0.3.1
-    # via celery
-click-plugins==1.1.1.2
-    # via celery
-click-repl==0.3.0
-    # via celery
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
     #   click
@@ -75,11 +48,11 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   pytest
     #   typer
 cryptography==50.0.0
-    # via fastapi-best-architecture
+    # via fba-slim
 dnspython==2.8.0
     # via email-validator
 dulwich==1.2.12
-    # via fastapi-best-architecture
+    # via fba-slim
 ecdsa==0.19.2
     # via python-jose
 email-validator==2.3.0
@@ -87,37 +60,25 @@ email-validator==2.3.0
 exceptiongroup==1.3.1 ; python_full_version < '3.11'
     # via
     #   anyio
-    #   celery
     #   pytest
 fast-captcha==0.3.2
-    # via fastapi-best-architecture
+    # via fba-slim
 fastapi==0.141.1
     # via
-    #   fastapi-best-architecture
     #   fastapi-pagination
+    #   fba-slim
 fastapi-cli==0.0.32
     # via fastapi
 fastapi-pagination==0.15.16
-    # via fastapi-best-architecture
-flower==2.0.1
-    # via fastapi-best-architecture
-gevent==26.8.0
-    # via fastapi-best-architecture
-googleapis-common-protos==1.75.1
-    # via opentelemetry-exporter-otlp-proto-grpc
+    # via fba-slim
 granian==2.8.1
-    # via fastapi-best-architecture
+    # via fba-slim
 greenlet==3.5.5
-    # via
-    #   gevent
-    #   sqlalchemy
-grpcio==1.83.0
-    # via opentelemetry-exporter-otlp-proto-grpc
+    # via sqlalchemy
 h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
-    #   wsproto
 hiredis==3.4.1
     # via redis
 httpcore==1.0.9
@@ -126,8 +87,6 @@ httptools==0.8.0
     # via uvicorn
 httpx==0.28.1
     # via fastapi
-humanize==4.16.0
-    # via flower
 idna==3.18
     # via
     #   anyio
@@ -136,15 +95,11 @@ idna==3.18
 iniconfig==2.3.0
     # via pytest
 itsdangerous==2.2.0
-    # via fastapi-best-architecture
+    # via fba-slim
 jinja2==3.1.6
-    # via
-    #   fastapi
-    #   fastapi-best-architecture
-kombu==5.6.2
-    # via celery
+    # via fastapi
 loguru==0.7.3
-    # via fastapi-best-architecture
+    # via fba-slim
 mako==1.4.1
     # via alembic
 markdown-it-py==4.2.0
@@ -156,81 +111,9 @@ markupsafe==3.0.3
 mdurl==0.1.2
     # via markdown-it-py
 msgspec==0.21.1
-    # via fastapi-best-architecture
-opentelemetry-api==1.44.0
-    # via
-    #   opentelemetry-exporter-otlp-proto-grpc
-    #   opentelemetry-instrumentation
-    #   opentelemetry-instrumentation-asgi
-    #   opentelemetry-instrumentation-asyncio
-    #   opentelemetry-instrumentation-celery
-    #   opentelemetry-instrumentation-fastapi
-    #   opentelemetry-instrumentation-httpx
-    #   opentelemetry-instrumentation-logging
-    #   opentelemetry-instrumentation-redis
-    #   opentelemetry-instrumentation-sqlalchemy
-    #   opentelemetry-sdk
-    #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.44.0
-    # via opentelemetry-exporter-otlp-proto-grpc
-opentelemetry-exporter-otlp-proto-grpc==1.44.0
-    # via fastapi-best-architecture
-opentelemetry-instrumentation==0.65b0
-    # via
-    #   opentelemetry-instrumentation-asgi
-    #   opentelemetry-instrumentation-asyncio
-    #   opentelemetry-instrumentation-celery
-    #   opentelemetry-instrumentation-fastapi
-    #   opentelemetry-instrumentation-httpx
-    #   opentelemetry-instrumentation-logging
-    #   opentelemetry-instrumentation-redis
-    #   opentelemetry-instrumentation-sqlalchemy
-opentelemetry-instrumentation-asgi==0.65b0
-    # via opentelemetry-instrumentation-fastapi
-opentelemetry-instrumentation-asyncio==0.65b0
-    # via fastapi-best-architecture
-opentelemetry-instrumentation-celery==0.65b0
-    # via fastapi-best-architecture
-opentelemetry-instrumentation-fastapi==0.65b0
-    # via fastapi-best-architecture
-opentelemetry-instrumentation-httpx==0.65b0
-    # via fastapi-best-architecture
-opentelemetry-instrumentation-logging==0.65b0
-    # via fastapi-best-architecture
-opentelemetry-instrumentation-redis==0.65b0
-    # via fastapi-best-architecture
-opentelemetry-instrumentation-sqlalchemy==0.65b0
-    # via fastapi-best-architecture
-opentelemetry-proto==1.44.0
-    # via
-    #   opentelemetry-exporter-otlp-proto-common
-    #   opentelemetry-exporter-otlp-proto-grpc
-opentelemetry-sdk==1.44.0
-    # via
-    #   fastapi-best-architecture
-    #   opentelemetry-exporter-otlp-proto-grpc
-opentelemetry-semantic-conventions==0.65b0
-    # via
-    #   opentelemetry-instrumentation
-    #   opentelemetry-instrumentation-asgi
-    #   opentelemetry-instrumentation-asyncio
-    #   opentelemetry-instrumentation-celery
-    #   opentelemetry-instrumentation-fastapi
-    #   opentelemetry-instrumentation-httpx
-    #   opentelemetry-instrumentation-logging
-    #   opentelemetry-instrumentation-redis
-    #   opentelemetry-instrumentation-sqlalchemy
-    #   opentelemetry-sdk
-opentelemetry-util-http==0.65b0
-    # via
-    #   opentelemetry-instrumentation-asgi
-    #   opentelemetry-instrumentation-fastapi
-    #   opentelemetry-instrumentation-httpx
+    # via fba-slim
 packaging==26.3
     # via
-    #   kombu
-    #   opentelemetry-instrumentation
-    #   opentelemetry-instrumentation-sqlalchemy
     #   pytest
     #   sqlakeyset
 pillow==12.3.0
@@ -238,26 +121,10 @@ pillow==12.3.0
 pluggy==1.6.0
     # via pytest
 prek==0.4.13
-prometheus-client==0.26.0
-    # via
-    #   fastapi-best-architecture
-    #   flower
-prompt-toolkit==3.0.53
-    # via click-repl
-protobuf==7.35.1
-    # via
-    #   googleapis-common-protos
-    #   opentelemetry-proto
-psutil==7.2.2
-    # via fastapi-best-architecture
-psycopg==3.2.10
-    # via fastapi-best-architecture
-psycopg-binary==3.2.10 ; implementation_name != 'pypy'
-    # via psycopg
 pwdlib==0.3.0
-    # via fastapi-best-architecture
+    # via fba-slim
 py-ip2region==3.0.4
-    # via fastapi-best-architecture
+    # via fba-slim
 pyasn1==0.6.4
     # via
     #   python-jose
@@ -267,8 +134,8 @@ pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementatio
 pydantic==2.13.4
     # via
     #   fastapi
-    #   fastapi-best-architecture
     #   fastapi-pagination
+    #   fba-slim
     #   pydantic-extra-types
     #   pydantic-settings
     #   sqlalchemy-crud-plus
@@ -279,40 +146,30 @@ pydantic-extra-types==2.11.1
 pydantic-settings==2.15.0
     # via
     #   fastapi
-    #   fastapi-best-architecture
+    #   fba-slim
 pygments==2.20.0
     # via
     #   pytest
     #   rich
-pymysql==1.2.0
-    # via fastapi-best-architecture
 pyrate-limiter==4.4.0
-    # via fastapi-best-architecture
+    # via fba-slim
 pytest==9.1.1
     # via pytest-sugar
 pytest-sugar==1.1.1
 python-dateutil==2.9.0.post0
-    # via
-    #   celery
-    #   sqlakeyset
+    # via sqlakeyset
 python-dotenv==1.2.2
     # via
     #   pydantic-settings
     #   uvicorn
-python-engineio==4.13.4
-    # via python-socketio
 python-jose==3.5.0
-    # via fastapi-best-architecture
+    # via fba-slim
 python-multipart==0.0.32
     # via fastapi
-python-socketio==5.16.4
-    # via fastapi-best-architecture
-pytz==2026.3.post1
-    # via flower
 pyyaml==6.0.3
     # via uvicorn
 redis==8.1.0
-    # via fastapi-best-architecture
+    # via fba-slim
 rich==15.0.0
     # via
     #   cappa
@@ -323,11 +180,9 @@ rich-toolkit==0.20.3
 rsa==4.9.1
     # via python-jose
 rtoml==0.13.0
-    # via fastapi-best-architecture
+    # via fba-slim
 shellingham==1.5.4
     # via typer
-simple-websocket==1.1.0
-    # via python-engineio
 six==1.17.0
     # via
     #   ecdsa
@@ -337,20 +192,20 @@ sqlakeyset==2.0.1775222100
 sqlalchemy==2.0.52
     # via
     #   alembic
-    #   fastapi-best-architecture
     #   fastapi-pagination
+    #   fba-slim
     #   sqlakeyset
     #   sqlalchemy-crud-plus
 sqlalchemy-crud-plus==1.13.3
-    # via fastapi-best-architecture
+    # via fba-slim
 sqlparse==0.5.5
-    # via fastapi-best-architecture
+    # via fba-slim
 starlette==1.6.0
     # via
     #   fastapi
     #   starlette-context
 starlette-context==0.5.1
-    # via fastapi-best-architecture
+    # via fba-slim
 termcolor==3.3.0
     # via pytest-sugar
 tomli==2.4.1 ; python_full_version < '3.11'
@@ -358,8 +213,6 @@ tomli==2.4.1 ; python_full_version < '3.11'
     #   alembic
     #   fastapi-cli
     #   pytest
-tornado==6.5.8
-    # via flower
 type-lens==0.2.6
     # via cappa
 typer==0.27.1
@@ -375,12 +228,6 @@ typing-extensions==4.16.0
     #   exceptiongroup
     #   fastapi
     #   fastapi-pagination
-    #   grpcio
-    #   opentelemetry-api
-    #   opentelemetry-exporter-otlp-proto-grpc
-    #   opentelemetry-sdk
-    #   opentelemetry-semantic-conventions
-    #   psycopg
     #   pydantic
     #   pydantic-core
     #   pydantic-extra-types
@@ -396,13 +243,6 @@ typing-inspection==0.4.3
     #   fastapi
     #   pydantic
     #   pydantic-settings
-tzdata==2026.3
-    # via
-    #   kombu
-    #   psycopg
-    #   tzlocal
-tzlocal==5.4.4
-    # via celery
 ua-parser==1.0.2
     # via user-agents
 ua-parser-builtins==202606
@@ -410,38 +250,18 @@ ua-parser-builtins==202606
 urllib3==2.7.0
     # via dulwich
 user-agents==2.2.0
-    # via fastapi-best-architecture
+    # via fba-slim
 uvicorn==0.52.1
     # via
     #   fastapi
     #   fastapi-cli
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
-vine==5.1.0
-    # via
-    #   amqp
-    #   celery
-    #   kombu
 watchfiles==1.2.0
     # via uvicorn
-wcwidth==0.8.2
-    # via prompt-toolkit
 websockets==16.1.1 ; python_full_version < '3.11'
     # via uvicorn
 websockets==17.0.1 ; python_full_version >= '3.11'
     # via uvicorn
 win32-setctime==1.2.0 ; sys_platform == 'win32'
     # via loguru
-wrapt==2.3.0
-    # via
-    #   opentelemetry-instrumentation
-    #   opentelemetry-instrumentation-asyncio
-    #   opentelemetry-instrumentation-httpx
-    #   opentelemetry-instrumentation-redis
-    #   opentelemetry-instrumentation-sqlalchemy
-wsproto==1.3.2
-    # via simple-websocket
-zope-event==6.2
-    # via gevent
-zope-interface==8.5
-    # via gevent

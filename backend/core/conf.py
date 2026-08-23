@@ -75,7 +75,6 @@ class Settings(BaseSettings):
     CACHE_LOCAL_TTL: int = 60 * 60 * 2  # 2 小时
     CACHE_REDIS_TTL: int = 60 * 60 * 2  # 2 小时
     CACHE_CONFIG_REDIS_PREFIX: str = 'fba:cache:config'
-    CACHE_DICT_REDIS_PREFIX: str = 'fba:cache:dict'
     CACHE_PUBSUB_CHANNEL: str = 'fba:cache:invalidate'
     CACHE_PUBSUB_RECONNECT_DELAY: int = 5  # 重连延迟（秒）
     CACHE_PUBSUB_MAX_RECONNECT_ATTEMPTS: int = 10  # 最大重连次数
@@ -102,10 +101,10 @@ class Settings(BaseSettings):
     TOKEN_ONLINE_REDIS_PREFIX: str = 'fba:token_online'
     TOKEN_REFRESH_REDIS_PREFIX: str = 'fba:refresh_token'
     TOKEN_REQUEST_UNDERLYING_SECURITY: bool = True
-    TOKEN_REQUEST_PATH_EXCLUDE: list[str] = [  # JWT / RBAC 路由白名单
+    TOKEN_REQUEST_PATH_EXCLUDE: list[str] = [  # JWT 路由白名单
         f'{FASTAPI_API_V1_PATH}/auth/login',
     ]
-    TOKEN_REQUEST_PATH_EXCLUDE_PATTERN: list[Pattern[str]] = []  # JWT / RBAC 路由白名单（正则）
+    TOKEN_REQUEST_PATH_EXCLUDE_PATTERN: list[Pattern[str]] = []  # JWT 路由白名单（正则）
 
     # 用户安全
     USER_LOCK_REDIS_PREFIX: str = 'fba:user:lock'
@@ -127,44 +126,9 @@ class Settings(BaseSettings):
     # JWT
     JWT_USER_REDIS_PREFIX: str = 'fba:user'
 
-    # RBAC
-    RBAC_ROLE_MENU_MODE: bool = True
-    RBAC_ROLE_MENU_EXCLUDE: list[str] = []
-
     # Cookie
     COOKIE_REFRESH_TOKEN_KEY: str = 'fba_refresh_token'
     COOKIE_REFRESH_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 24 * 7  # 7 天
-
-    # 数据权限
-    DATA_PERMISSION_MODEL_EXCLUDE: list[str] = [  # 排除允许进行数据过滤的 SQLA 模型
-        'DataScope',
-        'DataRule',
-        'sys_role_data_scope',
-        'sys_data_scope_rule',
-    ]
-    DATA_PERMISSION_COLUMN_EXCLUDE: list[str] = [  # 排除允许进行数据过滤的 SQLA 模型列
-        'id',
-        'sort',
-        'deleted',
-        'deleted_time',
-        'created_time',
-        'updated_time',
-    ]
-    DATA_PERMISSION_MODEL_TEMPLATE_VARIABLES: list[dict[str, str]] = [  # 数据规则模型可用模板变量
-        {'key': '__ALL__', 'comment': '所有模型'},
-    ]
-    DATA_PERMISSION_COLUMN_TEMPLATE_VARIABLES: list[dict[str, str]] = [  # 数据规则字段可用模板变量
-        {'key': '__dept_id__', 'comment': '部门 ID'},
-        {'key': '__created_by__', 'comment': '创建者'},
-    ]
-    DATA_PERMISSION_TEMPLATE_VARIABLES: list[dict[str, str]] = [  # 数据规则值可用模板变量
-        {'key': '${user_id}', 'comment': '当前登录用户 ID'},
-        {'key': '${dept_id}', 'comment': '当前登录用户部门 ID'},
-        {'key': '${now}', 'comment': '当前时间'},
-    ]
-
-    # Socket.IO
-    WS_NO_AUTH_MARKER: str = 'internal'
 
     # CORS
     CORS_ALLOWED_ORIGINS: list[str] = [  # 末尾不带斜杠
@@ -225,29 +189,8 @@ class Settings(BaseSettings):
     LOG_ACCESS_FILENAME: str = 'fba_access.log'
     LOG_ERROR_FILENAME: str = 'fba_error.log'
 
-    # 操作日志
-    OPERA_LOG_PATH_EXCLUDE: list[str] = [
-        '/favicon.ico',
-        '/docs',
-        '/redoc',
-        '/openapi',
-        f'{FASTAPI_API_V1_PATH}/auth/login/swagger',
-        f'{FASTAPI_API_V1_PATH}/oauth2/github/callback',
-        f'{FASTAPI_API_V1_PATH}/oauth2/google/callback',
-    ]
-    OPERA_LOG_REDACT_KEYS: list[str] = [
-        'password',
-        'old_password',
-        'new_password',
-        'confirm_password',
-    ]
-    OPERA_LOG_QUEUE_MAXSIZE: int = 100000
-    OPERA_LOG_QUEUE_BATCH_CONSUME_SIZE: int = 100
-    OPERA_LOG_QUEUE_TIMEOUT: int = 60  # 1 分钟
-    OPERA_LOG_BODY_MAX_SIZE: int = 10240  # 10 KB
-
     # Plugin 配置
-    PLUGIN_REQUIRED: list[str] = ['dict']
+    PLUGIN_REQUIRED: list[str] = ['config']
     PLUGIN_PIP_CHINA: bool = True
     PLUGIN_PIP_INDEX_URL: str = 'https://mirrors.aliyun.com/pypi/simple/'
     PLUGIN_PIP_MAX_RETRY: int = 3
@@ -255,76 +198,6 @@ class Settings(BaseSettings):
 
     # I18n 配置
     I18N_DEFAULT_LANGUAGE: str = 'zh-CN'
-
-    # Grafana
-    GRAFANA_METRICS_ENABLE: bool = False
-    GRAFANA_OTLP_GRPC_ENDPOINT: str = 'fba_alloy:4317'
-    # 以下配置为静态定义，修改后需要手动同步相关 Grafana 配置：
-    # - GRAFANA_PROMETHEUS_APP_NAME：deploy/backend/grafana/fba_datasource.yml
-    #   deploy/backend/grafana/dashboards/fba_server.json
-    # - GRAFANA_CELERY_OTEL_SERVICE_NAME：deploy/backend/grafana/dashboards/fba_celery.json
-    # - GRAFANA_METRICS_PATH：deploy/backend/grafana/fba_config.alloy
-    #   deploy/backend/grafana/dashboards/fba_server.json
-    # - GRAFANA_PROMETHEUS_EXEMPLAR_TRACE_ID_KEY：deploy/backend/grafana/fba_datasource.yml
-    GRAFANA_PROMETHEUS_APP_NAME: str = 'fba_server'
-    GRAFANA_CELERY_OTEL_SERVICE_NAME: str = 'fba_celery_worker'
-    GRAFANA_METRICS_PATH: str = '/metrics'
-    GRAFANA_PROMETHEUS_EXEMPLAR_TRACE_ID_KEY: str = 'TraceID'
-
-    ##################################################
-    # [ App ] task
-    ##################################################
-    # .env Redis
-    CELERY_BROKER_REDIS_DATABASE: int
-
-    # .env RabbitMQ
-    # docker run -d --hostname fba-mq --name fba-mq  -p 5672:5672 -p 15672:15672 rabbitmq:latest
-    CELERY_RABBITMQ_HOST: str
-    CELERY_RABBITMQ_PORT: int
-    CELERY_RABBITMQ_USERNAME: str
-    CELERY_RABBITMQ_PASSWORD: str
-
-    # 基础配置
-    CELERY_BROKER: Literal['rabbitmq', 'redis'] = 'redis'
-    CELERY_RABBITMQ_VHOST: str = ''
-    CELERY_REDIS_PREFIX: str = 'fba:celery'
-    CELERY_TASK_MAX_RETRIES: int = 5
-
-    ##################################################
-    # [ Plugin ] code_generator
-    ##################################################
-    CODE_GENERATOR_DOWNLOAD_ZIP_FILENAME: str
-
-    ##################################################
-    # [ Plugin ] oauth2
-    ##################################################
-    # .env
-    OAUTH2_GITHUB_CLIENT_ID: str
-    OAUTH2_GITHUB_CLIENT_SECRET: str
-    OAUTH2_GOOGLE_CLIENT_ID: str
-    OAUTH2_GOOGLE_CLIENT_SECRET: str
-
-    # 基础配置（in plugin.toml）
-    OAUTH2_STATE_REDIS_PREFIX: str
-    OAUTH2_STATE_EXPIRE_SECONDS: int
-    OAUTH2_GITHUB_REDIRECT_URI: str
-    OAUTH2_GOOGLE_REDIRECT_URI: str
-    OAUTH2_FRONTEND_LOGIN_REDIRECT_URI: str
-    OAUTH2_FRONTEND_BINDING_REDIRECT_URI: str
-
-    ##################################################
-    # [ Plugin ] email
-    ##################################################
-    # .env
-    EMAIL_USERNAME: str
-    EMAIL_PASSWORD: str
-
-    # 基础配置（in plugin.toml）
-    EMAIL_HOST: str
-    EMAIL_PORT: int
-    EMAIL_SSL: bool
-    EMAIL_CAPTCHA_REDIS_PREFIX: str
-    EMAIL_CAPTCHA_EXPIRE_SECONDS: int
 
     @model_validator(mode='before')
     @classmethod
@@ -334,12 +207,6 @@ class Settings(BaseSettings):
             # FastAPI
             values['FASTAPI_OPENAPI_URL'] = None
             values['FASTAPI_STATIC_FILES'] = False
-
-            # task
-            values['CELERY_BROKER'] = 'rabbitmq'
-
-            # Grafana
-            values['GRAFANA_METRICS_ENABLE'] = True
 
         return values
 

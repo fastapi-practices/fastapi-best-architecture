@@ -39,6 +39,3 @@ class User(Base):
     last_password_changed_time: Mapped[datetime | None] = mapped_column(
         TimeZone, init=False, default_factory=timezone.now, comment='上次密码变更时间'
     )
-
-    # 逻辑外键
-    dept_id: Mapped[int | None] = mapped_column(sa.BigInteger, default=None, comment='部门关联ID')

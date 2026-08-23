@@ -1,12 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, Path, Query
+from fastapi import APIRouter, Body, Path, Query
 
 from backend.common.pagination import DependsPagination, PageData
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
-from backend.common.security.jwt import DependsJwtAuth
-from backend.common.security.permission import RequestPermission
-from backend.common.security.rbac import DependsRBAC
+from backend.common.security.jwt import DependsJwtAuth, DependsSuperUser
 from backend.database.db import CurrentSession, CurrentSessionTransaction
 from backend.plugin.config.schema.config import (
     CreateConfigParam,
@@ -57,8 +55,7 @@ async def get_configs_paginated(
     '',
     summary='创建参数配置',
     dependencies=[
-        Depends(RequestPermission('sys:config:add')),
-        DependsRBAC,
+        DependsSuperUser,
     ],
 )
 async def create_config(db: CurrentSessionTransaction, obj: CreateConfigParam) -> ResponseModel:
@@ -66,7 +63,7 @@ async def create_config(db: CurrentSessionTransaction, obj: CreateConfigParam) -
     return response_base.success()
 
 
-@router.put('', summary='批量更新参数配置', dependencies=[Depends(RequestPermission('sys.config.edits')), DependsRBAC])
+@router.put('', summary='批量更新参数配置', dependencies=[DependsSuperUser])
 async def bulk_update_config(db: CurrentSessionTransaction, objs: list[UpdateConfigsParam]) -> ResponseModel:
     count = await config_service.bulk_update(db=db, objs=objs)
     if count > 0:
@@ -78,8 +75,7 @@ async def bulk_update_config(db: CurrentSessionTransaction, objs: list[UpdateCon
     '/{pk}',
     summary='更新参数配置',
     dependencies=[
-        Depends(RequestPermission('sys:config:edit')),
-        DependsRBAC,
+        DependsSuperUser,
     ],
 )
 async def update_config(
@@ -95,8 +91,7 @@ async def update_config(
     '',
     summary='批量删除参数配置',
     dependencies=[
-        Depends(RequestPermission('sys:config:del')),
-        DependsRBAC,
+        DependsSuperUser,
     ],
 )
 async def delete_configs(
