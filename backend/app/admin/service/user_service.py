@@ -169,12 +169,12 @@ class UserService:
                 user = await user_dao.get(db, pk)
                 if not user:
                     raise errors.NotFoundError(msg='用户不存在')
-                multi_login = user.is_multi_login if pk != user.id else request.user.is_multi_login
+                multi_login = user.is_multi_login if pk != request.user.id else request.user.is_multi_login
                 new_multi_login = not multi_login
                 count = await user_dao.set_multi_login(db, pk, multi_login=new_multi_login)
                 token = get_token(request)
                 token_payload = jwt_decode(token)
-                if pk == user.id:
+                if pk == request.user.id:
                     # 系统管理员修改自身时，除当前 token 外，其他 token 失效
                     if not new_multi_login:
                         key_prefix = f'{settings.TOKEN_REDIS_PREFIX}:{user.id}'
