@@ -48,22 +48,22 @@ class LoginLogService:
         :return:
         """
         try:
-            obj = CreateLoginLogParam(
-                user_uuid=user_uuid,
-                username=username,
-                status=status,
-                ip=ctx.ip,
-                country=ctx.country,
-                region=ctx.region,
-                city=ctx.city,
-                user_agent=ctx.user_agent,
-                browser=ctx.browser,
-                os=ctx.os,
-                device=ctx.device,
-                msg=msg,
-                login_time=login_time,
-            )
-            # 为后台任务创建独立数据库会话
+            data = {
+                'user_uuid': user_uuid,
+                'username': username,
+                'status': status,
+                'ip': ctx.ip,
+                'country': ctx.country,
+                'region': ctx.region,
+                'city': ctx.city,
+                'user_agent': ctx.user_agent,
+                'browser': ctx.browser,
+                'os': ctx.os,
+                'device': ctx.device,
+                'msg': msg,
+                'login_time': login_time,
+            }
+            obj = CreateLoginLogParam(**data)
             async with async_db_session.begin() as db:
                 await login_log_dao.create(db, obj)
         except Exception as e:

@@ -9,6 +9,7 @@ def build_sql_filename(
     pk_type: PrimaryKeyType,
     *,
     suffix: str | None = None,
+    tenant: bool = False,
 ) -> str:
     """
     构建插件 SQL 脚本文件名
@@ -23,10 +24,18 @@ def build_sql_filename(
         parts.append('snowflake')
     if suffix:
         parts.append(suffix)
+    if tenant:
+        parts.append('tenant')
     return f'{"_".join(parts)}.sql'
 
 
-async def get_plugin_sql(plugin: str, db_type: DataBaseType, pk_type: PrimaryKeyType) -> str | None:
+async def get_plugin_sql(
+    plugin: str,
+    db_type: DataBaseType,
+    pk_type: PrimaryKeyType,
+    *,
+    tenant: bool = False,
+) -> str | None:
     """
     获取插件 SQL 脚本
 
@@ -36,6 +45,11 @@ async def get_plugin_sql(plugin: str, db_type: DataBaseType, pk_type: PrimaryKey
     :return:
     """
     sql_dir = PLUGIN_DIR / plugin / 'sql' / ('mysql' if db_type == DataBaseType.mysql else 'postgresql')
+    if tenant:
+        tenant_sql_file = sql_dir / build_sql_filename('init', pk_type, tenant=True)
+        if await anyio.Path(tenant_sql_file).exists():
+            return str(tenant_sql_file)
+
     default_filename = build_sql_filename('init', pk_type)
     default_sql_file = sql_dir / default_filename
     return str(default_sql_file) if await anyio.Path(default_sql_file).exists() else None

@@ -34,6 +34,8 @@ async def rbac_verify(request: Request, _token: str = DependsJwtAuth) -> None:  
 
     # 检测用户角色
     user_roles = request.user.roles
+    if not user_roles:
+        raise errors.AuthorizationError(msg='用户未分配角色，请联系系统管理员')
     enabled_roles = [role for role in user_roles if role.status == StatusType.enable]
     if not enabled_roles:
         raise errors.AuthorizationError(msg='用户所属角色已被锁定，请联系系统管理员')

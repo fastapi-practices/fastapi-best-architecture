@@ -28,9 +28,20 @@ from backend.app.admin.schema.user import (
 from backend.app.admin.utils.password_security import get_hash_password
 from backend.common.enums import StatusType
 from backend.common.exception import errors
+from backend.core.conf import settings
 from backend.plugin.core import check_plugin_installed
 from backend.utils.serializers import select_join_serialize
 from backend.utils.timezone import timezone
+
+if settings.TENANT_ENABLED:
+    try:
+        from backend.plugin.tenant.utils import get_tenant_dict as inject_tenant_dict
+    except ImportError:
+        raise ImportError('租户插件方法导入失败，请联系系统管理员')
+else:
+
+    def inject_tenant_dict(obj: dict[str, Any]) -> dict[str, Any]:
+        return obj
 
 
 class CRUDUser(CRUDPlus[User]):
@@ -139,6 +150,7 @@ class CRUDUser(CRUDPlus[User]):
 
         dict_obj = obj.model_dump(exclude={'roles'})
         dict_obj.update({'salt': salt})
+
         new_user = self.model(**dict_obj)
         db.add(new_user)
         await db.flush()
@@ -148,7 +160,11 @@ class CRUDUser(CRUDPlus[User]):
             result = await db.execute(role_stmt)
             roles = result.scalars().all()
 
-            user_role_data = [AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump() for role in roles]
+            user_role_data = []
+            for role in roles:
+                role_dict = AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump()
+                user_role_data.append(inject_tenant_dict(role_dict))
+
             user_role_stmt = insert(user_role)
             await db.execute(user_role_stmt, user_role_data)
 
@@ -162,6 +178,7 @@ class CRUDUser(CRUDPlus[User]):
         """
         dict_obj = obj.model_dump()
         dict_obj.update({'is_staff': True, 'salt': None})
+
         new_user = self.model(**dict_obj)
         db.add(new_user)
         await db.flush()
@@ -172,7 +189,8 @@ class CRUDUser(CRUDPlus[User]):
         if role is None:
             raise errors.NotFoundError(msg='未找到可用角色，请联系系统管理员')
 
-        user_role_stmt = insert(user_role).values(AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump())
+        user_role_data = inject_tenant_dict(AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump())
+        user_role_stmt = insert(user_role).values(user_role_data)
         await db.execute(user_role_stmt)
 
     async def update(self, db: AsyncSession, user_id: int, obj: UpdateUserParam) -> int:
@@ -197,7 +215,11 @@ class CRUDUser(CRUDPlus[User]):
             result = await db.execute(role_stmt)
             roles = result.scalars().all()
 
-            user_role_data = [AddUserRoleParam(user_id=user_id, role_id=role.id).model_dump() for role in roles]
+            user_role_data = []
+            for role in roles:
+                role_dict = AddUserRoleParam(user_id=user_id, role_id=role.id).model_dump()
+                user_role_data.append(inject_tenant_dict(role_dict))
+
             user_role_stmt = insert(user_role)
             await db.execute(user_role_stmt, user_role_data)
 
