@@ -183,7 +183,8 @@ async def install_git_frontend_plugin(repo_url: str, frontend_project_root: str)
         raise errors.RequestError(msg='未检测到前端插件目录，请确认路径下存在 apps/web-antdv-next/src/plugins')
 
     repo_name = match.group('repo')
-    plugin_name = repo_name.removesuffix('_ui')
+    # 仓库名允许 _ui 或 -ui 后缀，安装目录不保留该后缀
+    plugin_name = repo_name.removesuffix('_ui') if repo_name.endswith('_ui') else repo_name.removesuffix('-ui')
     if not plugin_name:
         raise errors.RequestError(msg='前端插件仓库名称非法')
 
