@@ -50,7 +50,8 @@ def jwt_decode(token: str) -> TokenPayload:
         session_uuid = payload.get('session_uuid')
         user_id = payload.get('sub')
         expire = payload.get('exp')
-        if not session_uuid or not user_id or not expire:
+        tenant_id = payload.get('tenant_id')
+        if not session_uuid or not user_id or not expire or tenant_id is None:
             raise errors.TokenError(msg='Token 无效')
     except ExpiredSignatureError:
         raise errors.TokenError(msg='Token 已过期')
@@ -60,14 +61,22 @@ def jwt_decode(token: str) -> TokenPayload:
         user_id=int(user_id),
         session_uuid=session_uuid,
         expire_time=timezone.from_datetime(timezone.to_utc(expire)),
+        tenant_id=int(tenant_id),
     )
 
 
-async def create_access_token(user_id: int, *, multi_login: bool, **kwargs) -> AccessToken:
+async def create_access_token(
+    user_id: int,
+    tenant_id: int,
+    *,
+    multi_login: bool,
+    **kwargs,
+) -> AccessToken:
     """
     生成加密 token
 
     :param user_id: 用户 ID
+    :param tenant_id: 租户 ID
     :param multi_login: 是否允许多端登录
     :param kwargs: token 额外信息
     :return:
@@ -78,6 +87,7 @@ async def create_access_token(user_id: int, *, multi_login: bool, **kwargs) -> A
         'session_uuid': session_uuid,
         'exp': timezone.to_utc(expire).timestamp(),
         'sub': str(user_id),
+        'tenant_id': tenant_id,
     })
 
     if not multi_login:
@@ -100,12 +110,13 @@ async def create_access_token(user_id: int, *, multi_login: bool, **kwargs) -> A
     return AccessToken(access_token=access_token, access_token_expire_time=expire, session_uuid=session_uuid)
 
 
-async def create_refresh_token(session_uuid: str, user_id: int, *, multi_login: bool) -> RefreshToken:
+async def create_refresh_token(session_uuid: str, user_id: int, tenant_id: int, *, multi_login: bool) -> RefreshToken:
     """
     生成加密刷新 token，仅用于创建新的 token
 
     :param session_uuid: 会话 UUID
     :param user_id: 用户 ID
+    :param tenant_id: 租户 ID
     :param multi_login: 是否允许多端登录
     :return:
     """
@@ -114,6 +125,7 @@ async def create_refresh_token(session_uuid: str, user_id: int, *, multi_login: 
         'session_uuid': session_uuid,
         'exp': timezone.to_utc(expire).timestamp(),
         'sub': str(user_id),
+        'tenant_id': tenant_id,
     })
 
     if not multi_login:
@@ -131,6 +143,7 @@ async def create_new_token(
     refresh_token: str,
     session_uuid: str,
     user_id: int,
+    tenant_id: int,
     *,
     multi_login: bool,
     **kwargs,
@@ -141,6 +154,7 @@ async def create_new_token(
     :param refresh_token: 刷新 token
     :param session_uuid: 会话 UUID
     :param user_id: 用户 ID
+    :param tenant_id: 租户 ID
     :param multi_login: 是否允许多端登录
     :param kwargs: token 附加信息
     :return:
@@ -152,8 +166,18 @@ async def create_new_token(
     await redis_client.delete(f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user_id}:{session_uuid}')
     await redis_client.delete(f'{settings.TOKEN_REDIS_PREFIX}:{user_id}:{session_uuid}')
 
-    new_access_token = await create_access_token(user_id, multi_login=multi_login, **kwargs)
-    new_refresh_token = await create_refresh_token(new_access_token.session_uuid, user_id, multi_login=multi_login)
+    new_access_token = await create_access_token(
+        user_id,
+        tenant_id,
+        multi_login=multi_login,
+        **kwargs,
+    )
+    new_refresh_token = await create_refresh_token(
+        new_access_token.session_uuid,
+        user_id,
+        tenant_id,
+        multi_login=multi_login,
+    )
     return NewToken(
         new_access_token=new_access_token.access_token,
         new_access_token_expire_time=new_access_token.access_token_expire_time,
@@ -189,6 +213,41 @@ def get_token(request: Request) -> str:
     return token
 
 
+async def check_tenant_status(db: AsyncSession, tenant_id: int) -> None:
+    """
+    校验租户状态
+
+    :param db: 数据库会话
+    :param tenant_id: 租户 ID
+    :return:
+    """
+    if not settings.TENANT_ENABLED:
+        return
+
+    if tenant_id == settings.TENANT_DEFAULT_ID:
+        return
+
+    try:
+        from backend.plugin.tenant.crud.crud_package import tenant_package_dao
+        from backend.plugin.tenant.crud.crud_tenant import tenant_dao
+    except ImportError:
+        raise errors.ServerError(msg='租户插件方法导入失败，请联系系统管理员')
+
+    tenant = await tenant_dao.get(db, tenant_id)
+    if not tenant:
+        raise errors.NotFoundError(msg='租户不存在，请联系系统管理员')
+
+    if tenant.status == 0:
+        raise errors.AuthorizationError(msg='租户已被禁用，请联系系统管理员')
+
+    if tenant.expire_time and tenant.expire_time < timezone.now():
+        raise errors.AuthorizationError(msg='租户已过期，请联系系统管理员')
+
+    package = await tenant_package_dao.get(db, tenant.package_id)
+    if package and package.status == 0:
+        raise errors.AuthorizationError(msg='租户套餐已被禁用，请联系系统管理员')
+
+
 async def get_current_user(db: AsyncSession, pk: int) -> User:
     """
     获取当前用户
@@ -204,6 +263,10 @@ async def get_current_user(db: AsyncSession, pk: int) -> User:
         raise errors.TokenError(msg='Token 无效')
     if not user.status:
         raise errors.AuthorizationError(msg='用户已被锁定，请联系系统管理员')
+
+    if settings.TENANT_ENABLED:
+        await check_tenant_status(db, ctx.tenant_id)
+
     if user.dept_id and not user.dept:
         raise errors.AuthorizationError(msg='用户所属部门不存在或已被删除，请联系系统管理员')
     if user.dept and not user.dept.status:
@@ -248,6 +311,7 @@ async def jwt_authentication(token: str) -> GetUserInfoWithRelationDetail:
     """
     token_payload = jwt_decode(token)
     ctx.user_id = token_payload.user_id
+    ctx.tenant_id = token_payload.tenant_id
     redis_token = await redis_client.get(f'{settings.TOKEN_REDIS_PREFIX}:{ctx.user_id}:{token_payload.session_uuid}')
     if not redis_token:
         raise errors.TokenError(msg='Token 已过期')

@@ -2,12 +2,14 @@ import json
 import time
 
 from asyncio import Queue
+from collections import defaultdict
 from typing import Any
 
 from fastapi import Response
 from starlette.datastructures import UploadFile
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from starlette_context import request_cycle_context
 
 from backend.app.admin.schema.opera_log import CreateOperaLogParam
 from backend.app.admin.service.opera_log_service import opera_log_service
@@ -26,7 +28,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
     """操作日志中间件"""
 
     opera_log_queue_name = 'opera_log_queue'
-    opera_log_queue: Queue[CreateOperaLogParam] = Queue(maxsize=settings.OPERA_LOG_QUEUE_MAXSIZE)
+    opera_log_queue: Queue[tuple[dict[str, Any], CreateOperaLogParam]] = Queue(maxsize=settings.OPERA_LOG_QUEUE_MAXSIZE)
 
     async def dispatch(self, request: Request, call_next: Any) -> Response:  # ruff:ignore[complex-structure]
         """
@@ -98,28 +100,35 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                 log.info(f'{ctx.ip: <15} | {method: <8} | {code!s: <6} | {path} | {elapsed:.3f}ms')
 
             if should_log_opera and request.method != 'OPTIONS':
-                opera_log_in = CreateOperaLogParam(
-                    trace_id=get_request_trace_id(),
-                    username=username,
-                    method=method,
-                    title=summary,
-                    path=path,
-                    ip=ctx.ip,
-                    country=ctx.country,
-                    region=ctx.region,
-                    city=ctx.city,
-                    user_agent=ctx.user_agent,
-                    os=ctx.os,
-                    browser=ctx.browser,
-                    device=ctx.device,
-                    args=args,
-                    status=status,
-                    code=str(code),
-                    msg=msg,
-                    cost_time=elapsed,
-                    opera_time=ctx.start_time,
-                )
-                await self.opera_log_queue.put(opera_log_in)
+                opera_log_data = {
+                    'trace_id': get_request_trace_id(),
+                    'username': username,
+                    'method': method,
+                    'title': summary,
+                    'path': path,
+                    'ip': ctx.ip,
+                    'country': ctx.country,
+                    'region': ctx.region,
+                    'city': ctx.city,
+                    'user_agent': ctx.user_agent,
+                    'os': ctx.os,
+                    'browser': ctx.browser,
+                    'device': ctx.device,
+                    'args': args,
+                    'status': status,
+                    'code': str(code),
+                    'msg': msg,
+                    'cost_time': elapsed,
+                    'opera_time': ctx.start_time,
+                }
+                if settings.TENANT_ENABLED:
+                    tenant_id = ctx.get('tenant_id')
+                    if tenant_id is None:
+                        raise RuntimeError('opera log context is missing tenant_id')
+                    opera_log_data['tenant_id'] = tenant_id
+
+                opera_log_in = CreateOperaLogParam(**opera_log_data)
+                await self.opera_log_queue.put((ctx.copy(), opera_log_in))
                 if settings.GRAFANA_METRICS_ENABLE:
                     observe_queue_size(self.opera_log_queue, queue_name=self.opera_log_queue_name)
 
@@ -247,12 +256,21 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
     async def consumer(cls) -> None:
         """操作日志消费者"""
 
-        async def bulk_create_opera_log(logs: list[CreateOperaLogParam]) -> None:
+        async def bulk_create_opera_log(logs: list[tuple[dict[str, Any], CreateOperaLogParam]]) -> None:
             """批量创建操作日志"""
             if settings.DATABASE_ECHO:
                 log.info('自动执行【操作日志批量创建】任务...')
+            logs_by_tenant = defaultdict(list)
+            for context_data, log_in in logs:
+                tenant_id = context_data.get('tenant_id')
+                if tenant_id is None:
+                    raise RuntimeError('opera log context is missing tenant_id')
+                logs_by_tenant[tenant_id].append((context_data, log_in))
             async with async_db_session.begin() as db:
-                await opera_log_service.bulk_create(db=db, objs=logs)
+                for tenant_logs in logs_by_tenant.values():
+                    request_context = dict(tenant_logs[0][0])
+                    with request_cycle_context(request_context):
+                        await opera_log_service.bulk_create(db=db, objs=[log_in for _, log_in in tenant_logs])
 
         await batch_consume(
             cls.opera_log_queue,

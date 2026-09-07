@@ -4,11 +4,11 @@ import sqlalchemy as sa
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.common.model import DataClassBase, TimeZone, UniversalText, id_key
+from backend.common.model import DataClassBase, TenantMixin, TimeZone, UniversalText, id_key
 from backend.utils.timezone import timezone
 
 
-class OperaLog(DataClassBase):
+class OperaLog(DataClassBase, TenantMixin):
     """操作日志表"""
 
     __tablename__ = 'sys_opera_log'

@@ -4,20 +4,29 @@ import sqlalchemy as sa
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.common.model import Base, TimeZone, id_key
+from backend.common.model import Base, TenantMixin, TimeZone, id_key
+from backend.core.conf import settings
 from backend.database.db import uuid4_str
 from backend.utils.timezone import timezone
 
 
-class User(Base):
+class User(Base, TenantMixin):
     """用户表"""
 
     __tablename__ = 'sys_user'
-    __table_args__ = (
-        sa.UniqueConstraint('username', 'deleted', name='uk_sys_user_username_deleted'),
-        sa.UniqueConstraint('email', 'deleted', name='uk_sys_user_email_deleted'),
-        {'comment': '用户表'},
-    )
+
+    if settings.TENANT_ENABLED:
+        __table_args__ = (
+            sa.UniqueConstraint('username', 'tenant_id', 'deleted', name='uk_sys_user_username_tenant_deleted'),
+            sa.UniqueConstraint('email', 'tenant_id', 'deleted', name='uk_sys_user_email_tenant_deleted'),
+            {'comment': '用户表'},
+        )
+    else:
+        __table_args__ = (
+            sa.UniqueConstraint('username', 'deleted', name='uk_sys_user_username_deleted'),
+            sa.UniqueConstraint('email', 'deleted', name='uk_sys_user_email_deleted'),
+            {'comment': '用户表'},
+        )
 
     id: Mapped[id_key] = mapped_column(init=False)
     uuid: Mapped[str] = mapped_column(sa.String(64), init=False, default_factory=uuid4_str, unique=True)

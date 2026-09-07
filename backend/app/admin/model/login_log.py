@@ -4,11 +4,11 @@ import sqlalchemy as sa
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.common.model import DataClassBase, TimeZone, UniversalText, id_key
+from backend.common.model import DataClassBase, TenantMixin, TimeZone, UniversalText, id_key
 from backend.utils.timezone import timezone
 
 
-class LoginLog(DataClassBase):
+class LoginLog(DataClassBase, TenantMixin):
     """登录日志表"""
 
     __tablename__ = 'sys_login_log'

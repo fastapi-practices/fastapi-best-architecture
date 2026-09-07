@@ -2,10 +2,10 @@ import sqlalchemy as sa
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.common.model import Base, UniversalText, id_key
+from backend.common.model import Base, TenantMixin, UniversalText, id_key
 
 
-class Notice(Base):
+class Notice(Base, TenantMixin):
     """系统通知公告表"""
 
     __tablename__ = 'sys_notice'

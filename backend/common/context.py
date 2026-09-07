@@ -23,6 +23,7 @@ class TypedContextProtocol(Protocol):
 
     user_id: int | None
     is_superuser: bool
+    tenant_id: int
 
 
 class TypedContext(TypedContextProtocol, _Context):
