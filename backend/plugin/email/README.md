@@ -31,7 +31,7 @@ EMAIL_PORT = 465
 EMAIL_SSL = true
 ```
 
-在 `backend/core/conf.py` 中添加以下内容：
+当前项目的 `backend/core/conf.py` 已包含以下字段：
 
 ```python
 ##################################################
@@ -48,6 +48,14 @@ EMAIL_SSL: bool
 EMAIL_CAPTCHA_REDIS_PREFIX: str
 EMAIL_CAPTCHA_EXPIRE_SECONDS: int
 ```
+
+## 配置项说明
+
+- `EMAIL_CAPTCHA_EXPIRE_SECONDS`：控制邮箱验证码有效期
+- `EMAIL_CAPTCHA_REDIS_PREFIX`：控制邮箱验证码 Redis 键前缀
+- `EMAIL_HOST`：控制 SMTP 服务器地址
+- `EMAIL_PORT`：控制 SMTP 端口
+- `EMAIL_SSL`：控制是否启用 SSL
 
 ## 使用方式
 
