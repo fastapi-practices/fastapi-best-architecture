@@ -10,6 +10,8 @@ from backend.common.pagination import paging_data
 
 
 class TaskResultService:
+    """任务结果服务类"""
+
     @staticmethod
     async def get(*, db: AsyncSession, pk: int) -> TaskResult:
         """

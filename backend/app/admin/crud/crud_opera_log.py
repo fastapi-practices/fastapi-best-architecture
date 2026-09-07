@@ -7,7 +7,7 @@ from backend.app.admin.model import OperaLog
 from backend.app.admin.schema.opera_log import CreateOperaLogParam
 
 
-class CRUDOperaLogDao(CRUDPlus[OperaLog]):
+class CRUDOperaLog(CRUDPlus[OperaLog]):
     """操作日志数据库操作类"""
 
     async def get_select(self, username: str | None, status: int | None, ip: str | None) -> Select:
@@ -71,4 +71,4 @@ class CRUDOperaLogDao(CRUDPlus[OperaLog]):
         await db.execute(sa_delete(OperaLog))
 
 
-opera_log_dao: CRUDOperaLogDao = CRUDOperaLogDao(OperaLog)
+opera_log_dao: CRUDOperaLog = CRUDOperaLog(OperaLog)

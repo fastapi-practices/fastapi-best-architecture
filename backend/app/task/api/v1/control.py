@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Path
 from starlette.concurrency import run_in_threadpool
 
 from backend.app.task import celery_app
-from backend.app.task.schema.control import TaskRegisteredDetail
+from backend.app.task.schema.control import GetTaskRegisteredDetail
 from backend.common.exception import errors
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
 from backend.common.security.jwt import DependsJwtAuth
@@ -15,7 +15,7 @@ router = APIRouter()
 
 
 @router.get('/registered', summary='获取已注册的任务', dependencies=[DependsJwtAuth])
-async def get_task_registered() -> ResponseSchemaModel[list[TaskRegisteredDetail]]:
+async def get_task_registered() -> ResponseSchemaModel[list[GetTaskRegisteredDetail]]:
     inspector = celery_app.control.inspect(timeout=0.5)
     registered = await run_in_threadpool(inspector.registered)
     if not registered:
@@ -26,9 +26,9 @@ async def get_task_registered() -> ResponseSchemaModel[list[TaskRegisteredDetail
         for task in tasks:
             task_ins = celery_app_tasks.get(task)
             if task_ins:
-                task_registered.append(TaskRegisteredDetail(name=task_ins.__doc__ or task, task=task))
+                task_registered.append(GetTaskRegisteredDetail(name=task_ins.__doc__ or task, task=task))
             else:
-                task_registered.append(TaskRegisteredDetail(name=task, task=task))
+                task_registered.append(GetTaskRegisteredDetail(name=task, task=task))
     return response_base.success(data=task_registered)
 
 
