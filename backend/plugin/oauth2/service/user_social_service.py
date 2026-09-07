@@ -12,6 +12,8 @@ from backend.plugin.oauth2.schema.user_social import CreateUserSocialParam
 
 
 class UserSocialService:
+    """用户社交账号服务类"""
+
     @staticmethod
     async def get_bindings(*, db: AsyncSession, user_id: int) -> list[str]:
         """
@@ -19,7 +21,7 @@ class UserSocialService:
 
         :param db: 数据库会话
         :param user_id: 用户 ID
-        :return: 绑定列表，每个元素包含 sid、source 等信息
+        :return:
         """
         bindings = await user_social_dao.get_by_user_id(db, user_id)
         return [binding.source for binding in bindings]
