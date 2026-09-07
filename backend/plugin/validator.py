@@ -37,7 +37,7 @@ def _validate_settings(v: dict[str, Any]) -> dict[str, Any]:
 class PluginInfoSchema(BaseModel):
     """插件信息模型"""
 
-    icon: str | None = Field(default=None, description='图标路径或链接地址')
+    icon: str | None = Field(None, description='图标路径或链接地址')
     summary: str = Field(..., min_length=1, max_length=100, description='摘要')
     version: str = Field(..., description='版本号')
     description: str = Field(..., min_length=1, max_length=500, description='描述')
