@@ -5,7 +5,7 @@ from pydantic.alias_generators import to_pascal
 
 from backend.common.enums import PrimaryKeyType
 from backend.core.conf import settings
-from backend.plugin.code_generator.model import GenBusiness, GenColumn
+from backend.plugin.code_generator.model import CodeGenBusiness, CodeGenColumn
 from backend.plugin.code_generator.path_conf import JINJA2_TEMPLATE_DIR
 from backend.plugin.code_generator.utils.type_conversion import sql_type_to_sqlalchemy_name
 from backend.utils.snowflake import snowflake
@@ -31,17 +31,17 @@ class GenTemplate:
         获取 Jinja2 模板对象
 
         :param jinja_file: Jinja2 模板文件路径
-        :return: Template 对象
+        :return:
         """
         return self.env.get_template(jinja_file)
 
     @staticmethod
-    def get_template_path_mapping(business: GenBusiness) -> dict[str, str]:
+    def get_template_path_mapping(business: CodeGenBusiness) -> dict[str, str]:
         """
         获取模板文件到生成文件的路径映射
 
         :param business: 代码生成业务对象
-        :return: {模板路径: 生成文件路径}
+        :return:
         """
         app_name = business.app_name
         filename = business.filename
@@ -59,12 +59,12 @@ class GenTemplate:
             f'sql/postgresql/init{pk_suffix}.jinja': f'{app_name}/sql/postgresql/init{pk_suffix}.sql',
         }
 
-    def get_init_files(self, business: GenBusiness) -> dict[str, str]:
+    def get_init_files(self, business: CodeGenBusiness) -> dict[str, str]:
         """
         获取需要生成的 __init__.py 文件及其内容
 
         :param business: 业务对象
-        :return: {相对路径: 文件内容}
+        :return:
         """
         app_name = business.app_name
         table_name = business.table_name
@@ -84,7 +84,9 @@ class GenTemplate:
         }
 
     @staticmethod
-    def get_vars(business: GenBusiness, models: Sequence[GenColumn]) -> dict[str, str | Sequence[GenColumn]]:
+    def get_vars(
+        business: CodeGenBusiness, models: Sequence[CodeGenColumn]
+    ) -> dict[str, str | Sequence[CodeGenColumn]]:
         """
         获取模板变量
 

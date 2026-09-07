@@ -2,5 +2,5 @@ delete from sys_menu where name in ('AddGenCodeBusiness', 'EditGenCodeBusiness',
 
 delete from sys_menu where name = 'PluginCodeGenerator';
 
-drop table if exists gen_column;
-drop table if exists gen_business;
+drop table if exists code_gen_column;
+drop table if exists code_gen_business;

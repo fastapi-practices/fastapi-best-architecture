@@ -5,12 +5,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 from backend.common.model import Base, UniversalText, id_key
 
 
-class GenBusiness(Base):
+class CodeGenBusiness(Base):
     """代码生成业务表"""
 
-    __tablename__ = 'gen_business'
+    __tablename__ = 'code_gen_business'
     __table_args__ = (
-        sa.UniqueConstraint('table_name', 'deleted', name='uk_gen_business_table_name_deleted'),
+        sa.UniqueConstraint('table_name', 'deleted', name='uk_code_gen_business_table_name_deleted'),
         {'comment': '代码生成业务表'},
     )
 

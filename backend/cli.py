@@ -597,15 +597,15 @@ async def import_table(
         raise cappa.Exit('代码生成仅在开发环境可用', code=1)
 
     try:
-        from backend.plugin.code_generator.schema.gen import ImportParam
-        from backend.plugin.code_generator.service.gen_service import gen_service
+        from backend.plugin.code_generator.schema.code_gen import ImportParam
+        from backend.plugin.code_generator.service.code_gen_service import code_gen_service
     except ImportError:
         raise cappa.Exit('代码生成插件用法导入失败，请联系系统管理员', code=1)
 
     try:
         obj = ImportParam(app=app, table_schema=table_schema, table_name=table_name)
         async with async_db_session.begin() as db:
-            await gen_service.import_business_and_model(db=db, obj=obj)
+            await code_gen_service.import_business_and_model(db=db, obj=obj)
         console.tip('代码生成业务和模型列导入成功')
         console.log('\n快试试 [bold cyan]fba codegen[/bold cyan] 生成代码吧~')
     except Exception as e:
@@ -618,15 +618,15 @@ async def generate(*, preview: bool = False) -> None:
         raise cappa.Exit('代码生成仅在开发环境可用', code=1)
 
     try:
-        from backend.plugin.code_generator.service.business_service import gen_business_service
-        from backend.plugin.code_generator.service.gen_service import gen_service
+        from backend.plugin.code_generator.service.business_service import code_gen_business_service
+        from backend.plugin.code_generator.service.code_gen_service import code_gen_service
     except ImportError:
         raise cappa.Exit('代码生成插件用法导入失败，请联系系统管理员', code=1)
 
     try:
         ids = []
         async with async_db_session() as db:
-            results = await gen_business_service.get_all(db=db)
+            results = await code_gen_business_service.get_all(db=db)
 
         if not results:
             raise cappa.Exit('[red]暂无可用的代码生成业务！请先通过 import 命令导入！[/]')
@@ -651,7 +651,7 @@ async def generate(*, preview: bool = False) -> None:
 
         # 预览
         async with async_db_session() as db:
-            preview_data = await gen_service.preview(db=db, pk=business)
+            preview_data = await code_gen_service.preview(db=db, pk=business)
 
         console.print('\n[bold yellow]将要生成以下文件：[/]')
         file_table = Table(show_header=True, header_style='bold cyan')
@@ -675,7 +675,7 @@ async def generate(*, preview: bool = False) -> None:
 
         if ok.lower() == 'y':
             async with async_db_session.begin() as db:
-                gen_path = await gen_service.generate(db=db, pk=business)
+                gen_path = await code_gen_service.generate(db=db, pk=business)
 
             console.print()
             console.tip('代码已生成完成')
