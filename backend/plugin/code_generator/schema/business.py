@@ -7,7 +7,7 @@ from backend.common.schema import SchemaBase
 from backend.utils.pattern_validate import is_english_identifier
 
 
-class GenBusinessSchemaBase(SchemaBase):
+class CodeGenBusinessSchemaBase(SchemaBase):
     """代码生成业务基础模型"""
 
     app_name: str = Field(description='应用名称（英文）')
@@ -32,15 +32,15 @@ class GenBusinessSchemaBase(SchemaBase):
         return v
 
 
-class CreateGenBusinessParam(GenBusinessSchemaBase):
+class CreateCodeGenBusinessParam(CodeGenBusinessSchemaBase):
     """创建代码生成业务参数"""
 
 
-class UpdateGenBusinessParam(GenBusinessSchemaBase):
+class UpdateCodeGenBusinessParam(CodeGenBusinessSchemaBase):
     """更新代码生成业务参数"""
 
 
-class GetGenBusinessDetail(GenBusinessSchemaBase):
+class GetCodeGenBusinessDetail(CodeGenBusinessSchemaBase):
     """获取代码生成业务详情"""
 
     model_config = ConfigDict(from_attributes=True)

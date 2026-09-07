@@ -9,20 +9,20 @@ from backend.common.security.permission import RequestPermission
 from backend.common.security.rbac import DependsRBAC
 from backend.database.db import CurrentSession, CurrentSessionTransaction
 from backend.plugin.code_generator.schema.business import (
-    CreateGenBusinessParam,
-    GetGenBusinessDetail,
-    UpdateGenBusinessParam,
+    CreateCodeGenBusinessParam,
+    GetCodeGenBusinessDetail,
+    UpdateCodeGenBusinessParam,
 )
-from backend.plugin.code_generator.schema.column import GetGenColumnDetail
-from backend.plugin.code_generator.service.business_service import gen_business_service
-from backend.plugin.code_generator.service.column_service import gen_column_service
+from backend.plugin.code_generator.schema.column import GetCodeGenColumnDetail
+from backend.plugin.code_generator.service.business_service import code_gen_business_service
+from backend.plugin.code_generator.service.column_service import code_gen_column_service
 
 router = APIRouter()
 
 
 @router.get('/all', summary='获取所有代码生成业务', dependencies=[DependsJwtAuth])
-async def get_all_businesses(db: CurrentSession) -> ResponseSchemaModel[list[GetGenBusinessDetail]]:
-    data = await gen_business_service.get_all(db=db)
+async def get_all_businesses(db: CurrentSession) -> ResponseSchemaModel[list[GetCodeGenBusinessDetail]]:
+    data = await code_gen_business_service.get_all(db=db)
     return response_base.success(data=data)
 
 
@@ -30,8 +30,8 @@ async def get_all_businesses(db: CurrentSession) -> ResponseSchemaModel[list[Get
 async def get_business(
     db: CurrentSession,
     pk: Annotated[int, Path(description='业务 ID')],
-) -> ResponseSchemaModel[GetGenBusinessDetail]:
-    data = await gen_business_service.get(db=db, pk=pk)
+) -> ResponseSchemaModel[GetCodeGenBusinessDetail]:
+    data = await code_gen_business_service.get(db=db, pk=pk)
     return response_base.success(data=data)
 
 
@@ -46,8 +46,8 @@ async def get_business(
 async def get_businesses_paginated(
     db: CurrentSession,
     table_name: Annotated[str | None, Query(description='代码生成业务表名称')] = None,
-) -> ResponseSchemaModel[PageData[GetGenBusinessDetail]]:
-    page_data = await gen_business_service.get_list(db=db, table_name=table_name)
+) -> ResponseSchemaModel[PageData[GetCodeGenBusinessDetail]]:
+    page_data = await code_gen_business_service.get_list(db=db, table_name=table_name)
     return response_base.success(data=page_data)
 
 
@@ -55,8 +55,8 @@ async def get_businesses_paginated(
 async def get_business_all_columns(
     db: CurrentSession,
     pk: Annotated[int, Path(description='业务 ID')],
-) -> ResponseSchemaModel[list[GetGenColumnDetail]]:
-    data = await gen_column_service.get_columns(db=db, business_id=pk)
+) -> ResponseSchemaModel[list[GetCodeGenColumnDetail]]:
+    data = await code_gen_column_service.get_columns(db=db, business_id=pk)
     return response_base.success(data=data)
 
 
@@ -68,8 +68,8 @@ async def get_business_all_columns(
         DependsRBAC,
     ],
 )
-async def create_business(db: CurrentSessionTransaction, obj: CreateGenBusinessParam) -> ResponseModel:
-    await gen_business_service.create(db=db, obj=obj)
+async def create_business(db: CurrentSessionTransaction, obj: CreateCodeGenBusinessParam) -> ResponseModel:
+    await code_gen_business_service.create(db=db, obj=obj)
     return response_base.success()
 
 
@@ -84,9 +84,9 @@ async def create_business(db: CurrentSessionTransaction, obj: CreateGenBusinessP
 async def update_business(
     db: CurrentSessionTransaction,
     pk: Annotated[int, Path(description='业务 ID')],
-    obj: UpdateGenBusinessParam,
+    obj: UpdateCodeGenBusinessParam,
 ) -> ResponseModel:
-    count = await gen_business_service.update(db=db, pk=pk, obj=obj)
+    count = await code_gen_business_service.update(db=db, pk=pk, obj=obj)
     if count > 0:
         return response_base.success()
     return response_base.fail()
@@ -103,7 +103,7 @@ async def update_business(
 async def delete_business(
     db: CurrentSessionTransaction, pk: Annotated[int, Path(description='业务 ID')]
 ) -> ResponseModel:
-    count = await gen_business_service.delete(db=db, pk=pk)
+    count = await code_gen_business_service.delete(db=db, pk=pk)
     if count > 0:
         return response_base.success()
     return response_base.fail()

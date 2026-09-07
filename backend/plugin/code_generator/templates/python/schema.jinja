@@ -49,8 +49,8 @@ class Get{{ schema_name }}Detail({{ schema_name }}SchemaBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: int = Field(description='主键 ID')
     {% if datetime_mixin %}
-    created_time: datetime
-    updated_time: datetime | None = None
+    created_time: datetime = Field(description='创建时间')
+    updated_time: datetime | None = Field(None, description='更新时间')
     {% endif %}

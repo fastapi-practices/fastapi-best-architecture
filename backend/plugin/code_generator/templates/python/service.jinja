@@ -10,6 +10,8 @@ from backend.common.pagination import paging_data
 
 
 class {{ class_name }}Service:
+    """{{ doc_comment }}服务类"""
+
     @staticmethod
     async def get(*, db: AsyncSession, pk: int) -> {{ class_name }}:
         """
@@ -25,7 +27,7 @@ class {{ class_name }}Service:
         return {{ table_name }}
 
     @staticmethod
-    async def get_list(db: AsyncSession) -> dict[str, Any]:
+    async def get_list(*, db: AsyncSession) -> dict[str, Any]:
         """
         获取{{ doc_comment }}列表
 

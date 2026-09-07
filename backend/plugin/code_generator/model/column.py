@@ -5,12 +5,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 from backend.common.model import DataClassBase, UniversalText, id_key
 
 
-class GenColumn(DataClassBase):
+class CodeGenColumn(DataClassBase):
     """代码生成模型列表"""
 
-    __tablename__ = 'gen_column'
+    __tablename__ = 'code_gen_column'
     __table_args__ = (
-        sa.UniqueConstraint('gen_business_id', 'name', name='uk_gen_column_business_id_name'),
+        sa.UniqueConstraint('code_gen_business_id', 'name', name='uk_code_gen_column_business_id_name'),
         {'comment': '代码生成模型列表'},
     )
 
@@ -26,4 +26,4 @@ class GenColumn(DataClassBase):
     is_nullable: Mapped[bool] = mapped_column(default=False, comment='是否可为空')
 
     # 逻辑外键
-    gen_business_id: Mapped[int] = mapped_column(sa.BigInteger, default=0, comment='代码生成业务ID')
+    code_gen_business_id: Mapped[int] = mapped_column(sa.BigInteger, default=0, comment='代码生成业务ID')

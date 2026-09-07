@@ -17,21 +17,21 @@ from starlette.concurrency import run_in_threadpool
 from backend.common.exception import errors
 from backend.core.conf import settings
 from backend.core.path_conf import BASE_PATH
-from backend.plugin.code_generator.crud.crud_business import gen_business_dao
-from backend.plugin.code_generator.crud.crud_column import gen_column_dao
-from backend.plugin.code_generator.crud.crud_gen import gen_dao
-from backend.plugin.code_generator.model import GenBusiness
-from backend.plugin.code_generator.schema.business import CreateGenBusinessParam
-from backend.plugin.code_generator.schema.column import CreateGenColumnInternalParam
-from backend.plugin.code_generator.schema.gen import ImportParam
-from backend.plugin.code_generator.service.column_service import gen_column_service
+from backend.plugin.code_generator.crud.crud_business import code_gen_business_dao
+from backend.plugin.code_generator.crud.crud_code_gen import code_gen_dao
+from backend.plugin.code_generator.crud.crud_column import code_gen_column_dao
+from backend.plugin.code_generator.model import CodeGenBusiness
+from backend.plugin.code_generator.schema.business import CreateCodeGenBusinessParam
+from backend.plugin.code_generator.schema.column import CreateCodeGenColumnInternalParam
+from backend.plugin.code_generator.schema.code_gen import ImportParam
+from backend.plugin.code_generator.service.column_service import code_gen_column_service
 from backend.plugin.code_generator.utils.format_code import format_python_code
 from backend.plugin.code_generator.utils.gen_template import gen_template
 from backend.plugin.code_generator.utils.type_conversion import sql_type_to_pydantic
 from backend.utils.locks import acquire_distributed_reload_lock
 
 
-class GenService:
+class CodeGenService:
     """代码生成服务类"""
 
     @staticmethod
@@ -43,7 +43,7 @@ class GenService:
         :param table_schema: 数据库 schema 名称
         :return:
         """
-        return await gen_dao.get_all_tables(db, table_schema)
+        return await code_gen_dao.get_all_tables(db, table_schema)
 
     @staticmethod
     async def import_business_and_model(*, db: AsyncSession, obj: ImportParam) -> None:
@@ -57,11 +57,11 @@ class GenService:
         if settings.ENVIRONMENT != 'dev':
             raise errors.ForbiddenError(msg='禁止在非开发环境下导入代码生成业务')
 
-        table_info = await gen_dao.get_table(db, obj.table_schema, obj.table_name)
+        table_info = await code_gen_dao.get_table(db, obj.table_schema, obj.table_name)
         if not table_info:
             raise errors.NotFoundError(msg='数据库表不存在')
 
-        business_info = await gen_business_dao.get_by_name(db, obj.table_name)
+        business_info = await code_gen_business_dao.get_by_name(db, obj.table_name)
         if business_info:
             raise errors.ConflictError(msg='已存在相同数据库表业务')
 
@@ -71,8 +71,8 @@ class GenService:
             if table_info['table_comment'][-1] == '表'
             else table_info['table_comment'] or table_name.split('_')[-1]
         )
-        new_business = GenBusiness(
-            **CreateGenBusinessParam(
+        new_business = CodeGenBusiness(
+            **CreateCodeGenBusinessParam(
                 app_name=obj.app,
                 table_name=table_name,
                 doc_comment=doc_comment,
@@ -86,13 +86,13 @@ class GenService:
         db.add(new_business)
         await db.flush()
 
-        column_info = await gen_dao.get_all_columns(db, obj.table_schema, table_name)
-        gen_columns = []
+        column_info = await code_gen_dao.get_all_columns(db, obj.table_schema, table_name)
+        code_gen_columns = []
         for column in column_info:
             column_type = column['column_type'].split('(')[0].upper()
             pd_type = sql_type_to_pydantic(column_type)
-            gen_columns.append(
-                CreateGenColumnInternalParam(
+            code_gen_columns.append(
+                CreateCodeGenColumnInternalParam(
                     name=column['column_name'],
                     comment=column['column_comment'],
                     type=column_type,
@@ -102,14 +102,14 @@ class GenService:
                     else 0,
                     is_pk=column['is_pk'],
                     is_nullable=column['is_nullable'],
-                    gen_business_id=new_business.id,
+                    code_gen_business_id=new_business.id,
                     pd_type=pd_type,
                 ),
             )
-        await gen_column_dao.bulk_create(db, gen_columns)
+        await code_gen_column_dao.bulk_create(db, code_gen_columns)
 
     @staticmethod
-    async def _render_tpl_code(*, db: AsyncSession, business: GenBusiness) -> dict[str, str]:
+    async def _render_tpl_code(*, db: AsyncSession, business: CodeGenBusiness) -> dict[str, str]:
         """
         渲染模板代码
 
@@ -117,7 +117,7 @@ class GenService:
         :param business: 业务对象
         :return:
         """
-        gen_models = await gen_column_service.get_columns(db=db, business_id=business.id)
+        gen_models = await code_gen_column_service.get_columns(db=db, business_id=business.id)
         if not gen_models:
             raise errors.NotFoundError(msg='代码生成模型表为空')
 
@@ -176,7 +176,7 @@ class GenService:
         :param pk: 业务 ID
         :return:
         """
-        business = await gen_business_dao.get(db, pk)
+        business = await code_gen_business_dao.get(db, pk)
         if not business:
             raise errors.NotFoundError(msg='业务不存在')
 
@@ -206,7 +206,7 @@ class GenService:
         :param pk: 业务 ID
         :return:
         """
-        business = await gen_business_dao.get(db, pk)
+        business = await code_gen_business_dao.get(db, pk)
         if not business:
             raise errors.NotFoundError(msg='业务不存在')
 
@@ -232,7 +232,7 @@ class GenService:
         if settings.ENVIRONMENT != 'dev':
             raise errors.ForbiddenError(msg='禁止在非开发环境下生成代码')
 
-        business = await gen_business_dao.get(db, pk)
+        business = await code_gen_business_dao.get(db, pk)
         if not business:
             raise errors.NotFoundError(msg='业务不存在')
 
@@ -274,7 +274,7 @@ class GenService:
         :param pk: 业务 ID
         :return:
         """
-        business = await gen_business_dao.get(db, pk)
+        business = await code_gen_business_dao.get(db, pk)
         if not business:
             raise errors.NotFoundError(msg='业务不存在')
 
@@ -297,4 +297,4 @@ class GenService:
         return bio
 
 
-gen_service: GenService = GenService()
+code_gen_service: CodeGenService = CodeGenService()

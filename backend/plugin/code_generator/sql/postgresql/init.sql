@@ -20,10 +20,10 @@ end $$;
 
 select setval(pg_get_serial_sequence('sys_menu', 'id'), coalesce(max(id), 0) + 1, true) from sys_menu;
 
-insert into gen_business (id, app_name, table_name, doc_comment, table_comment, class_name, schema_name, filename, datetime_mixin, api_version, gen_path, remark, created_time, updated_time)
+insert into code_gen_business (id, app_name, table_name, doc_comment, table_comment, class_name, schema_name, filename, datetime_mixin, api_version, gen_path, remark, created_time, updated_time)
 values (1, 'test', 'sys_opera_log', '操作日志表', '操作日志表', 'SysOperaLog', 'SysOperaLog', 'sys_opera_log', true, 'v1', null, null, '2025-12-15 15:30:33', null);
 
-insert into gen_column (id, name, comment, type, pd_type, "default", sort, "length", is_pk, is_nullable, gen_business_id)
+insert into code_gen_column (id, name, comment, type, pd_type, "default", sort, "length", is_pk, is_nullable, code_gen_business_id)
 values
 (1, 'trace_id', '请求跟踪 ID', 'String', 'str', null, 2, 32, false, false, 1),
 (2, 'username', '用户名', 'String', 'str', null, 3, 64, false, true, 1),
@@ -45,5 +45,5 @@ values
 (18, 'cost_time', '请求耗时（ms）', 'String', 'str', null, 19, 0, false, false, 1),
 (19, 'opera_time', '操作时间', 'String', 'str', null, 20, 0, false, false, 1);
 
-select setval(pg_get_serial_sequence('gen_business', 'id'),coalesce(max(id), 0) + 1, true) from gen_business;
-select setval(pg_get_serial_sequence('gen_column', 'id'),coalesce(max(id), 0) + 1, true) from gen_column;
+select setval(pg_get_serial_sequence('code_gen_business', 'id'),coalesce(max(id), 0) + 1, true) from code_gen_business;
+select setval(pg_get_serial_sequence('code_gen_column', 'id'),coalesce(max(id), 0) + 1, true) from code_gen_column;

@@ -9,8 +9,8 @@ from backend.common.security.permission import RequestPermission
 from backend.common.security.rbac import DependsRBAC
 from backend.core.conf import settings
 from backend.database.db import CurrentSession, CurrentSessionTransaction
-from backend.plugin.code_generator.schema.gen import ImportParam
-from backend.plugin.code_generator.service.gen_service import gen_service
+from backend.plugin.code_generator.schema.code_gen import ImportParam
+from backend.plugin.code_generator.service.code_gen_service import code_gen_service
 
 router = APIRouter()
 
@@ -20,7 +20,7 @@ async def get_all_tables(
     db: CurrentSession,
     table_schema: Annotated[str, Query(description='数据库名')] = 'fba',
 ) -> ResponseSchemaModel[list[dict[str, str | None]]]:
-    data = await gen_service.get_tables(db=db, table_schema=table_schema)
+    data = await code_gen_service.get_tables(db=db, table_schema=table_schema)
     return response_base.success(data=data)
 
 
@@ -33,7 +33,7 @@ async def get_all_tables(
     ],
 )
 async def import_table(db: CurrentSessionTransaction, obj: ImportParam) -> ResponseModel:
-    await gen_service.import_business_and_model(db=db, obj=obj)
+    await code_gen_service.import_business_and_model(db=db, obj=obj)
     return response_base.success()
 
 
@@ -41,7 +41,7 @@ async def import_table(db: CurrentSessionTransaction, obj: ImportParam) -> Respo
 async def preview_code(
     db: CurrentSession, pk: Annotated[int, Path(description='业务 ID')]
 ) -> ResponseSchemaModel[dict[str, bytes]]:
-    data = await gen_service.preview(db=db, pk=pk)
+    data = await code_gen_service.preview(db=db, pk=pk)
     return response_base.success(data=data)
 
 
@@ -49,7 +49,7 @@ async def preview_code(
 async def get_generate_paths(
     db: CurrentSession, pk: Annotated[int, Path(description='业务 ID')]
 ) -> ResponseSchemaModel[list[str]]:
-    data = await gen_service.get_generate_path(db=db, pk=pk)
+    data = await code_gen_service.get_generate_path(db=db, pk=pk)
     return response_base.success(data=data)
 
 
@@ -63,13 +63,13 @@ async def get_generate_paths(
     ],
 )
 async def generate_code(db: CurrentSession, pk: Annotated[int, Path(description='业务 ID')]) -> ResponseModel:
-    await gen_service.generate(db=db, pk=pk)
+    await code_gen_service.generate(db=db, pk=pk)
     return response_base.success()
 
 
 @router.get('/{pk}', summary='下载代码', dependencies=[DependsJwtAuth])
 async def download_code(db: CurrentSession, pk: Annotated[int, Path(description='业务 ID')]):  # ruff:ignore[missing-return-type-undocumented-public-function]
-    bio = await gen_service.download(db=db, pk=pk)
+    bio = await code_gen_service.download(db=db, pk=pk)
     return StreamingResponse(
         bio,
         media_type='application/x-zip-compressed',

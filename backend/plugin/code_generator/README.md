@@ -19,7 +19,7 @@
 CODE_GENERATOR_DOWNLOAD_ZIP_FILENAME = 'fba_generator'
 ```
 
-在 `backend/core/conf.py` 中添加以下内容：
+当前项目的 `backend/core/conf.py` 已包含以下字段：
 
 ```python
 ##################################################
@@ -27,6 +27,10 @@ CODE_GENERATOR_DOWNLOAD_ZIP_FILENAME = 'fba_generator'
 ##################################################
 CODE_GENERATOR_DOWNLOAD_ZIP_FILENAME: str
 ```
+
+## 配置项说明
+
+- `CODE_GENERATOR_DOWNLOAD_ZIP_FILENAME`：控制代码生成结果下载压缩包的文件名
 
 ## 使用方式
 

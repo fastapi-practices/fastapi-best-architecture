@@ -7,7 +7,7 @@ from backend.common.enums import DataBaseType
 from backend.core.conf import settings
 
 
-class CRUDGen:
+class CRUDCodeGen:
     """代码生成 CRUD 类"""
 
     @staticmethod
@@ -194,4 +194,4 @@ class CRUDGen:
         return result.mappings().all()
 
 
-gen_dao: CRUDGen = CRUDGen()
+code_gen_dao: CRUDCodeGen = CRUDCodeGen()
