@@ -1,0 +1,73 @@
+name: Semgrep AppSec Analysis
+
+on:
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze Python Code
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Record start time
+        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Semgrep
+        run: python -m pip install semgrep
+
+      - name: Run Semgrep AppSec
+        continue-on-error: true
+        run: |
+          semgrep ci \
+            --sarif \
+            --output semgrep_appsec.sarif
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+      - name: Show SARIF summary
+        if: always()
+        run: |
+          if [ -f semgrep_appsec.sarif ]; then
+            python - <<'PY'
+          import json
+
+          with open("semgrep_appsec.sarif", encoding="utf-8") as f:
+              data = json.load(f)
+
+          run = data["runs"][0]
+          rules = run["tool"]["driver"].get("rules", [])
+          results = run.get("results", [])
+
+          print(f"Rules: {len(rules)}")
+          print(f"Results: {len(results)}")
+          PY
+          else
+            echo "SARIF file was not generated."
+          fi
+
+      - name: Record end time and calculate duration
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          echo "Semgrep AppSec pipeline duration: $DURATION seconds"
+
+      - name: Upload SARIF results as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-appsec-results
+          path: semgrep_appsec.sarif
+          if-no-files-found: warn
