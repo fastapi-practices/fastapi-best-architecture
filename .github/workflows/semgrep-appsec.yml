@@ -25,7 +25,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Semgrep
-        run: python -m pip install semgrep
+        run: python -m pip install --upgrade semgrep
 
       - name: Run Semgrep AppSec
         continue-on-error: true
@@ -46,12 +46,17 @@ jobs:
           with open("semgrep_appsec.sarif", encoding="utf-8") as f:
               data = json.load(f)
 
-          run = data["runs"][0]
-          rules = run["tool"]["driver"].get("rules", [])
-          results = run.get("results", [])
+          runs = data.get("runs", [])
 
-          print(f"Rules: {len(rules)}")
-          print(f"Results: {len(results)}")
+          if not runs:
+              print("No SARIF runs found")
+          else:
+              run = runs[0]
+              rules = run.get("tool", {}).get("driver", {}).get("rules", [])
+              results = run.get("results", [])
+
+              print(f"Rules: {len(rules)}")
+              print(f"Results: {len(results)}")
           PY
           else
             echo "SARIF file was not generated."
@@ -63,6 +68,7 @@ jobs:
           END_TIME=$(date +%s)
           DURATION=$((END_TIME - START_TIME))
           echo "Semgrep AppSec pipeline duration: $DURATION seconds"
+          echo "PIPELINE_DURATION=$DURATION" >> $GITHUB_ENV
 
       - name: Upload SARIF results as artifact
         if: always()
