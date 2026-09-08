@@ -1,6 +1,16 @@
 name: Semgrep AppSec Analysis
 
 on:
+  push:
+    branches:
+      - master
+      - security-testing
+
+  pull_request:
+    branches:
+      - master
+      - security-testing
+
   workflow_dispatch:
 
 jobs:
@@ -17,7 +27,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Record start time
-        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+        run: echo "START_TIME=$(date +%s)" >> "$GITHUB_ENV"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -25,16 +35,31 @@ jobs:
           python-version: "3.11"
 
       - name: Install Semgrep
-        run: python -m pip install --upgrade semgrep
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade semgrep
+
+      - name: Show Semgrep version
+        run: semgrep --version
 
       - name: Run Semgrep AppSec
         continue-on-error: true
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
         run: |
           semgrep ci \
             --sarif \
             --output semgrep_appsec.sarif
-        env:
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+      - name: Check SARIF file
+        if: always()
+        run: |
+          if [ -f semgrep_appsec.sarif ]; then
+            echo "SARIF file generated successfully."
+            ls -lh semgrep_appsec.sarif
+          else
+            echo "SARIF file was not generated."
+          fi
 
       - name: Show SARIF summary
         if: always()
@@ -52,14 +77,38 @@ jobs:
               print("No SARIF runs found")
           else:
               run = runs[0]
-              rules = run.get("tool", {}).get("driver", {}).get("rules", [])
+
+              rules = (
+                  run.get("tool", {})
+                  .get("driver", {})
+                  .get("rules", [])
+              )
+
               results = run.get("results", [])
 
-              print(f"Rules: {len(rules)}")
-              print(f"Results: {len(results)}")
+              print("==============================")
+              print("Semgrep AppSec SARIF Summary")
+              print("==============================")
+              print(f"Rules   : {len(rules)}")
+              print(f"Results : {len(results)}")
+
+              severity_count = {}
+
+              for result in results:
+                  level = result.get("level", "unknown")
+                  severity_count[level] = severity_count.get(level, 0) + 1
+
+              print("\nResults by severity:")
+
+              if severity_count:
+                  for level, count in severity_count.items():
+                      print(f"{level}: {count}")
+              else:
+                  print("No vulnerabilities found.")
+
           PY
           else
-            echo "SARIF file was not generated."
+            echo "Cannot show summary because SARIF file does not exist."
           fi
 
       - name: Record end time and calculate duration
@@ -67,13 +116,15 @@ jobs:
         run: |
           END_TIME=$(date +%s)
           DURATION=$((END_TIME - START_TIME))
-          echo "Semgrep AppSec pipeline duration: $DURATION seconds"
-          echo "PIPELINE_DURATION=$DURATION" >> $GITHUB_ENV
 
-      - name: Upload SARIF results as artifact
+          echo "Semgrep AppSec pipeline duration: $DURATION seconds"
+          echo "PIPELINE_DURATION=$DURATION" >> "$GITHUB_ENV"
+
+      - name: Upload SARIF results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: semgrep-appsec-results
           path: semgrep_appsec.sarif
           if-no-files-found: warn
+          retention-days: 30
