@@ -1,0 +1,104 @@
+name: Snyk Code Analysis
+
+on:
+  push:
+    branches:
+      - master
+      - security-testing
+
+  pull_request:
+    branches:
+      - master
+
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze Python Code
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Record start time
+        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Run Snyk Code scan
+        id: snyk_scan
+        continue-on-error: true
+        run: |
+          echo "Starting Snyk Code SAST scan..."
+
+          snyk code test \
+            --sarif-file-output=snyk.sarif \
+            2>&1 | tee snyk_output.txt
+
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "SNYK_EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
+          echo "Snyk exited with code: $EXIT_CODE"
+
+          if [ "$EXIT_CODE" -eq 0 ] || [ "$EXIT_CODE" -eq 1 ]; then
+            echo "Scan completed."
+            exit 0
+          else
+            echo "Snyk scan failed with exit code $EXIT_CODE"
+            exit "$EXIT_CODE"
+          fi
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Verify SARIF output
+        if: always()
+        run: |
+          echo "=== Snyk Scan Output ==="
+          cat snyk_output.txt || echo "No output file found"
+
+          echo ""
+          echo "=== SARIF File Check ==="
+
+          if [ -f snyk.sarif ]; then
+            echo "snyk.sarif exists ($(wc -c < snyk.sarif) bytes)"
+          else
+            echo "snyk.sarif was NOT created"
+            echo "Files in workspace:"
+            ls -la
+          fi
+
+      - name: Record end time and calculate duration
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+
+          echo "========================================"
+          echo "Snyk Code Pipeline Duration: ${DURATION}s"
+          echo "Snyk Exit Code: ${SNYK_EXIT_CODE:-unknown}"
+          echo "========================================"
+
+          echo "PIPELINE_DURATION=$DURATION" >> $GITHUB_ENV
+
+      - name: Upload SARIF as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-code-results
+          path: |
+            snyk.sarif
+            snyk_output.txt
+          if-no-files-found: warn
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always() && hashFiles('snyk.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: snyk.sarif
+          category: snyk-code
