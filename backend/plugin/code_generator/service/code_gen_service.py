@@ -22,8 +22,8 @@ from backend.plugin.code_generator.crud.crud_code_gen import code_gen_dao
 from backend.plugin.code_generator.crud.crud_column import code_gen_column_dao
 from backend.plugin.code_generator.model import CodeGenBusiness
 from backend.plugin.code_generator.schema.business import CreateCodeGenBusinessParam
-from backend.plugin.code_generator.schema.column import CreateCodeGenColumnInternalParam
 from backend.plugin.code_generator.schema.code_gen import ImportParam
+from backend.plugin.code_generator.schema.column import CreateCodeGenColumnInternalParam
 from backend.plugin.code_generator.service.column_service import code_gen_column_service
 from backend.plugin.code_generator.utils.format_code import format_python_code
 from backend.plugin.code_generator.utils.gen_template import gen_template
