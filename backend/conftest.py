@@ -27,7 +27,7 @@ def client() -> Generator:
 
 
 @pytest.fixture(scope='module')
-def token_headers(client: TestClient) -> dict[str, str]:
+def token_headers(client: TestClient) -> Generator[dict[str, str], None, None]:
     params = {
         'username': PYTEST_USERNAME,
         'password': PYTEST_PASSWORD,
@@ -37,4 +37,5 @@ def token_headers(client: TestClient) -> dict[str, str]:
     token_type = response.json()['token_type']
     access_token = response.json()['access_token']
     headers = {'Authorization': f'{token_type} {access_token}'}
-    return headers
+    yield headers
+    client.post('/auth/logout', headers=headers)
