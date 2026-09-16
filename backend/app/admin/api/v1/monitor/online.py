@@ -23,7 +23,8 @@ router = APIRouter()
 async def get_sessions(  # ruff:ignore[complex-structure]
     username: Annotated[str | None, Query(description='用户名')] = None,
 ) -> ResponseSchemaModel[list[GetTokenDetail]]:
-    user_ids = list(await redis_client.smembers(f'{settings.TOKEN_SESSION_REDIS_PREFIX}:users'))
+    users_key = f'{settings.TOKEN_SESSION_REDIS_PREFIX}:users'
+    user_ids = list(await redis_client.smembers(users_key))
     if not user_ids:
         return response_base.success(data=[])
 
@@ -34,7 +35,7 @@ async def get_sessions(  # ruff:ignore[complex-structure]
     for user_id, members in zip(user_ids, session_sets, strict=True):
         session_refs.extend((user_id, session_uuid) for session_uuid in members)
     if not session_refs:
-        await redis_client.srem(f'{settings.TOKEN_SESSION_REDIS_PREFIX}:users', *user_ids)
+        await redis_client.srem(users_key, *user_ids)
         return response_base.success(data=[])
 
     tokens = await redis_client.mget_batched([
@@ -52,7 +53,7 @@ async def get_sessions(  # ruff:ignore[complex-structure]
         live_user_ids.add(user_id)
     stale_user_ids = [user_id for user_id in user_ids if user_id not in live_user_ids]
     if stale_user_ids:
-        await redis_client.srem(f'{settings.TOKEN_SESSION_REDIS_PREFIX}:users', *stale_user_ids)
+        await redis_client.srem(users_key, *stale_user_ids)
     if not token_payloads:
         return response_base.success(data=[])
 

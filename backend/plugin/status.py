@@ -67,7 +67,10 @@ class PluginStatusChecker:
         :param request: FastAPI 请求对象
         :return:
         """
-        plugin_info = cast('str | None', await redis_client.get(f'{settings.PLUGIN_REDIS_PREFIX}:{self.plugin}'))
+        plugin_info = cast(
+            'str | None',
+            await redis_client.get(f'{settings.PLUGIN_REDIS_PREFIX}:{self.plugin}'),
+        )
         if not plugin_info:
             log.warning('插件 {} 状态未初始化或丢失，尝试自动修复', self.plugin)
             try:

@@ -252,7 +252,8 @@ class UserService:
         :param email: 邮箱
         :return:
         """
-        captcha_code = await redis_client.get(f'{settings.EMAIL_CAPTCHA_REDIS_PREFIX}:{ctx.ip}')
+        captcha_key = f'{settings.EMAIL_CAPTCHA_REDIS_PREFIX}:{ctx.ip}'
+        captcha_code = await redis_client.get(captcha_key)
         if not captcha_code:
             raise errors.RequestError(msg='验证码已失效，请重新获取')
         if captcha != captcha_code:
@@ -260,7 +261,7 @@ class UserService:
         email_user = await user_dao.check_email(db, email)
         if email_user and email_user.id != user_id:
             raise errors.ConflictError(msg='邮箱已被绑定')
-        await redis_client.delete(f'{settings.EMAIL_CAPTCHA_REDIS_PREFIX}:{ctx.ip}')
+        await redis_client.delete(captcha_key)
         count = await user_dao.update_email(db, user_id, email)
         await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}')
         return count

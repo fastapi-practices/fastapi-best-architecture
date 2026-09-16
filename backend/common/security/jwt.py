@@ -91,13 +91,14 @@ async def get_jwt_user(user_id: int) -> GetUserInfoWithRelationDetail:
     :param user_id: 用户 ID
     :return:
     """
-    cache_user = await redis_client.get(f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}')
+    user_key = f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}'
+    cache_user = await redis_client.get(user_key)
     if not cache_user:
         async with async_db_session() as db:
             current_user = await get_current_user(db, user_id)
             user = GetUserInfoWithRelationDetail.model_validate(current_user)
             await redis_client.set(
-                f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}',
+                user_key,
                 user.model_dump_json(),
                 ex=settings.TOKEN_EXPIRE_SECONDS,
             )

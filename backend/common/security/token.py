@@ -166,7 +166,10 @@ async def create_access_token(
             index_key = f'{settings.TOKEN_SESSION_REDIS_PREFIX}:{user_id}'
             pipe.sadd(index_key, session_uuid)
             pipe.expire(index_key, session_ttl)
-            pipe.sadd(f'{settings.TOKEN_SESSION_REDIS_PREFIX}:users', str(user_id))
+            pipe.sadd(
+                f'{settings.TOKEN_SESSION_REDIS_PREFIX}:users',
+                str(user_id),
+            )
         await pipe.execute()
 
     return AccessToken(access_token=access_token, access_token_expire_time=expire, session_uuid=session_uuid)
@@ -271,8 +274,14 @@ async def _revoke_sessions(user_id: int, session_uuids: set[str]) -> None:
     delete_keys.extend(f'{settings.TOKEN_ONLINE_REDIS_PREFIX}:sid:{sid}' for sid in sids)
     await redis_client.delete_batched(delete_keys)
     await asyncio.gather(
-        _srem_members(f'{settings.TOKEN_SESSION_REDIS_PREFIX}:{user_id}', ordered),
-        _srem_members(f'{settings.TOKEN_SESSION_REDIS_PREFIX}:{user_id}:swagger', ordered),
+        _srem_members(
+            f'{settings.TOKEN_SESSION_REDIS_PREFIX}:{user_id}',
+            ordered,
+        ),
+        _srem_members(
+            f'{settings.TOKEN_SESSION_REDIS_PREFIX}:{user_id}:swagger',
+            ordered,
+        ),
     )
     if not await redis_client.smembers(f'{settings.TOKEN_SESSION_REDIS_PREFIX}:{user_id}'):
         await redis_client.srem(f'{settings.TOKEN_SESSION_REDIS_PREFIX}:users', str(user_id))
