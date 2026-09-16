@@ -110,7 +110,8 @@ class RedisBucketFactory(BucketFactory):
         :return:
         """
         bucket_key = self._bucket_key(item.name)
-        now = await _redis_time_ms(redis_client)
+        # wrap_item 已取过 Redis 时间，直接复用，省一次往返
+        now = item.timestamp
 
         async with self.lock:
             state = self.buckets.get(bucket_key)
@@ -119,16 +120,29 @@ class RedisBucketFactory(BucketFactory):
                 self.buckets.move_to_end(bucket_key)
                 return state.bucket
 
-            bucket_result = RedisTimeBucket.init(
+        # 锁外做 Redis IO，避免所有限流请求排队等待 script_load
+        bucket = await _maybe_await(
+            RedisTimeBucket.init(
                 rates=self.rates,
                 redis=redis_client,
                 bucket_key=bucket_key,
             )
-            bucket = await _maybe_await(bucket_result)
+        )
+
+        async with self.lock:
+            # 并发初始化同一 bucket 时以先写入者为准
+            state = self.buckets.get(bucket_key)
+            if state is not None:
+                state.last_seen = now
+                self.buckets.move_to_end(bucket_key)
+                return state.bucket
             self.buckets[bucket_key] = RedisBucketState(bucket=bucket, last_seen=now)
             self.schedule_leak(bucket)
-            await self._evict(now)
-            return bucket
+            disposed = self._evict(now)
+
+        for state in disposed:
+            await self._cleanup(state.bucket, now)
+        return bucket
 
     async def get_bucket(self, name: str) -> RedisBucket:
         """
@@ -139,38 +153,38 @@ class RedisBucketFactory(BucketFactory):
         """
         return await self.get(await self.wrap_item(name))
 
-    async def _evict(self, now: int) -> None:
+    def _evict(self, now: int) -> list[RedisBucketState]:
         """
-        淘汰本地 bucket 缓存
+        淘汰本地 bucket 缓存，只改内存状态，不做 Redis IO
 
         :param now: 当前时间戳，单位毫秒
         :return:
         """
+        expired: list[RedisBucketState] = []
         for bucket_key, state in list(self.buckets.items()):
             if now - state.last_seen <= self.cache_ttl:
                 continue
-            await self._dispose(bucket_key, state, now, cleanup=True)
+            self.buckets.pop(bucket_key, None)
+            self.dispose(state.bucket)
+            expired.append(state)
 
         while len(self.buckets) > self.max_cache_size:
-            bucket_key, state = next(iter(self.buckets.items()))
-            await self._dispose(bucket_key, state, now, cleanup=False)
+            _, state = self.buckets.popitem(last=False)
+            self.dispose(state.bucket)
+        return expired
 
-    async def _dispose(self, bucket_key: str, state: RedisBucketState, now: int, *, cleanup: bool) -> None:
+    @staticmethod
+    async def _cleanup(bucket: RedisBucket, now: int) -> None:
         """
-        移除本地 bucket 并按需清理 Redis 过期数据
+        清理已淘汰 bucket 的 Redis 过期数据
 
-        :param bucket_key: Redis bucket key
-        :param state: Redis bucket 缓存状态
+        :param bucket: Redis bucket
         :param now: 当前时间戳，单位毫秒
-        :param cleanup: 是否执行 Redis 过期数据清理
         :return:
         """
-        self.buckets.pop(bucket_key, None)
-        self.dispose(state.bucket)
-        if cleanup:
-            await _maybe_await(state.bucket.leak(now))
-            if await _maybe_await(state.bucket.count()) == 0:
-                await _maybe_await(state.bucket.flush())
+        await _maybe_await(bucket.leak(now))
+        if await _maybe_await(bucket.count()) == 0:
+            await _maybe_await(bucket.flush())
 
     def _bucket_key(self, name: str) -> str:
         """
