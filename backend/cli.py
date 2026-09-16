@@ -261,8 +261,10 @@ async def init(db: AsyncSession, redis: RedisCli) -> None:
             for prefix in [
                 settings.JWT_USER_REDIS_PREFIX,
                 settings.TOKEN_EXTRA_INFO_REDIS_PREFIX,
+                settings.TOKEN_ONLINE_REDIS_PREFIX,
                 settings.TOKEN_REDIS_PREFIX,
                 settings.TOKEN_REFRESH_REDIS_PREFIX,
+                settings.TOKEN_SESSION_REDIS_PREFIX,
             ]:
                 await redis.delete_by_prefix(prefix)
 
