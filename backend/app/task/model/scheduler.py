@@ -1,6 +1,7 @@
 import asyncio
 
 from datetime import datetime
+from typing import ClassVar
 
 import sqlalchemy as sa
 
@@ -45,6 +46,8 @@ class TaskScheduler(Base):
     remark: Mapped[str | None] = mapped_column(UniversalText, default=None, comment='备注')
 
     no_changes: bool = False
+    # 持有后台任务引用，避免 create_task 返回的任务在执行前被回收
+    _update_tasks: ClassVar[set[asyncio.Task]] = set()
 
     @staticmethod
     def before_insert_or_update(mapper, connection, target) -> None:  # ruff:ignore[missing-type-function-argument]
@@ -63,7 +66,9 @@ class TaskScheduler(Base):
 
     @classmethod
     def update_changed(cls, mapper, connection, target) -> None:  # ruff:ignore[missing-type-function-argument]
-        asyncio.create_task(cls.update_changed_async())
+        task = asyncio.create_task(cls.update_changed_async())
+        cls._update_tasks.add(task)
+        task.add_done_callback(cls._update_tasks.discard)
 
 
 # 事件监听器
