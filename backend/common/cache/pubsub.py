@@ -38,26 +38,33 @@ class CachePubSubManager:
 
             try:
                 # 使用独立连接
-                pubsub_client = RedisCli(socket_timeout=None)
+                pubsub_client = RedisCli(max_connections=1)
                 pubsub = pubsub_client.pubsub()
                 await pubsub.subscribe(settings.CACHE_PUBSUB_CHANNEL)
 
                 # 发布订阅成功
                 reconnect_attempts = 0
 
-                async for message in pubsub.listen():
-                    if message['type'] == 'message':
-                        try:
-                            data = json.loads(message['data'])
-                            cache_key = data['cache_key']
-                            if not data['delete_by_prefix']:
-                                local_cache_manager.delete(cache_key)
-                            else:
-                                local_cache_manager.delete_by_prefix(cache_key)
-                        except json.JSONDecodeError as e:
-                            log.warning(f'[CachePubSub] 消息格式错误 {e}')
-                        except Exception as e:
-                            log.error(f'[CachePubSub] 处理通知失败: {e}')
+                # 带超时轮询而不是 listen()，每次进入读取都会触发健康检查 PING，
+                # 避免连接被静默断开后协程永久挂起
+                while True:
+                    message = await pubsub.get_message(
+                        ignore_subscribe_messages=True,
+                        timeout=settings.CACHE_PUBSUB_POLL_TIMEOUT,
+                    )
+                    if message is None or message['type'] != 'message':
+                        continue
+                    try:
+                        data = json.loads(message['data'])
+                        cache_key = data['cache_key']
+                        if not data['delete_by_prefix']:
+                            local_cache_manager.delete(cache_key)
+                        else:
+                            local_cache_manager.delete_by_prefix(cache_key)
+                    except json.JSONDecodeError as e:
+                        log.warning(f'[CachePubSub] 消息格式错误 {e}')
+                    except Exception as e:
+                        log.error(f'[CachePubSub] 处理通知失败: {e}')
 
             except asyncio.CancelledError:
                 break
