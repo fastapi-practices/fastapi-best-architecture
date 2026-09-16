@@ -34,6 +34,12 @@ class _CustomPageParams(BaseModel, AbstractParams):
         )
 
 
+class _CustomCursorParams(CursorParams):
+    """自定义游标分页参数"""
+
+    size: int = Query(50, ge=0, le=200, description='每页数量')
+
+
 class _Links(BaseModel):
     """分页链接"""
 
@@ -98,7 +104,7 @@ class _CustomPage(_PageDetails, AbstractPage[T], Generic[T]):
 class _CustomCursorPage(_CursorPageDetails, AbstractPage[T], Generic[T]):
     """自定义游标分页类"""
 
-    __params_type__ = CursorParams
+    __params_type__ = _CustomCursorParams
 
     @classmethod
     def create(
