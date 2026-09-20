@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy import event
 from sqlalchemy.orm import Mapped, mapped_column
 
+from backend.common.enums import StatusType
 from backend.common.exception import errors
 from backend.common.model import Base, TimeZone, UniversalText, id_key
 from backend.core.conf import settings
@@ -40,7 +41,7 @@ class TaskScheduler(Base):
     interval_period: Mapped[str | None] = mapped_column(sa.String(256), comment='任务运行之间的周期类型')
     crontab: Mapped[str | None] = mapped_column(sa.String(64), default='* * * * *', comment='Crontab 表达式')
     one_off: Mapped[bool] = mapped_column(default=False, comment='是否仅运行一次')
-    enabled: Mapped[bool] = mapped_column(default=True, comment='是否启用任务')
+    status: Mapped[int] = mapped_column(default=StatusType.enable.value, comment='状态（0停用 1正常）')
     total_run_count: Mapped[int] = mapped_column(default=0, comment='任务触发的总次数')
     last_run_time: Mapped[datetime | None] = mapped_column(TimeZone, default=None, comment='任务最后触发的时间')
     remark: Mapped[str | None] = mapped_column(UniversalText, default=None, comment='备注')

@@ -19,6 +19,7 @@ from backend.app.task.enums import PeriodType, TaskSchedulerType
 from backend.app.task.model.scheduler import TaskScheduler
 from backend.app.task.schema.scheduler import CreateTaskSchedulerParam
 from backend.app.task.utils.tzcrontab import TzAwareCrontab, crontab_verify
+from backend.common.enums import StatusType
 from backend.common.exception import errors
 from backend.core.conf import settings
 from backend.database.db import async_db_session
@@ -91,22 +92,24 @@ class ModelEntry(ScheduleEntry):
         self.last_run_at = timezone.from_datetime(model.last_run_time)
         self.options['periodic_task_name'] = model.name
         self.model = model
+        self.enabled = model.status == StatusType.enable
 
     async def _disable(self, model: TaskScheduler) -> None:
         """禁用任务"""
         model.no_changes = True
-        self.model.enabled = self.enabled = model.enabled = False
+        self.model.status = model.status = StatusType.disable
+        self.enabled = False
         async with async_db_session.begin() as db:
             stmt = select(TaskScheduler).where(TaskScheduler.id == model.id, TaskScheduler.deleted == 0)
             query = await db.execute(stmt)
             task = query.scalars().first()
             if task:
                 task.no_changes = True
-                task.enabled = False
+                task.status = StatusType.disable
 
     def is_due(self) -> tuple[bool, int | float | datetime]:
         """任务到期状态"""
-        if not self.model.enabled:
+        if self.model.status != StatusType.enable:
             # 重新启用时延迟 5 秒
             return schedules.schedstate(is_due=False, next=5)
 
@@ -119,11 +122,11 @@ class ModelEntry(ScheduleEntry):
                 return schedules.schedstate(is_due=False, next=delay)
 
         # 一次性任务
-        if self.model.one_off and self.model.enabled and self.model.total_run_count > 0:
-            self.model.enabled = False
+        if self.model.one_off and self.model.status == StatusType.enable and self.model.total_run_count > 0:
+            self.model.status = StatusType.disable
             self.model.total_run_count = 0
             self.model.no_changes = False
-            save_fields = ('enabled',)
+            save_fields = ('status',)
             run_await(self.save)(save_fields)
             return schedules.schedstate(is_due=False, next=1000000000)  # 高延迟，避免重新检查
 
@@ -237,6 +240,9 @@ class ModelEntry(ScheduleEntry):
             **cls._unpack_options(**options or {}),
             **entry,
         )
+        if 'enabled' in model_dict:
+            enabled = model_dict.pop('enabled')
+            model_dict['status'] = StatusType.enable if enabled else StatusType.disable
         return model_dict
 
     @classmethod
@@ -359,7 +365,7 @@ class DatabaseScheduler(Scheduler):
         try:
             for name, entry_fields in beat_dict.items():
                 entry = run_await(self.Entry.from_entry)(name, app=self.app, **entry_fields)
-                if entry.model.enabled:
+                if entry.model.status == StatusType.enable:
                     s[name] = entry
         except Exception:
             logger.error(f'添加任务 {name} 到数据库失败')
@@ -389,7 +395,7 @@ class DatabaseScheduler(Scheduler):
         async with async_db_session() as db:
             logger.debug('DatabaseScheduler: Fetching database schedule')
             stmt = select(TaskScheduler).where(
-                TaskScheduler.enabled.is_(True),
+                TaskScheduler.status == StatusType.enable,
                 TaskScheduler.deleted == 0,
             )
             query = await db.execute(stmt)

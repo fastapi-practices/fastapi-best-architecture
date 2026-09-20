@@ -12,6 +12,7 @@ from backend.app.task.enums import TaskSchedulerType
 from backend.app.task.model import TaskScheduler
 from backend.app.task.schema.scheduler import CreateTaskSchedulerParam, UpdateTaskSchedulerParam
 from backend.app.task.utils.tzcrontab import crontab_verify
+from backend.common.enums import StatusType
 from backend.common.exception import errors
 from backend.common.pagination import paging_data
 
@@ -110,7 +111,8 @@ class TaskSchedulerService:
         task_scheduler = await task_scheduler_dao.get(db, pk)
         if not task_scheduler:
             raise errors.NotFoundError(msg='任务调度不存在')
-        count = await task_scheduler_dao.set_status(db, pk, status=not task_scheduler.enabled)
+        next_status = StatusType.disable if task_scheduler.status == StatusType.enable else StatusType.enable
+        count = await task_scheduler_dao.set_status(db, pk, status=next_status)
         return count
 
     @staticmethod
