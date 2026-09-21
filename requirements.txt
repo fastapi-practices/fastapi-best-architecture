@@ -74,7 +74,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   loguru
     #   pytest
     #   typer
-cryptography==50.0.0
+cryptography==50.0.1
     # via fastapi-best-architecture
 dnspython==2.8.0
     # via email-validator
@@ -343,7 +343,7 @@ sqlalchemy==2.0.52
     #   sqlalchemy-crud-plus
 sqlalchemy-crud-plus==1.13.3
     # via fastapi-best-architecture
-sqlparse==0.5.5
+sqlparse==0.6.0
     # via fastapi-best-architecture
 starlette==1.6.0
     # via
@@ -358,7 +358,7 @@ tomli==2.4.1 ; python_full_version < '3.11'
     #   alembic
     #   fastapi-cli
     #   pytest
-tornado==6.5.8
+tornado==6.5.10
     # via flower
 type-lens==0.2.6
     # via cappa
