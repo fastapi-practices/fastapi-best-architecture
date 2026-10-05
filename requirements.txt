@@ -11,7 +11,7 @@ annotated-doc==0.0.5
     #   typer
 annotated-types==0.8.0
     # via pydantic
-anyio==4.14.2
+anyio==4.15.1
     # via
     #   httpx
     #   starlette
@@ -74,7 +74,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   loguru
     #   pytest
     #   typer
-cryptography==50.0.0
+cryptography==50.0.2
     # via fastapi-best-architecture
 dnspython==2.8.0
     # via email-validator
@@ -343,7 +343,7 @@ sqlalchemy==2.0.52
     #   sqlalchemy-crud-plus
 sqlalchemy-crud-plus==1.13.3
     # via fastapi-best-architecture
-sqlparse==0.5.5
+sqlparse==0.6.0
     # via fastapi-best-architecture
 starlette==1.6.0
     # via
@@ -358,7 +358,7 @@ tomli==2.4.1 ; python_full_version < '3.11'
     #   alembic
     #   fastapi-cli
     #   pytest
-tornado==6.5.8
+tornado==6.5.9
     # via flower
 type-lens==0.2.6
     # via cappa
@@ -407,7 +407,7 @@ ua-parser==1.0.2
     # via user-agents
 ua-parser-builtins==202606
     # via ua-parser
-urllib3==2.7.0
+urllib3==2.8.0
     # via dulwich
 user-agents==2.2.0
     # via fastapi-best-architecture
