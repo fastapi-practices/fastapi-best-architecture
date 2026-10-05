@@ -14,4 +14,4 @@ def _register_model_globals() -> None:
 _register_model_globals()
 
 
-__version__ = '1.15.1'
+__version__ = '1.16.0'
