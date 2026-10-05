@@ -232,7 +232,7 @@ class ModelEntry(ScheduleEntry):
         for k in ['id', 'created_time', 'updated_time', 'deleted', 'deleted_time']:
             try:
                 del model_dict[k]
-            except KeyError:  # ruff:ignore[try-except-in-loop]
+            except KeyError:
                 continue
         model_dict.update(
             args=json.dumps(args, ensure_ascii=False) if args else None,

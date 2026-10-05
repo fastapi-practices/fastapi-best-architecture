@@ -2,7 +2,7 @@ import functools
 
 from collections.abc import Awaitable, Callable, Sequence
 from inspect import isawaitable
-from typing import Any, ParamSpec, TypeVar
+from typing import Any
 
 from msgspec import json
 
@@ -15,8 +15,6 @@ from backend.core.conf import settings
 from backend.database.redis import redis_client
 from backend.utils.serializers import select_columns_serialize, select_list_serialize
 
-P = ParamSpec('P')
-T = TypeVar('T')
 _MISSING = object()
 
 
@@ -105,7 +103,7 @@ def user_key_builder() -> str:
     return str(user_id)
 
 
-def cached(  # ruff:ignore[complex-structure]
+def cached[**P, T](  # ruff:ignore[complex-structure]
     namespace: str,
     *,
     key: str | None = None,
@@ -172,7 +170,7 @@ def cached(  # ruff:ignore[complex-structure]
     return decorator
 
 
-def cache_invalidate(  # ruff:ignore[complex-structure]
+def cache_invalidate[**P, T](  # ruff:ignore[complex-structure]
     namespace: str,
     *,
     key: str | None = None,

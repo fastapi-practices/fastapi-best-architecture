@@ -2,7 +2,7 @@ import json
 
 from typing import cast
 
-from fastapi import Request
+from starlette.requests import HTTPConnection
 
 from backend.common.enums import StatusType
 from backend.common.exception import errors
@@ -60,11 +60,11 @@ class PluginStatusChecker:
         """
         self.plugin = plugin
 
-    async def __call__(self, request: Request) -> None:
+    async def __call__(self, connection: HTTPConnection) -> None:
         """
         验证插件状态
 
-        :param request: FastAPI 请求对象
+        :param connection: 当前 HTTP/WebSocket 连接
         :return:
         """
         plugin_info = cast(

@@ -3,8 +3,7 @@ import platform
 import socket
 import sys
 
-from datetime import datetime
-from datetime import timezone as tz
+from datetime import UTC, datetime
 
 import psutil
 
@@ -109,7 +108,7 @@ async def get_server_info() -> ResponseSchemaModel[ServerMonitorInfo]:  # ruff:i
         process = psutil.Process(os.getpid())
         proc_mem = process.memory_info()
         try:
-            create_time = datetime.fromtimestamp(process.create_time(), tz=tz.utc)
+            create_time = datetime.fromtimestamp(process.create_time(), tz=UTC)
             start_time = timezone.from_datetime(create_time)
         except (psutil.NoSuchProcess, OSError):
             start_time = timezone.now()

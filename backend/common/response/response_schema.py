@@ -1,12 +1,10 @@
-from typing import Any, Generic, TypeVar, overload
+from typing import Any, overload
 
 from fastapi import Response
 from pydantic import BaseModel, Field
 
 from backend.common.response.response_code import CustomResponse, CustomResponseCode
 from backend.utils.serializers import MsgSpecJSONResponse
-
-SchemaT = TypeVar('SchemaT')
 
 
 class ResponseModel(BaseModel):
@@ -36,7 +34,7 @@ class ResponseModel(BaseModel):
     data: Any | None = Field(None, description='返回数据')
 
 
-class ResponseSchemaModel(ResponseModel, Generic[SchemaT]):
+class ResponseSchemaModel[SchemaT](ResponseModel):
     """
     包含返回数据 schema 的通用型统一返回模型
 
@@ -90,7 +88,7 @@ class ResponseBase:
     ) -> ResponseModel: ...
 
     @overload
-    def success(
+    def success[SchemaT](
         self,
         *,
         res: CustomResponseCode | CustomResponse = CustomResponseCode.HTTP_200,
@@ -121,7 +119,7 @@ class ResponseBase:
     ) -> ResponseModel: ...
 
     @overload
-    def fail(
+    def fail[SchemaT](
         self,
         *,
         res: CustomResponseCode | CustomResponse = CustomResponseCode.HTTP_400,

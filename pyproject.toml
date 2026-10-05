@@ -2,62 +2,61 @@
 name = "fastapi-best-architecture"
 description = "FastAPI 企业级后端架构解决方案"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [
   { name = "Wu Clan", email = "jianhengwu0407@gmail.com" },
 ]
 dependencies = [
-  "alembic>=1.19.1",
+  "alembic>=1.20.0",
   "asgiref>=3.12.1",
-  "asyncmy>=0.2.13",
+  "asyncmy>=0.2.15",
   "asyncpg>=0.31.0",
   "bcrypt>=5.0.0",
   # If there is a serious problem, we will try `moka-py`
-  "cachebox>=6.2.5",
+  "cachebox>=6.2.7",
   "cappa>=0.32.2",
   "celery>=5.6.3",
   # When celery version < 6.0.0
   # https://github.com/celery/celery/issues/7874
   "celery-aio-pool>=0.1.0rc8",
-  "cryptography>=47.0.0",
-  "dulwich>=1.2.12",
+  "cryptography>=50.0.1",
+  "dulwich>=1.2.15",
   "fast-captcha>=0.3.2",
-  "fastapi-pagination[sqlalchemy]>=0.15.16",
-  "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1",
-  "flower>=2.0.1",
-  "gevent>=26.8.0",
-  "granian>=2.8.1",
+  "fastapi-pagination[sqlalchemy]>=0.16.0",
+  "fastapi[standard-no-fastapi-cloud-cli]>=0.142.2",
+  "flower>=2.2.0",
+  "gevent>=26.9.0",
+  "granian>=2.8.3",
   "itsdangerous>=2.2.0",
   "jinja2>=3.1.6",
   "loguru>=0.7.3",
   "msgspec>=0.21.1",
-  "opentelemetry-exporter-otlp-proto-grpc>=1.44.0",
-  "opentelemetry-instrumentation-asyncio>=0.65b0",
-  "opentelemetry-instrumentation-celery>=0.65b0",
-  "opentelemetry-instrumentation-fastapi>=0.65b0",
-  "opentelemetry-instrumentation-httpx>=0.65b0",
-  "opentelemetry-instrumentation-logging>=0.65b0",
-  "opentelemetry-instrumentation-redis>=0.65b0",
-  "opentelemetry-instrumentation-sqlalchemy>=0.65b0",
-  "opentelemetry-sdk>=1.44.0",
-  "prometheus-client>=0.25.0",
+  "opentelemetry-exporter-otlp-proto-grpc>=1.45.0",
+  "opentelemetry-instrumentation-asyncio>=0.66b0",
+  "opentelemetry-instrumentation-celery>=0.66b0",
+  "opentelemetry-instrumentation-httpx>=0.66b0",
+  "opentelemetry-instrumentation-logging>=0.66b0",
+  "opentelemetry-instrumentation-redis>=0.66b0",
+  "opentelemetry-instrumentation-sqlalchemy>=0.66b0",
+  "opentelemetry-sdk>=1.45.0",
+  "prometheus-client>=0.26.0",
   "psutil>=7.2.2",
   # https://github.com/fastapi-practices/fastapi_best_architecture/issues/887
   "psycopg[binary]==3.2.10",
-  "pwdlib>=0.3.0",
+  "pwdlib>=0.3.1",
   "py-ip2region>=3.0.4",
-  "pydantic>=2.13.4",
+  "pydantic>=2.13.5",
   "pydantic-settings>=2.15.0",
-  "pymysql>=1.1.2",
-  "pyrate-limiter>=4.4.0",
+  "pymysql>=1.2.3",
+  "pyrate-limiter>=4.5.0",
   "python-jose>=3.5.0",
-  "python-socketio>=5.16.4",
+  "python-socketio>=5.17.0",
   "redis[hiredis]>=8.1.0",
   "rtoml>=0.13.0",
   "sqlalchemy-crud-plus>=1.13.3",
-  "sqlalchemy[asyncio]>=2.0.52",
-  "sqlparse>=0.5.5",
+  "sqlalchemy[asyncio]>=2.1.1",
+  "sqlparse>=0.6.0",
   "starlette-context>=0.5.1",
   "user-agents>=2.2.0",
 ]
@@ -68,14 +67,15 @@ fba = "backend.cli:main"
 
 [dependency-groups]
 dev = [
+  "aiosqlite>=0.22.1",
   "pytest>=9.1.1",
   "pytest-sugar>=1.1.1",
 ]
 lint = [
-  "prek>=0.4.13",
+  "prek>=0.5.4",
 ]
 server = [
-  "aio-pika>=9.6.2",
+  "aio-pika>=10.1.0",
   "wait-for-it>=2.3.0",
 ]
 
@@ -237,7 +237,7 @@ ignore = [
   "non-empty-init-module",
   "error-instead-of-exception",
   "raise-vanilla-args",
-  "raise-within-try"
+  "raise-within-try",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -245,7 +245,7 @@ ignore = [
 "backend/common/socketio/server.py" = ["missing-type-function-argument"]
 "backend/common/exception/exception_handler.py" = [
   "missing-return-type-private-function",
-  "unused-async"
+  "unused-async",
 ]
 
 [tool.ruff.lint.flake8-pytest-style]
@@ -259,7 +259,7 @@ inline-quotes = "single"
 [tool.ruff.lint.flake8-type-checking]
 runtime-evaluated-base-classes = [
   "pydantic.BaseModel",
-  "sqlalchemy.orm.DeclarativeBase"
+  "sqlalchemy.orm.DeclarativeBase",
 ]
 
 [tool.ruff.lint.flake8-unused-arguments]

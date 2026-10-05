@@ -2,7 +2,7 @@
 ARG SERVER_TYPE=fba_server
 
 # === Python environment from uv ===
-FROM ghcr.io/astral-sh/uv:python3.10-trixie-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.12-trixie-slim AS builder
 
 # Used for build Python packages
 RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources \
@@ -31,7 +31,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     python -c "from backend.plugin.requirements import install_requirements; install_requirements(None)"
 
 # === Runtime base server image ===
-FROM ghcr.io/astral-sh/uv:python3.10-trixie-slim AS base_server
+FROM ghcr.io/astral-sh/uv:python3.12-trixie-slim AS base_server
 
 RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list.d/debian.sources \
     && apt-get update \

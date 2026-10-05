@@ -3,7 +3,6 @@ import time
 
 from asyncio import Queue
 from collections.abc import Awaitable, Callable
-from typing import TypeVar
 
 from backend.common.log import log
 from backend.common.observability.prometheus.queue import (
@@ -12,10 +11,8 @@ from backend.common.observability.prometheus.queue import (
     observe_queue_size,
 )
 
-T = TypeVar('T')
 
-
-async def batch_dequeue(queue: Queue[T], max_items: int, timeout: float, *, queue_name: str = 'default') -> list[T]:
+async def batch_dequeue[T](queue: Queue[T], max_items: int, timeout: float, *, queue_name: str = 'default') -> list[T]:
     """
     从异步队列中获取多个项目
 
@@ -36,7 +33,7 @@ async def batch_dequeue(queue: Queue[T], max_items: int, timeout: float, *, queu
 
     try:
         await asyncio.wait_for(collector(), timeout=timeout)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         pass
     except Exception as e:
         inc_queue_exception(queue_name=queue_name)
@@ -48,7 +45,7 @@ async def batch_dequeue(queue: Queue[T], max_items: int, timeout: float, *, queu
     return items
 
 
-async def batch_consume(
+async def batch_consume[T](
     queue: Queue[T],
     max_items: int,
     timeout: float,

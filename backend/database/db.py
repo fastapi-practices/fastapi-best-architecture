@@ -3,7 +3,7 @@ import sys
 from collections.abc import AsyncGenerator, Mapping
 from contextlib import AbstractAsyncContextManager
 from functools import partial
-from typing import Annotated, Any, TypeAlias
+from typing import Annotated, Any
 from uuid import uuid4
 
 from fastapi import Depends
@@ -203,5 +203,5 @@ for source, engine in _database_engines.items():
     )
 
 # Session Annotated
-CurrentSession: TypeAlias = Annotated[AsyncSession, Depends(get_db)]
-CurrentSessionTransaction: TypeAlias = Annotated[AsyncSession, Depends(get_db_transaction)]
+type CurrentSession = Annotated[AsyncSession, Depends(get_db)]
+type CurrentSessionTransaction = Annotated[AsyncSession, Depends(get_db_transaction)]

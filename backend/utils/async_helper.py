@@ -5,9 +5,7 @@ import weakref
 
 from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
-from typing import Any, TypeVar
-
-T = TypeVar('T')
+from typing import Any
 
 
 class _TaskRunner:
@@ -38,7 +36,7 @@ class _TaskRunner:
         finally:
             self.__loop.close()
 
-    def run(self, coro: Awaitable[T]) -> T:
+    def run[T](self, coro: Awaitable[T]) -> T:
         """在后台事件循环上运行协程并返回其结果"""
         with self.__lock:
             name = f'TaskRunner-{threading.get_ident()}'
@@ -53,7 +51,7 @@ class _TaskRunner:
 _runner_map = weakref.WeakValueDictionary()
 
 
-def run_await(coro: Callable[..., Awaitable[T]] | Callable[..., Coroutine[Any, Any, T]]) -> Callable[..., T]:
+def run_await[T](coro: Callable[..., Awaitable[T]] | Callable[..., Coroutine[Any, Any, T]]) -> Callable[..., T]:
     """将协程包装在函数中，直到它执行完为止"""
 
     @wraps(coro)

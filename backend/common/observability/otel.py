@@ -1,15 +1,18 @@
-from fastapi import FastAPI
+from importlib.metadata import version
+from typing import Any
+
 from opentelemetry import _logs, metrics, trace
+from opentelemetry.context import get_current
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.asyncio import AsyncioInstrumentor
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor as BaseSQLAlchemyInstrumentor
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs._internal import std_to_otel
 from opentelemetry.sdk._logs._internal.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
@@ -23,6 +26,22 @@ from backend.common.log import log, request_id_filter
 from backend.core.conf import settings
 from backend.database.db import get_database_engines
 from backend.database.redis import redis_client
+
+
+class SQLAlchemyInstrumentor(BaseSQLAlchemyInstrumentor):
+    """保留依赖检查，仅扩展已验证的 SQLAlchemy 2.1.1 兼容范围"""
+
+    _instance = None
+
+    def instrumentation_dependencies(self) -> tuple[str, ...]:
+        dependencies = tuple(super().instrumentation_dependencies())
+        if (
+            version('opentelemetry-instrumentation-sqlalchemy') == '0.66b0'
+            and version('sqlalchemy') == '2.1.1'
+            and dependencies == ('sqlalchemy >= 1.0.0, < 2.1.0',)
+        ):
+            return ('sqlalchemy == 2.1.1',)
+        return dependencies
 
 
 def init_resource(service_name: str) -> Resource:
@@ -86,22 +105,24 @@ def init_logging(resource: Resource) -> None:
     provider.add_log_record_processor(processor)
     _logs.set_logger_provider(provider)
 
+    def otel_log_filter(record: dict[str, Any]) -> bool:
+        """保留共享请求 ID，并在格式化前检查 OTEL 日志是否启用"""
+        logger = provider.get_logger(record['name'])
+        return request_id_filter(record) and logger.enabled(
+            context=get_current(), severity_number=std_to_otel(record['level'].no)
+        )
+
     otel_logging_handler = LoggingHandler(logger_provider=provider)
     log.add(
         otel_logging_handler,
         level=settings.LOG_STD_LEVEL,
         format=settings.LOG_FORMAT,
-        filter=lambda record: request_id_filter(record),
+        filter=otel_log_filter,
     )
 
 
-def init_otel(app: FastAPI) -> None:
-    """
-    初始化 OpenTelemetry
-
-    :param app: FastAPI 应用实例
-    :return:
-    """
+def init_otel() -> None:
+    """初始化 OpenTelemetry provider 和外部服务采集"""
     resource = init_resource(settings.GRAFANA_PROMETHEUS_APP_NAME)
     init_tracer(resource)
     init_metrics(resource)
@@ -113,10 +134,11 @@ def init_otel(app: FastAPI) -> None:
 
     AsyncioInstrumentor().instrument()
     HTTPXClientInstrumentor().instrument()
-    # 禁止自动将 OTel handler 安装到 stdlib root logger，
-    # 避免与上面注册的 LoggingHandler（loguru sink）重复推送。
+    # 禁止在 stdlib root logger 安装 OTEL handler，避免与 loguru sink 重复推送
     LoggingInstrumentor().instrument(set_logging_format=True, enable_log_auto_instrumentation=False)
     RedisInstrumentor.instrument_client(client=redis_client)  # type: ignore
-    for engine in get_database_engines().values():
-        SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
-    FastAPIInstrumentor.instrument_app(app)
+    SQLAlchemyInstrumentor().instrument(
+        engines=[engine.sync_engine for engine in get_database_engines().values()],
+        tracer_provider=trace.get_tracer_provider(),
+        meter_provider=metrics.get_meter_provider(),
+    )

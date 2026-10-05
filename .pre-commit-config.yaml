@@ -1,5 +1,7 @@
 default_language_version:
-    python: '>= 3.10'
+    python:
+        request: '>= 3.12'
+        preference: managed
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -11,7 +13,7 @@ repos:
       - id: check-toml
 
   - repo: https://github.com/tombi-toml/tombi-pre-commit
-    rev: v1.3.0
+    rev: v1.7.2
     hooks:
       - id: tombi-lint
         args: ["--offline"]
@@ -19,7 +21,7 @@ repos:
         args: ["--offline"]
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.16.3
+    rev: v0.16.10
     hooks:
       - id: ruff-check
         args:
@@ -29,7 +31,7 @@ repos:
       - id: ruff-format
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.12.3
+    rev: 0.12.23
     hooks:
       - id: uv-lock
       - id: uv-export

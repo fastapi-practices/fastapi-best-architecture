@@ -3,11 +3,9 @@ import inspect
 import os.path
 
 from functools import lru_cache
-from typing import Any, TypeVar
+from typing import Any
 
 import sqlalchemy as sa
-
-T = TypeVar('T')
 
 
 @lru_cache(maxsize=128)

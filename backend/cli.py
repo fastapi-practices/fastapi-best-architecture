@@ -351,7 +351,7 @@ def run_celery_beat(log_level: Literal['info', 'debug']) -> None:
         pass
 
 
-def run_celery_flower(port: int, basic_auth: str) -> None:
+def run_celery_flower(port: int, basic_auth: str, *, read_only: bool = True) -> None:
     """启动 Celery flower 监控服务"""
     try:
         subprocess.run([
@@ -361,6 +361,7 @@ def run_celery_flower(port: int, basic_auth: str) -> None:
             'flower',
             f'--port={port}',
             f'--basic-auth={basic_auth}',
+            f'--read-only={str(read_only).lower()}',
         ])
     except KeyboardInterrupt:
         pass
@@ -854,9 +855,13 @@ class Flower:
         str,
         cappa.Arg(default='admin:123456', help='页面登录的用户名和密码'),
     ]
+    read_only: Annotated[
+        bool,
+        cappa.Arg(long=['--read-only', '--no-read-only'], default=True, help='只读监控模式，关闭后允许管理操作'),
+    ]
 
     def __call__(self) -> None:
-        run_celery_flower(port=self.port, basic_auth=self.basic_auth)
+        run_celery_flower(port=self.port, basic_auth=self.basic_auth, read_only=self.read_only)
 
 
 @cappa.command(help='运行 Celery 服务')

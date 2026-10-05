@@ -102,6 +102,13 @@ def register_app() -> FastAPI:
         openapi_url=settings.FASTAPI_OPENAPI_URL,
         default_response_class=MsgSpecJSONResponse,
         lifespan=lifespan_manager.build(),
+        telemetry={
+            'tracing': settings.GRAFANA_METRICS_ENABLE,
+            'metrics': settings.GRAFANA_METRICS_ENABLE,
+            # 异常日志由现有中间件记录，避免重复导出
+            'logs': False,
+            'auto_configure': False,
+        },
     )
 
     # 注册组件
@@ -252,5 +259,5 @@ def register_metrics(app: FastAPI) -> None:
     metrics_app = make_asgi_app()
     app.mount(settings.GRAFANA_METRICS_PATH, metrics_app)
 
-    init_otel(app)
+    init_otel()
     init_plugin_otel_hooks(app)
