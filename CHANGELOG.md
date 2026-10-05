@@ -1,3 +1,44 @@
+<a id="v1.16.0"></a>
+# [v1.16.0](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v1.16.0) - 2026-10-05
+
+## What's Changed
+* Update changelog for v1.15.1 by [@wu-clan](https://github.com/wu-clan) in [#1236](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1236)
+* Add claude.uy sponsor to the README and CLI by [@wu-clan](https://github.com/wu-clan) in [#1238](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1238)
+* Fix correct multi-login permission check by [@jerryliu44](https://github.com/jerryliu44) in [#1240](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1240)
+* Update frontend plugin installer suffix handling by [@wu-clan](https://github.com/wu-clan) in [#1241](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1241)
+* Update code generator plugin menu SQL paths by [@wu-clan](https://github.com/wu-clan) in [#1242](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1242)
+* Update code generator plugin naming to CodeGen prefix by [@wu-clan](https://github.com/wu-clan) in [#1243](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1243)
+* Update email plugin README configuration by [@wu-clan](https://github.com/wu-clan) in [#1244](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1244)
+* Update oauth2 plugin README and service docstring by [@wu-clan](https://github.com/wu-clan) in [#1245](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1245)
+* Update admin and task naming conventions by [@wu-clan](https://github.com/wu-clan) in [#1246](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1246)
+* Update cursor pagination page size params by [@wu-clan](https://github.com/wu-clan) in [#1249](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1249)
+* Update code generator import order by [@wu-clan](https://github.com/wu-clan) in [#1250](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1250)
+* Update test token fixture to logout after use by [@wu-clan](https://github.com/wu-clan) in [#1251](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1251)
+* Optimize Redis connection pool and batch operations by [@wu-clan](https://github.com/wu-clan) in [#1252](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1252)
+* Refactor token session index and online status by [@wu-clan](https://github.com/wu-clan) in [#1253](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1253)
+* Fix rate limiter Redis bucket cache lock contention by [@wu-clan](https://github.com/wu-clan) in [#1254](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1254)
+* Fix distributed reload lock timeout handling by [@wu-clan](https://github.com/wu-clan) in [#1255](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1255)
+* Fix snowflake initialization blocking the event loop by [@wu-clan](https://github.com/wu-clan) in [#1256](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1256)
+* Fix scheduler background task garbage collection by [@wu-clan](https://github.com/wu-clan) in [#1257](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1257)
+* Reuse Redis key strings in local variables by [@wu-clan](https://github.com/wu-clan) in [#1259](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1259)
+* Rename task scheduler enabled field to status by [@wu-clan](https://github.com/wu-clan) in [#1261](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1261)
+* Ignore AI Buddy downloaded static files by [@wu-clan](https://github.com/wu-clan) in [#1262](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1262)
+* Bump dependencies and pre-commits by [@wu-clan](https://github.com/wu-clan) in [#1264](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1264)
+* Update the version number to 1.16.0 by [@wu-clan](https://github.com/wu-clan) in [#1266](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1266)
+
+## New Contributors
+* [@jerryliu44](https://github.com/jerryliu44) made their first contribution in [#1240](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1240)
+
+**Full Changelog**: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.15.1...v1.16.0
+
+## Contributors
+
+<a href="https://github.com/jerryliu44"><img src="https://wsrv.nl/?url=https%3A%2F%2Fgithub.com%2Fjerryliu44.png&w=128&h=128&fit=cover&mask=circle" width="64" height="64" alt="@jerryliu44"></a>
+<a href="https://github.com/wu-clan"><img src="https://wsrv.nl/?url=https%3A%2F%2Fgithub.com%2Fwu-clan.png&w=128&h=128&fit=cover&mask=circle" width="64" height="64" alt="@wu-clan"></a>
+
+[Changes][v1.16.0]
+
+
 <a id="v1.15.1"></a>
 # [v1.15.1](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v1.15.1) - 2026-08-16
 
@@ -1602,6 +1643,7 @@
 [Changes][v1.0.0]
 
 
+[v1.16.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.15.1...v1.16.0
 [v1.15.1]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.15.0...v1.15.1
 [v1.15.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.14.0...v1.15.0
 [v1.14.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.13.4...v1.14.0
