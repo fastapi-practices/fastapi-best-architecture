@@ -171,10 +171,7 @@ class Settings(BaseSettings):
     WS_NO_AUTH_MARKER: str = 'internal'
 
     # CORS
-    CORS_ALLOWED_ORIGINS: list[str] = [  # 末尾不带斜杠
-        'http://127.0.0.1',
-        'http://localhost:5173',
-    ]
+    CORS_ALLOWED_ORIGINS: list[str] = ['*']  # 末尾不带斜杠
     CORS_EXPOSE_HEADERS: list[str] = [
         'X-Request-ID',
     ]
