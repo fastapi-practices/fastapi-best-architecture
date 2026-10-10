@@ -133,6 +133,12 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
         :return:
         """
         args = {}
+        # 用于 ai-buddy 插件，避免交互输入、聊天和图像生成请求中的敏感内容写入操作日志
+        if '/input-requests/' in request.url.path or request.url.path.endswith((
+            '/chat/completions',
+            '/images/generations',
+        )):
+            return {'body': '[REDACTED]'}
 
         # 查询参数
         query_params = dict(request.query_params)

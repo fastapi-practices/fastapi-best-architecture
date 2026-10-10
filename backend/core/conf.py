@@ -244,6 +244,7 @@ class Settings(BaseSettings):
         'old_password',
         'new_password',
         'confirm_password',
+        'secret',
     ]
     OPERA_LOG_QUEUE_MAXSIZE: int = 100000
     OPERA_LOG_QUEUE_BATCH_CONSUME_SIZE: int = 100
