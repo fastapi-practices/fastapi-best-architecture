@@ -1,3 +1,5 @@
+import ipaddress
+
 import httpx
 import ip2region.searcher as ip2region_xdb
 import ip2region.util as ip2region_util
@@ -67,6 +69,9 @@ def get_location_offline(ip: str) -> dict | None:
     :return:
     """
     try:
+        if ipaddress.ip_address(ip).version == 6:
+            return None
+
         data = __xdb_searcher.search(ip)
         country, region_name, city, *_ = data.split('|')
     except Exception as e:
