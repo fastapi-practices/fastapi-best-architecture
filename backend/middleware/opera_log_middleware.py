@@ -1,7 +1,8 @@
+import asyncio
 import json
 import time
 
-from asyncio import Queue
+from asyncio import Queue, QueueFull
 from typing import Any
 
 from fastapi import Response
@@ -14,7 +15,7 @@ from backend.app.admin.service.opera_log_service import opera_log_service
 from backend.common.context import ctx
 from backend.common.enums import StatusType
 from backend.common.log import log
-from backend.common.observability.prometheus.queue import observe_queue_size
+from backend.common.observability.prometheus.queue import inc_queue_exception, observe_queue_size
 from backend.common.queue import batch_consume
 from backend.common.response.response_code import StandardResponseCode
 from backend.core.conf import settings
@@ -27,6 +28,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
 
     opera_log_queue_name = 'opera_log_queue'
     opera_log_queue: Queue[CreateOperaLogParam] = Queue(maxsize=settings.OPERA_LOG_QUEUE_MAXSIZE)
+    opera_log_stop_event = asyncio.Event()
 
     async def dispatch(self, request: Request, call_next: Any) -> Response:  # ruff:ignore[complex-structure]
         """
@@ -119,7 +121,13 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                     cost_time=elapsed,
                     opera_time=ctx.start_time,
                 )
-                await self.opera_log_queue.put(opera_log_in)
+                # 日志队列已满时丢弃，避免日志写入积压拖慢业务请求
+                try:
+                    self.opera_log_queue.put_nowait(opera_log_in)
+                except QueueFull:
+                    log.warning('操作日志队列已满，已丢弃本次请求的操作日志')
+                    if settings.GRAFANA_METRICS_ENABLE:
+                        inc_queue_exception(queue_name=self.opera_log_queue_name)
                 if settings.GRAFANA_METRICS_ENABLE:
                     observe_queue_size(self.opera_log_queue, queue_name=self.opera_log_queue_name)
 
@@ -253,6 +261,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
     @classmethod
     async def consumer(cls) -> None:
         """操作日志消费者"""
+        cls.opera_log_stop_event.clear()
 
         async def bulk_create_opera_log(logs: list[CreateOperaLogParam]) -> None:
             """批量创建操作日志"""
@@ -269,4 +278,21 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
             queue_name=cls.opera_log_queue_name,
             error_message='操作日志入库失败',
             item_name='日志',
+            stop_event=cls.opera_log_stop_event,
         )
+
+    @classmethod
+    async def stop_consumer(cls, task: asyncio.Task[None]) -> None:
+        """
+        停止操作日志消费者，在限定时间内排空队列，超时后取消
+
+        :param task: 操作日志消费者任务
+        :return:
+        """
+        if task.done():
+            return
+        cls.opera_log_stop_event.set()
+        try:
+            await asyncio.wait_for(task, timeout=settings.OPERA_LOG_QUEUE_DRAIN_TIMEOUT)
+        except TimeoutError:
+            log.warning(f'操作日志未能在 {settings.OPERA_LOG_QUEUE_DRAIN_TIMEOUT} 秒内全部入库，剩余日志已丢弃')
