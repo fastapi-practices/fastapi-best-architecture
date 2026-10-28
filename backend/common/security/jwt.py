@@ -1,21 +1,48 @@
-from typing import Annotated, Any
+from typing import Annotated, Any, Protocol
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import ExpiredSignatureError, JWTError, jwt
-from pydantic_core import from_json
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.authentication import UnauthenticatedUser
 
-from backend.app.admin.model import User
-from backend.app.admin.schema.user import GetUserInfoWithRelationDetail
 from backend.common.context import ctx
 from backend.common.dataclasses import TokenPayload
 from backend.common.exception import errors
 from backend.core.conf import settings
-from backend.database.db import async_db_session
 from backend.database.redis import redis_client
 from backend.utils.timezone import timezone
+
+
+class JwtUser(Protocol):
+    """JWT 认证用户协议，只约定通用安全模块需要读取的字段"""
+
+    is_superuser: bool
+
+
+class JwtUserProvider(Protocol):
+    """JWT 用户提供者协议，由持有用户体系的应用实现，并在应用启动时注册"""
+
+    async def __call__(self, *, user_id: int) -> JwtUser:
+        """
+        获取 JWT 认证用户
+
+        :param user_id: 用户 ID
+        :return:
+        """
+
+
+_jwt_user_provider: JwtUserProvider | None = None
+
+
+def register_jwt_user_provider(provider: JwtUserProvider) -> None:
+    """
+    注册 JWT 用户提供者
+
+    :param provider: JWT 用户提供者
+    :return:
+    """
+    global _jwt_user_provider
+    _jwt_user_provider = provider
 
 
 def jwt_encode(payload: dict[str, Any]) -> str:
@@ -58,58 +85,7 @@ def jwt_decode(token: str) -> TokenPayload:
     )
 
 
-async def get_current_user(db: AsyncSession, pk: int) -> User:
-    """
-    获取当前用户
-
-    :param db: 数据库会话
-    :param pk: 用户 ID
-    :return:
-    """
-    from backend.app.admin.crud.crud_user import user_dao
-
-    user = await user_dao.get_join(db, user_id=pk)
-    if not user:
-        raise errors.TokenError(msg='Token 无效')
-    if not user.status:
-        raise errors.AuthorizationError(msg='用户已被锁定，请联系系统管理员')
-    if user.dept_id and not user.dept:
-        raise errors.AuthorizationError(msg='用户所属部门不存在或已被删除，请联系系统管理员')
-    if user.dept and not user.dept.status:
-        raise errors.AuthorizationError(msg='用户所属部门已被锁定，请联系系统管理员')
-    if user.roles:
-        role_status = [role.status for role in user.roles]
-        if all(status == 0 for status in role_status):
-            raise errors.AuthorizationError(msg='用户所属角色已被锁定，请联系系统管理员')
-    return user
-
-
-async def get_jwt_user(user_id: int) -> GetUserInfoWithRelationDetail:
-    """
-    获取 JWT 用户
-
-    :param user_id: 用户 ID
-    :return:
-    """
-    user_key = f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}'
-    cache_user = await redis_client.get(user_key)
-    if not cache_user:
-        async with async_db_session() as db:
-            current_user = await get_current_user(db, user_id)
-            user = GetUserInfoWithRelationDetail.model_validate(current_user)
-            await redis_client.set(
-                user_key,
-                user.model_dump_json(),
-                ex=settings.TOKEN_EXPIRE_SECONDS,
-            )
-    else:
-        # TODO: 在恰当的时机，应替换为使用 model_validate_json
-        # https://docs.pydantic.dev/latest/concepts/json/#partial-json-parsing
-        user = GetUserInfoWithRelationDetail.model_validate(from_json(cache_user, allow_partial=True))
-    return user
-
-
-async def jwt_authentication(token: str) -> GetUserInfoWithRelationDetail:
+async def jwt_authentication(token: str) -> JwtUser:
     """
     JWT 认证
 
@@ -123,9 +99,12 @@ async def jwt_authentication(token: str) -> GetUserInfoWithRelationDetail:
         raise errors.TokenError(msg='Token 已过期')
     if token != redis_token:
         raise errors.TokenError(msg='Token 已失效')
+    if _jwt_user_provider is None:
+        raise RuntimeError('JWT 用户提供者未注册，请在应用启动时调用 register_jwt_user_provider')
 
-    user = await get_jwt_user(ctx.user_id)
+    user = await _jwt_user_provider(user_id=ctx.user_id)
     ctx.is_superuser = user.is_superuser
+
     return user
 
 

@@ -1,9 +1,11 @@
 from collections.abc import Sequence
 
+from pydantic_core import from_json
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.admin.model import data_scope_rule, role_data_scope, role_menu, user_role
+from backend.app.admin.schema.user import GetUserInfoWithRelationDetail
 from backend.core.conf import settings
 from backend.database.redis import redis_client
 
@@ -12,7 +14,40 @@ class UserCacheManager:
     """用户缓存管理"""
 
     @staticmethod
-    async def clear(user_ids: Sequence[int]) -> None:
+    def get_key(user_id: int) -> str:
+        """
+        获取用户缓存键
+
+        :param user_id: 用户 ID
+        :return:
+        """
+        return f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}'
+
+    async def get(self, user_id: int) -> GetUserInfoWithRelationDetail | None:
+        """
+        获取用户缓存
+
+        :param user_id: 用户 ID
+        :return:
+        """
+        cache_user = await redis_client.get(self.get_key(user_id))
+        if not cache_user:
+            return None
+        # TODO: 在恰当的时机，应替换为使用 model_validate_json
+        # https://docs.pydantic.dev/latest/concepts/json/#partial-json-parsing
+        return GetUserInfoWithRelationDetail.model_validate(from_json(cache_user, allow_partial=True))
+
+    async def set(self, user_id: int, user: GetUserInfoWithRelationDetail) -> None:
+        """
+        设置用户缓存
+
+        :param user_id: 用户 ID
+        :param user: 用户信息
+        :return:
+        """
+        await redis_client.set(self.get_key(user_id), user.model_dump_json(), ex=settings.TOKEN_EXPIRE_SECONDS)
+
+    async def clear(self, user_ids: Sequence[int]) -> None:
         """
         清理用户缓存
 
@@ -20,7 +55,7 @@ class UserCacheManager:
         :return:
         """
         if user_ids:
-            await redis_client.delete(*[f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}' for user_id in user_ids])
+            await redis_client.delete(*[self.get_key(user_id) for user_id in user_ids])
 
     async def clear_by_role_id(self, db: AsyncSession, role_ids: list[int]) -> None:
         """

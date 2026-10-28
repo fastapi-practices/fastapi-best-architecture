@@ -1,0 +1,12 @@
+# 基础层依赖方向约束：基础层不得依赖业务层和装配层
+# 需要业务能力时，由基础层定义协议或注册入口，业务层在启动时注入
+extend = "../../pyproject.toml"
+# 第一方包按仓库根目录识别，避免子目录同名包（如 socketio）被误判为第一方
+src = ["../.."]
+
+[lint]
+extend-select = ["banned-api"]
+
+[lint.flake8-tidy-imports.banned-api]
+"backend.app".msg = "基础层不得依赖业务层，请改为定义协议或注册入口，由业务层注入"
+"backend.middleware".msg = "基础层不得依赖装配层"
