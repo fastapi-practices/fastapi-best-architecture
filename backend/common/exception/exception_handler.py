@@ -9,9 +9,8 @@ from backend.common.context import ctx
 from backend.common.exception.errors import BaseExceptionError
 from backend.common.i18n import i18n, t
 from backend.common.response.response_code import CustomResponseCode, StandardResponseCode
-from backend.common.response.response_schema import response_base
+from backend.common.response.response_schema import MsgSpecJSONResponse, response_base
 from backend.core.conf import settings
-from backend.utils.serializers import MsgSpecJSONResponse
 from backend.utils.trace_id import get_request_trace_id
 
 
