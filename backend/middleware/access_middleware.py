@@ -13,6 +13,7 @@ from backend.common.observability.prometheus.fastapi import (
     inc_fastapi_response,
     observe_fastapi_request_cost_time,
 )
+from backend.common.redaction import REDACTED, redaction
 from backend.common.response.response_code import StandardResponseCode
 from backend.core.conf import settings
 from backend.utils.timezone import timezone
@@ -41,9 +42,8 @@ class AccessMiddleware(BaseHTTPMiddleware):
 
         if method != 'OPTIONS':
             query = request.url.query
-            # 用于 ai-buddy 插件，避免 OAuth 回调凭据进入访问日志
-            if query and path.rstrip('/').endswith('/mcps/oauth/callback'):
-                query = '[REDACTED]'
+            if query and redaction.is_query_redacted(path):
+                query = REDACTED
             log.debug(f'--> 请求开始[{path if not query else path + "?" + query}]')
 
         should_record_metrics = settings.GRAFANA_METRICS_ENABLE and path.startswith(settings.FASTAPI_API_V1_PATH)

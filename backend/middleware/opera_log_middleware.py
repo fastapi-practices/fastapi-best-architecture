@@ -16,6 +16,7 @@ from backend.common.enums import StatusType
 from backend.common.log import log
 from backend.common.observability.prometheus.queue import observe_queue_size
 from backend.common.queue import batch_consume
+from backend.common.redaction import REDACTED, redaction
 from backend.common.response.response_code import StandardResponseCode
 from backend.core.conf import settings
 from backend.database.db import async_db_session
@@ -133,13 +134,9 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
         :return:
         """
         args = {}
-        # 用于 ai-buddy 插件，避免交互输入、聊天、图像及 OAuth 凭据进入操作日志
-        if (
-            '/input-requests/' in request.url.path
-            or request.url.path.endswith(('/chat/completions', '/images/generations', '/mcps/oauth/callback'))
-            or ('/mcps/' in request.url.path and request.url.path.rstrip('/').endswith(('/oauth', '/oauth/config')))
-        ):
-            return {'body': '[REDACTED]'}
+        # 业务插件注册的敏感路径整体不记录请求参数
+        if redaction.is_body_redacted(request.url.path):
+            return {'body': REDACTED}
 
         # 查询参数
         query_params = dict(request.query_params)
@@ -247,7 +244,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
         """
         for key in args:
             if key in settings.OPERA_LOG_REDACT_KEYS:
-                args[key] = '[REDACTED]'
+                args[key] = REDACTED
         return args
 
     @classmethod
