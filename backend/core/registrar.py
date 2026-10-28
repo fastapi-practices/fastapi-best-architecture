@@ -23,6 +23,7 @@ from backend.common.limiter import get_fba_rate_limit_backend
 from backend.common.log import set_custom_logfile, setup_logging
 from backend.common.observability.otel import init_otel
 from backend.common.response.response_code import StandardResponseCode
+from backend.common.response.response_schema import MsgSpecJSONResponse
 from backend.core.conf import settings
 from backend.core.path_conf import STATIC_DIR, UPLOAD_DIR
 from backend.database.db import create_tables, dispose_database
@@ -36,7 +37,6 @@ from backend.plugin.hooks import init_plugin_otel_hooks, register_plugin_hooks
 from backend.plugin.router import build_final_router
 from backend.utils.demo_mode import demo_site
 from backend.utils.openapi import ensure_unique_route_names, simplify_operation_ids
-from backend.utils.serializers import MsgSpecJSONResponse
 from backend.utils.snowflake import snowflake
 from backend.utils.trace_id import OtelTraceIdPlugin
 

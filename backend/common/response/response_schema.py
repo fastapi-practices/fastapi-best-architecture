@@ -1,10 +1,24 @@
 from typing import Any, overload
 
 from fastapi import Response
+from fastapi.encoders import decimal_encoder
+from msgspec import json
 from pydantic import BaseModel, Field
+from starlette.responses import JSONResponse
 
 from backend.common.response.response_code import CustomResponse, CustomResponseCode
-from backend.utils.serializers import MsgSpecJSONResponse
+
+# 复用编码器实例，并按 FastAPI 默认行为将 Decimal 编码为数字，避免与常规响应路径产生差异
+_msg_spec_encoder: json.Encoder = json.Encoder(decimal_format=decimal_encoder)
+
+
+class MsgSpecJSONResponse(JSONResponse):
+    """
+    使用高性能的 msgspec 库将数据序列化为 JSON 的响应类
+    """
+
+    def render(self, content: Any) -> bytes:
+        return _msg_spec_encoder.encode(content)
 
 
 class ResponseModel(BaseModel):

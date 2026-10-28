@@ -10,9 +10,9 @@ from backend.app.admin.schema.user import GetUserInfoWithRelationDetail
 from backend.common.context import ctx
 from backend.common.exception.errors import TokenError
 from backend.common.log import log
+from backend.common.response.response_schema import MsgSpecJSONResponse
 from backend.common.security.jwt import jwt_authentication
 from backend.core.conf import settings
-from backend.utils.serializers import MsgSpecJSONResponse
 
 
 class AuthenticationError(StarletteAuthenticationError):
