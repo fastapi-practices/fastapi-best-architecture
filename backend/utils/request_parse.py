@@ -57,8 +57,10 @@ async def get_location_online(ip: str) -> dict | None:
 
 
 # 离线 IP 搜索器（数据将缓存到内存，缓存大小取决于 IP 数据文件大小）
-__c_buffer: bytes = ip2region_util.load_content_from_file(STATIC_DIR / 'ip2region_v4.xdb')
-__xdb_searcher: ip2region_xdb.Searcher = ip2region_xdb.new_with_buffer(ip2region_util.IPv4, __c_buffer)
+__c_buffer_v4: bytes = ip2region_util.load_content_from_file(STATIC_DIR / 'ip2region_v4.xdb')
+__xdb_searcher_v4: ip2region_xdb.Searcher = ip2region_xdb.new_with_buffer(ip2region_util.IPv4, __c_buffer_v4)
+__c_buffer_v6: bytes = ip2region_util.load_content_from_file(STATIC_DIR / 'ip2region_v6.xdb')
+__xdb_searcher_v6: ip2region_xdb.Searcher = ip2region_xdb.new_with_buffer(ip2region_util.IPv6, __c_buffer_v6)
 
 
 def get_location_offline(ip: str) -> dict | None:
@@ -69,10 +71,15 @@ def get_location_offline(ip: str) -> dict | None:
     :return:
     """
     try:
-        if ipaddress.ip_address(ip).version == 6:
+        ip_address = ipaddress.ip_address(ip)
+        # IPv4 映射的 IPv6 地址（::ffff:a.b.c.d）按 IPv4 查询
+        if isinstance(ip_address, ipaddress.IPv6Address) and ip_address.ipv4_mapped:
+            ip_address = ip_address.ipv4_mapped
+        searcher = __xdb_searcher_v6 if ip_address.version == 6 else __xdb_searcher_v4
+        data = searcher.search(str(ip_address))
+        # 数据文件未收录该地址（例如 ::1）时返回空字符串
+        if not data:
             return None
-
-        data = __xdb_searcher.search(ip)
         country, region_name, city, *_ = data.split('|')
     except Exception as e:
         log.error(f'离线获取 IP 地址属地失败：{e}')
