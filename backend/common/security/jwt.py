@@ -1,8 +1,9 @@
 from typing import Annotated, Any, Protocol
 
+import jwt
+
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import ExpiredSignatureError, JWTError, jwt
 from starlette.authentication import UnauthenticatedUser
 
 from backend.common.context import ctx
@@ -74,9 +75,9 @@ def jwt_decode(token: str) -> TokenPayload:
         expire = payload.get('exp')
         if not session_uuid or not user_id or not expire:
             raise errors.TokenError(msg='Token 无效')
-    except ExpiredSignatureError:
+    except jwt.ExpiredSignatureError:
         raise errors.TokenError(msg='Token 已过期')
-    except (JWTError, Exception):
+    except Exception:
         raise errors.TokenError(msg='Token 无效')
     return TokenPayload(
         user_id=int(user_id),

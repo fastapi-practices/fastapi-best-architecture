@@ -764,18 +764,6 @@ wheels = [
 ]
 
 [[package]]
-name = "ecdsa"
-version = "0.19.2"
-source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
-dependencies = [
-  { name = "six" },
-]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/25/ca/8de7744cb3bc966c85430ca2d0fcaeea872507c6a4cf6e007f7fe269ed9d/ecdsa-0.19.2.tar.gz", hash = "sha256:62635b0ac1ca2e027f82122b5b81cb706edc38cd91c63dda28e4f3455a2bf930" }
-wheels = [
-  { url = "https://mirrors.aliyun.com/pypi/packages/51/79/119091c98e2bf49e24ed9f3ae69f816d715d2904aefa6a2baa039a2ba0b0/ecdsa-0.19.2-py2.py3-none-any.whl", hash = "sha256:840f5dc5e375c68f36c1a7a5b9caad28f95daa65185c9253c0c08dd952bb7399" },
-]
-
-[[package]]
 name = "email-validator"
 version = "2.3.0"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
@@ -828,6 +816,7 @@ standard-no-fastapi-cloud-cli = [
   { name = "opentelemetry-sdk" },
   { name = "pydantic-extra-types" },
   { name = "pydantic-settings" },
+  { name = "pyjwt" },
   { name = "python-multipart" },
   { name = "uvicorn", extra = ["standard"] },
 ]
@@ -874,7 +863,6 @@ dependencies = [
   { name = "pydantic" },
   { name = "pydantic-settings" },
   { name = "pymysql" },
-  { name = "python-jose" },
   { name = "python-socketio" },
   { name = "redis", extra = ["hiredis"] },
   { name = "rtoml" },
@@ -937,8 +925,8 @@ requires-dist = [
   { name = "py-ip2region", specifier = ">=3.0.6" },
   { name = "pydantic", specifier = ">=2.14.1" },
   { name = "pydantic-settings", specifier = ">=2.16.1" },
+  { name = "pyjwt", specifier = ">=2.15.1" },
   { name = "pymysql", specifier = ">=1.2.3" },
-  { name = "python-jose", specifier = ">=3.5.0" },
   { name = "python-socketio", specifier = ">=5.17.0" },
   { name = "redis", extras = ["hiredis"], specifier = ">=8.1.0" },
   { name = "rtoml", specifier = ">=0.14.0" },
@@ -2583,15 +2571,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyasn1"
-version = "0.6.4"
-source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/a4/9a/23310166d960def5897e91fe20e5b724601b02a22e84ba1f94232c0b7f67/pyasn1-0.6.4.tar.gz", hash = "sha256:9c447d8431c947fe4c8febc4ed9e760bc29011a5b01e5c74b67025bd9fb8ce81" }
-wheels = [
-  { url = "https://mirrors.aliyun.com/pypi/packages/9a/3b/6163796d69c3977d1e4287bea4a6979161cbbdd170ebb430511e8e1999ce/pyasn1-0.6.4-py3-none-any.whl", hash = "sha256:deda9277cfd454080ec40b207fb6df82206a3a2688735233cdcd8d3d565f088b" },
-]
-
-[[package]]
 name = "pycparser"
 version = "3.12"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
@@ -2759,6 +2738,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyjwt"
+version = "2.15.1"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/43/ea/5194e52748b0da83d71e082d75496eaec6e58f419f5e184786ded517e6a9/pyjwt-2.15.1.tar.gz", hash = "sha256:4f259e80cdfb6b3fc18a7de51fd1ef9ec79652f25019bae68975ca2468a34df8" }
+wheels = [
+  { url = "https://mirrors.aliyun.com/pypi/packages/50/ca/44de4e75f8aadc457f0634be3b542815078ded46dca30efb960edeecad6e/pyjwt-2.15.1-py3-none-any.whl", hash = "sha256:42d59d631f7768a1028a64c7ff581a9bf7519804daf91fc5b6c56e30eec5e193" },
+]
+
+[[package]]
 name = "pymysql"
 version = "1.2.3"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
@@ -2828,20 +2816,6 @@ dependencies = [
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/fc/65/f8bae11b228647e2e2f45b63dec7448efaddb7cb51f529de1fdba69e63b5/python_engineio-4.14.0.tar.gz", hash = "sha256:eaa1e386baf9c2c7959eef7f9d9165c5ea910c5b392f5316e78d29ed073cb43d" }
 wheels = [
   { url = "https://mirrors.aliyun.com/pypi/packages/e5/de/07cfd386974c2a26a7bde41f2111be29bbfc92b9ea0bb76694415a4a1a78/python_engineio-4.14.0-py3-none-any.whl", hash = "sha256:9f0fe275fb7d67bfc1a632421adf22949fd4843bd9c458c004b0a89cede302a2" },
-]
-
-[[package]]
-name = "python-jose"
-version = "3.5.0"
-source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
-dependencies = [
-  { name = "ecdsa" },
-  { name = "pyasn1" },
-  { name = "rsa" },
-]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/c6/77/3a1c9039db7124eb039772b935f2244fbb73fc8ee65b9acf2375da1c07bf/python_jose-3.5.0.tar.gz", hash = "sha256:fb4eaa44dbeb1c26dcc69e4bd7ec54a1cb8dd64d3b4d81ef08d90ff453f2b01b" }
-wheels = [
-  { url = "https://mirrors.aliyun.com/pypi/packages/d9/c3/0bd11992072e6a1c513b16500a5d07f91a24017c5909b02c72c62d7ad024/python_jose-3.5.0-py2.py3-none-any.whl", hash = "sha256:abd1202f23d34dfad2c3d28cb8617b90acf34132c7afd60abd0b0b7d3cb55771" },
 ]
 
 [[package]]
@@ -2975,18 +2949,6 @@ dependencies = [
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/61/fe/e851890b72568a075a3574f760eed9014736b449fe104b16fd05a416c321/rich_toolkit-0.20.6.tar.gz", hash = "sha256:04768f19438df877c6279e6e668ab0d88b5fff5c7ef3ac302838d97f7b03472e" }
 wheels = [
   { url = "https://mirrors.aliyun.com/pypi/packages/79/fc/7c296a563a893b0a23a73923ce27965ae15f658dcb58c0bcdd463e1671a2/rich_toolkit-0.20.6-py3-none-any.whl", hash = "sha256:465453ba6f94f99401f59f79fb562827ba5f6b4d4759015d40019f5c67750262" },
-]
-
-[[package]]
-name = "rsa"
-version = "4.9.1"
-source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
-dependencies = [
-  { name = "pyasn1" },
-]
-sdist = { url = "https://mirrors.aliyun.com/pypi/packages/da/8a/22b7beea3ee0d44b1916c0c1cb0ee3af23b700b6da9f04991899d0c555d4/rsa-4.9.1.tar.gz", hash = "sha256:e7bdbfdb5497da4c07dfd35530e1a902659db6ff241e39d9953cad06ebd0ae75" }
-wheels = [
-  { url = "https://mirrors.aliyun.com/pypi/packages/64/8d/0133e4eb4beed9e425d9a98ed6e081a55d195481b7632472be1af08d2f6b/rsa-4.9.1-py3-none-any.whl", hash = "sha256:68635866661c6836b8d39430f97a996acbd61bfa49406748ea243539fe239762" },
 ]
 
 [[package]]
