@@ -3,13 +3,116 @@
     "captcha": {
       "error": "Captcha error",
       "invalid": "Captcha is invalid, please try again",
-      "expired": "Captcha has expired, please try again"
+      "expired": "Captcha has expired, please try again",
+      "invalidated": "Captcha is no longer valid, please request a new one"
     },
-    "language_not_found": "Current language pack is not initialized or does not exist"
+    "auth": {
+      "invalid_credentials": "Incorrect username or password",
+      "locked_retry": "Account is locked, please try again in {minutes} minutes",
+      "password_expired": "Password has expired, please change it and log in again",
+      "refresh_token_expired": "Refresh token has expired, please log in again",
+      "remote_login": "This account has logged in from another location, please log in again and change the password promptly",
+      "too_many_failures": "Too many failed login attempts, the account has been locked",
+      "user_locked": "User is locked, please contact the administrator"
+    },
+    "data_rule": {
+      "exists": "Data rule already exists",
+      "model_not_found": "Available model for data rule does not exist",
+      "not_found": "Data rule does not exist"
+    },
+    "data_scope": {
+      "exists": "Data scope already exists",
+      "not_found": "Data scope does not exist"
+    },
+    "demo": {
+      "forbidden": "This operation is not allowed in the demo environment"
+    },
+    "dept": {
+      "has_children": "The department has sub-departments and cannot be deleted",
+      "has_users": "The department has users and cannot be deleted",
+      "name_exists": "Department name already exists",
+      "not_found": "Department does not exist",
+      "parent_not_found": "Parent department does not exist",
+      "parent_self": "A department cannot be its own parent"
+    },
+    "file": {
+      "image_too_large": "The image exceeds the maximum size, please choose another one",
+      "unknown_type": "Unknown file type",
+      "unsupported_ext": "File format {file_ext} is not supported",
+      "upload_failed": "Failed to upload the file",
+      "video_too_large": "The video exceeds the maximum size, please choose another one"
+    },
+    "lock": {
+      "reload_timeout": "Timed out acquiring the hot reload lock, please try again later"
+    },
+    "menu": {
+      "has_children": "The menu has sub-menus and cannot be deleted",
+      "not_found": "Menu does not exist",
+      "parent_not_found": "Parent menu does not exist",
+      "title_exists": "Menu title already exists"
+    },
+    "password": {
+      "need_digit": "Password must contain a digit",
+      "need_letter": "Password must contain a letter",
+      "need_special": "Password must contain a special character (e.g. !@#$%)",
+      "reused": "The new password must differ from your last {count} passwords",
+      "too_long": "Password must not exceed {max_length} characters",
+      "too_short": "Password must be at least {min_length} characters long"
+    },
+    "plugin": {
+      "casbin_import_failed": "Failed to import the Casbin RBAC plugin, please contact the system administrator",
+      "git_url_required": "Git repository URL must not be empty",
+      "install_forbidden": "Installing plugins is not allowed outside the development environment",
+      "not_found": "Plugin does not exist",
+      "oauth2_import_failed": "Failed to import the OAuth2 plugin, please contact the system administrator",
+      "required": "Plugin {plugin} is required and cannot be uninstalled",
+      "uninstall_forbidden": "Uninstalling plugins is not allowed outside the development environment",
+      "zip_required": "ZIP archive must not be empty"
+    },
+    "rbac": {
+      "no_menu": "No menu is assigned to the user, please contact the system administrator",
+      "staff_forbidden": "The user is forbidden from back-office operations, please contact the system administrator"
+    },
+    "request": {
+      "invalid": "Invalid request parameters: {message}",
+      "json_invalid": "Failed to parse JSON"
+    },
+    "role": {
+      "exists": "Role already exists",
+      "not_found": "Role does not exist",
+      "unavailable": "No available role found, please contact the system administrator"
+    },
+    "snowflake": {
+      "clock_backwards": "Failed to generate snowflake ID, the clock moved backwards by more than {back_ms} ms, please contact the system administrator immediately",
+      "config": "Invalid snowflake configuration, please contact the system administrator",
+      "datacenter_config": "Invalid snowflake datacenter configuration, please contact the system administrator",
+      "exhausted": "No snowflake node available, all nodes are exhausted",
+      "uninitialized": "Failed to generate snowflake ID, the snowflake algorithm is not initialized",
+      "worker_config": "Invalid snowflake worker configuration, please contact the system administrator"
+    },
+    "sql": {
+      "illegal_operation": "SQL script {filepath} contains illegal operations, only the following are allowed: {allowed}",
+      "script_not_found": "SQL script file does not exist"
+    },
+    "token": {
+      "invalid": "Token is invalid",
+      "role_locked": "The user's roles are locked, please contact the system administrator"
+    },
+    "user": {
+      "email_bound": "Email is already bound to another account",
+      "not_found": "User does not exist",
+      "old_password_wrong": "Original password is incorrect",
+      "password_mismatch": "The two passwords entered do not match",
+      "password_required": "Password must not be empty",
+      "permission_self": "Modifying your own permissions is not allowed",
+      "permission_type_not_found": "Permission type does not exist",
+      "username_registered": "Username is already registered"
+    }
   },
   "response": {
     "error": "Request error",
     "rate_limit": "Too many requests, please try again later",
+    "server_error": "Internal server error",
     "success": "Request success"
   },
   "success": {

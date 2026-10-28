@@ -15,6 +15,7 @@ from backend.app.admin.schema.data_rule import (
 )
 from backend.app.admin.utils.cache import user_cache_manager
 from backend.common.exception import errors
+from backend.common.i18n import t
 from backend.common.pagination import paging_data
 from backend.common.security.permission import get_data_permission_models
 from backend.core.conf import settings
@@ -35,7 +36,7 @@ class DataRuleService:
 
         data_rule = await data_rule_dao.get(db, pk)
         if not data_rule:
-            raise errors.NotFoundError(msg='数据规则不存在')
+            raise errors.NotFoundError(msg=t('error.data_rule.not_found'))
         return data_rule
 
     @staticmethod
@@ -71,7 +72,7 @@ class DataRuleService:
 
         available_models = get_data_permission_models()
         if model not in available_models:
-            raise errors.NotFoundError(msg='数据规则可用模型不存在')
+            raise errors.NotFoundError(msg=t('error.data_rule.model_not_found'))
         model_ins = available_models[model]
 
         table = model_ins if isinstance(model_ins, Table) else model_ins.__table__
@@ -117,7 +118,7 @@ class DataRuleService:
         """
         data_rule = await data_rule_dao.get_by_name(db, obj.name)
         if data_rule:
-            raise errors.ConflictError(msg='数据规则已存在')
+            raise errors.ConflictError(msg=t('error.data_rule.exists'))
         await data_rule_dao.create(db, obj)
 
     @staticmethod
@@ -132,9 +133,9 @@ class DataRuleService:
         """
         data_rule = await data_rule_dao.get(db, pk)
         if not data_rule:
-            raise errors.NotFoundError(msg='数据规则不存在')
+            raise errors.NotFoundError(msg=t('error.data_rule.not_found'))
         if data_rule.name != obj.name and await data_rule_dao.get_by_name(db, obj.name):
-            raise errors.ConflictError(msg='数据规则已存在')
+            raise errors.ConflictError(msg=t('error.data_rule.exists'))
         count = await data_rule_dao.update(db, pk, obj)
         await user_cache_manager.clear_by_data_rule_id(db, [pk])
         return count

@@ -14,6 +14,7 @@ from backend.app.admin.schema.data_scope import (
 )
 from backend.app.admin.utils.cache import user_cache_manager
 from backend.common.exception import errors
+from backend.common.i18n import t
 from backend.common.pagination import paging_data
 
 
@@ -32,7 +33,7 @@ class DataScopeService:
 
         data_scope = await data_scope_dao.get(db, pk)
         if not data_scope:
-            raise errors.NotFoundError(msg='数据范围不存在')
+            raise errors.NotFoundError(msg=t('error.data_scope.not_found'))
         return data_scope
 
     @staticmethod
@@ -59,7 +60,7 @@ class DataScopeService:
 
         data_scope = await data_scope_dao.get_join(db, pk)
         if not data_scope:
-            raise errors.NotFoundError(msg='数据范围不存在')
+            raise errors.NotFoundError(msg=t('error.data_scope.not_found'))
         return data_scope
 
     @staticmethod
@@ -86,7 +87,7 @@ class DataScopeService:
         """
         data_scope = await data_scope_dao.get_by_name(db, obj.name)
         if data_scope:
-            raise errors.ConflictError(msg='数据范围已存在')
+            raise errors.ConflictError(msg=t('error.data_scope.exists'))
         await data_scope_dao.create(db, obj)
 
     @staticmethod
@@ -101,9 +102,9 @@ class DataScopeService:
         """
         data_scope = await data_scope_dao.get(db, pk)
         if not data_scope:
-            raise errors.NotFoundError(msg='数据范围不存在')
+            raise errors.NotFoundError(msg=t('error.data_scope.not_found'))
         if data_scope.name != obj.name and await data_scope_dao.get_by_name(db, obj.name):
-            raise errors.ConflictError(msg='数据范围已存在')
+            raise errors.ConflictError(msg=t('error.data_scope.exists'))
         count = await data_scope_dao.update(db, pk, obj)
         await user_cache_manager.clear_by_data_scope_id(db, [pk])
         return count
@@ -120,11 +121,11 @@ class DataScopeService:
         """
         data_scope = await data_scope_dao.get(db, pk)
         if not data_scope:
-            raise errors.NotFoundError(msg='数据范围不存在')
+            raise errors.NotFoundError(msg=t('error.data_scope.not_found'))
         if rule_ids.rules:
             rules = await data_rule_dao.get_all_by_ids(db, list(set(rule_ids.rules)))
             if {rule.id for rule in rules} != set(rule_ids.rules):
-                raise errors.NotFoundError(msg='数据规则不存在')
+                raise errors.NotFoundError(msg=t('error.data_rule.not_found'))
         count = await data_scope_dao.update_rules(db, pk, rule_ids)
         await user_cache_manager.clear_by_data_scope_id(db, [pk])
         return count

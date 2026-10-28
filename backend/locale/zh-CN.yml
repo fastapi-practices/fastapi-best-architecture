@@ -3,7 +3,92 @@ error:
     error: 验证码错误
     invalid: 验证码无效，请重新获取
     expired: 验证码已过期，请重新获取
-  language_not_found: 当前语言包未初始化或不存在
+    invalidated: 验证码已失效，请重新获取
+  auth:
+    invalid_credentials: 用户名或密码有误
+    locked_retry: '账号已被锁定，请在 {minutes} 分钟后重试'
+    password_expired: 密码已过期，请修改密码后重新登录
+    refresh_token_expired: Refresh Token 已过期，请重新登录
+    remote_login: 此用户已在异地登录，请重新登录并及时修改密码
+    too_many_failures: 登录失败次数过多，账号已被锁定
+    user_locked: 用户已被锁定, 请联系统管理员
+  data_rule:
+    exists: 数据规则已存在
+    model_not_found: 数据规则可用模型不存在
+    not_found: 数据规则不存在
+  data_scope:
+    exists: 数据范围已存在
+    not_found: 数据范围不存在
+  demo:
+    forbidden: 演示环境下禁止执行此操作
+  dept:
+    has_children: 部门下存在子部门，无法删除
+    has_users: 部门下存在用户，无法删除
+    name_exists: 部门名称已存在
+    not_found: 部门不存在
+    parent_not_found: 父级部门不存在
+    parent_self: 禁止关联自身为父级
+  file:
+    image_too_large: 图片超出最大限制，请重新选择
+    unknown_type: 未知的文件类型
+    unsupported_ext: '此文件格式 {file_ext} 暂不支持'
+    upload_failed: 上传文件失败
+    video_too_large: 视频超出最大限制，请重新选择
+  lock:
+    reload_timeout: 获取热重载锁超时，请稍后重试
+  menu:
+    has_children: 菜单下存在子菜单，无法删除
+    not_found: 菜单不存在
+    parent_not_found: 父级菜单不存在
+    title_exists: 菜单标题已存在
+  password:
+    need_digit: 密码必须包含数字
+    need_letter: 密码必须包含字母
+    need_special: 密码必须包含特殊字符（如：!@#$%）
+    reused: '新密码不能与最近 {count} 次使用的密码相同'
+    too_long: '密码长度不能超过 {max_length} 个字符'
+    too_short: '密码长度不能少于 {min_length} 个字符'
+  plugin:
+    casbin_import_failed: Casbin RBAC 插件用法导入失败，请联系系统管理员
+    git_url_required: Git 仓库地址不能为空
+    install_forbidden: 禁止在非开发环境下安装插件
+    not_found: 插件不存在
+    oauth2_import_failed: OAuth2 插件用法导入失败，请联系系统管理员
+    required: '插件 {plugin} 为必需插件，禁止卸载'
+    uninstall_forbidden: 禁止在非开发环境下卸载插件
+    zip_required: ZIP 压缩包不能为空
+  rbac:
+    no_menu: 用户未分配菜单，请联系系统管理员
+    staff_forbidden: 用户已被禁止后台管理操作，请联系系统管理员
+  request:
+    invalid: '请求参数非法: {message}'
+    json_invalid: json解析失败
+  role:
+    exists: 角色已存在
+    not_found: 角色不存在
+    unavailable: 未找到可用角色，请联系系统管理员
+  snowflake:
+    clock_backwards: '雪花 ID 生成失败，时钟回拨超过 {back_ms} ms，请立即联系系统管理员'
+    config: 雪花算法配置失败，请联系系统管理员
+    datacenter_config: 雪花算法数据中心配置失败，请联系系统管理员
+    exhausted: 无可用的雪花算法节点，节点已耗尽
+    uninitialized: 雪花 ID 生成失败，雪花算法未初始化
+    worker_config: 雪花算法工作机器配置失败，请联系系统管理员
+  sql:
+    illegal_operation: 'SQL 脚本 {filepath} 存在非法操作，仅允许：{allowed}'
+    script_not_found: SQL 脚本文件不存在
+  token:
+    invalid: Token 无效
+    role_locked: 用户所属角色已被锁定，请联系系统管理员
+  user:
+    email_bound: 邮箱已被绑定
+    not_found: 用户不存在
+    old_password_wrong: 原密码错误
+    password_mismatch: 两次密码输入不一致
+    password_required: 密码不允许为空
+    permission_self: 禁止修改自身权限
+    permission_type_not_found: 权限类型不存在
+    username_registered: 用户名已注册
 pydantic:
   # 自定义验证错误信息，参考：
   # https://github.com/pydantic/pydantic-core/blob/a5cb7382643415b716b1a7a5392914e50f726528/tests/test_errors.py#L266
@@ -108,6 +193,7 @@ pydantic:
 response:
   error: 请求错误
   rate_limit: 请求过于频繁，请稍后重试
+  server_error: 服务器内部错误
   success: 请求成功
 success:
   login:

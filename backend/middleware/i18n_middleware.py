@@ -30,7 +30,7 @@ def get_current_language(request: Request) -> str | None:
         'en-us': 'en-US',
     }
 
-    return lang_mapping.get(lang, lang)
+    return lang_mapping.get(lang) or lang_mapping.get(lang.split('-')[0], lang)
 
 
 class I18nMiddleware(BaseHTTPMiddleware):

@@ -3,6 +3,7 @@ from fastapi import Depends, Request
 from backend.common.context import ctx
 from backend.common.enums import MethodType, StatusType
 from backend.common.exception import errors
+from backend.common.i18n import t
 from backend.common.security.jwt import DependsJwtAuth
 from backend.core.conf import settings
 
@@ -36,16 +37,16 @@ async def rbac_verify(request: Request, _token: str = DependsJwtAuth) -> None:  
     user_roles = request.user.roles
     enabled_roles = [role for role in user_roles if role.status == StatusType.enable]
     if not enabled_roles:
-        raise errors.AuthorizationError(msg='用户所属角色已被锁定，请联系系统管理员')
+        raise errors.AuthorizationError(msg=t('error.token.role_locked'))
 
     # 检测用户所属角色菜单
     if not any(len(role.menus) > 0 for role in enabled_roles):
-        raise errors.AuthorizationError(msg='用户未分配菜单，请联系系统管理员')
+        raise errors.AuthorizationError(msg=t('error.rbac.no_menu'))
 
     # 检测后台管理操作权限
     method = request.method
     if method not in {MethodType.GET, MethodType.OPTIONS} and not request.user.is_staff:
-        raise errors.AuthorizationError(msg='用户已被禁止后台管理操作，请联系系统管理员')
+        raise errors.AuthorizationError(msg=t('error.rbac.staff_forbidden'))
 
     # RBAC 鉴权
     if settings.RBAC_ROLE_MENU_MODE:
@@ -77,7 +78,7 @@ async def rbac_verify(request: Request, _token: str = DependsJwtAuth) -> None:  
         try:
             from backend.plugin.casbin_rbac.rbac import casbin_verify
         except ImportError:
-            raise errors.ServerError(msg='Casbin RBAC 插件用法导入失败，请联系系统管理员')
+            raise errors.ServerError(msg=t('error.plugin.casbin_import_failed'))
 
         await casbin_verify(request)
 

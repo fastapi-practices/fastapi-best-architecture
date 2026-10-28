@@ -25,7 +25,7 @@ class CustomResponseCode(CustomCodeBase):
 
     HTTP_200 = (200, 'response.success')
     HTTP_400 = (400, 'response.error')
-    HTTP_500 = (500, '服务器内部错误')
+    HTTP_500 = (500, 'response.server_error')
 
 
 class CustomErrorCode(CustomCodeBase):
