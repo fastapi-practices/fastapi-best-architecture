@@ -66,13 +66,8 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         yield
     finally:
-        # 取消操作日志任务
-        if not opera_log_task.done():
-            opera_log_task.cancel()
-            try:
-                await opera_log_task
-            except asyncio.CancelledError:
-                pass
+        # 排空并停止操作日志任务
+        await OperaLogMiddleware.stop_consumer(opera_log_task)
 
         # 释放 snowflake 节点
         if settings.SNOWFLAKE_ENABLED or settings.DATABASE_PK_MODE == 'snowflake':
