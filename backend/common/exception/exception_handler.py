@@ -6,6 +6,8 @@ from starlette.middleware.cors import CORSMiddleware
 from uvicorn.protocols.http.h11_impl import STATUS_PHRASES
 
 from backend.common.context import ctx
+from backend.common.dataclasses import RequestException
+from backend.common.enums import RequestExceptionKind
 from backend.common.exception.errors import BaseExceptionError
 from backend.common.i18n import i18n, t
 from backend.common.response.response_code import CustomResponseCode, StandardResponseCode
@@ -92,7 +94,9 @@ async def _validation_exception_handler(exc: RequestValidationError | Validation
         'msg': msg,
         'data': data,
     }
-    ctx.__request_validation_exception__ = content  # 用于在中间件中获取异常信息
+    ctx.request_exception = RequestException(
+        kind=RequestExceptionKind.validation, code=content['code'], msg=content['msg']
+    )
     content.update(trace_id=get_request_trace_id())
     return MsgSpecJSONResponse(status_code=StandardResponseCode.HTTP_422, content=content)
 
@@ -116,7 +120,9 @@ def register_exception(app: FastAPI) -> None:  # ruff:ignore[complex-structure]
         else:
             res = response_base.fail(res=CustomResponseCode.HTTP_400)
             content = res.model_dump()
-        ctx.__request_http_exception__ = content
+        ctx.request_exception = RequestException(
+            kind=RequestExceptionKind.http, code=content['code'], msg=content['msg']
+        )
         content.update(trace_id=get_request_trace_id())
         return MsgSpecJSONResponse(
             status_code=_get_exception_code(exc.status_code),
@@ -164,7 +170,9 @@ def register_exception(app: FastAPI) -> None:  # ruff:ignore[complex-structure]
         else:
             res = response_base.fail(res=CustomResponseCode.HTTP_500)
             content = res.model_dump()
-        ctx.__request_assertion_error__ = content
+        ctx.request_exception = RequestException(
+            kind=RequestExceptionKind.assertion, code=content['code'], msg=content['msg']
+        )
         content.update(trace_id=get_request_trace_id())
         return MsgSpecJSONResponse(
             status_code=StandardResponseCode.HTTP_500,
@@ -185,7 +193,9 @@ def register_exception(app: FastAPI) -> None:  # ruff:ignore[complex-structure]
             'msg': str(exc.msg),
             'data': exc.data or None,
         }
-        ctx.__request_custom_exception__ = content
+        ctx.request_exception = RequestException(
+            kind=RequestExceptionKind.custom, code=content['code'], msg=content['msg']
+        )
         content.update(trace_id=get_request_trace_id())
         return MsgSpecJSONResponse(
             status_code=_get_exception_code(exc.code),
@@ -211,7 +221,9 @@ def register_exception(app: FastAPI) -> None:  # ruff:ignore[complex-structure]
         else:
             res = response_base.fail(res=CustomResponseCode.HTTP_500)
             content = res.model_dump()
-        ctx.__request_unknown_exception__ = content
+        ctx.request_exception = RequestException(
+            kind=RequestExceptionKind.unknown, code=content['code'], msg=content['msg']
+        )
         content.update(trace_id=get_request_trace_id())
         return MsgSpecJSONResponse(
             status_code=StandardResponseCode.HTTP_500,
@@ -245,10 +257,8 @@ def register_exception(app: FastAPI) -> None:  # ruff:ignore[complex-structure]
                 else:
                     res = response_base.fail(res=CustomResponseCode.HTTP_500)
                     content = res.model_dump()
-            if isinstance(exc, BaseExceptionError):
-                ctx.__request_custom_exception__ = content
-            else:
-                ctx.__request_unknown_exception__ = content
+            kind = RequestExceptionKind.custom if isinstance(exc, BaseExceptionError) else RequestExceptionKind.unknown
+            ctx.request_exception = RequestException(kind=kind, code=content['code'], msg=content['msg'])
             content.update(trace_id=get_request_trace_id())
             response = MsgSpecJSONResponse(
                 status_code=exc.code if isinstance(exc, BaseExceptionError) else StandardResponseCode.HTTP_500,
