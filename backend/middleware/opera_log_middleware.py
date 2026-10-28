@@ -68,20 +68,12 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
 
             if should_log_opera:
                 # 检查上下文中的异常信息
-                for exception_key in [
-                    '__request_http_exception__',
-                    '__request_validation_exception__',
-                    '__request_assertion_error__',
-                    '__request_custom_exception__',
-                    '__request_unknown_exception__',
-                ]:
-                    exception = ctx.get(exception_key)
-                    if exception:
-                        code = exception.get('code')
-                        msg = exception.get('msg')
-                        status = StatusType.disable
-                        log.error(f'请求异常: {msg}')
-                        break
+                request_exception = ctx.request_exception
+                if request_exception is not None:
+                    code = request_exception.code
+                    msg = request_exception.msg
+                    status = StatusType.disable
+                    log.error(f'请求异常: {msg}')
         finally:
             # summary 只能在请求后获取
             route = request.scope.get('route')

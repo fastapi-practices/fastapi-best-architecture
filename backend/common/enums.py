@@ -152,3 +152,14 @@ class LifespanStage(IntEnum):
     core = 0
     plugin = 1
     tail = 2
+
+
+class RequestExceptionKind(StrEnum):
+    """请求异常类型，取值同时作为 Prometheus 异常标签"""
+
+    authentication = 'AuthenticationError'
+    http = 'HTTPException'
+    validation = 'RequestValidationError'
+    assertion = 'AssertionError'
+    custom = 'BaseExceptionError'
+    unknown = 'Exception'

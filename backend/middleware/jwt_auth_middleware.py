@@ -8,6 +8,8 @@ from starlette.requests import HTTPConnection
 
 from backend.app.admin.schema.user import GetUserInfoWithRelationDetail
 from backend.common.context import ctx
+from backend.common.dataclasses import RequestException
+from backend.common.enums import RequestExceptionKind
 from backend.common.exception.errors import TokenError
 from backend.common.log import log
 from backend.common.security.jwt import jwt_authentication
@@ -51,7 +53,7 @@ class JwtAuthMiddleware(AuthenticationBackend):
         :return:
         """
         content = {'code': exc.code, 'msg': exc.msg, 'data': None}
-        ctx.__request_authentication_exception__ = content
+        ctx.request_exception = RequestException(kind=RequestExceptionKind.authentication, code=exc.code, msg=exc.msg)
         return MsgSpecJSONResponse(content=content, status_code=exc.code)
 
     @staticmethod

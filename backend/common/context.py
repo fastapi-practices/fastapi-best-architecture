@@ -3,6 +3,8 @@ from typing import Any, Protocol
 
 from starlette_context.ctx import _Context, context
 
+from backend.common.dataclasses import RequestException
+
 
 class TypedContextProtocol(Protocol):
     perf_time: float
@@ -23,6 +25,8 @@ class TypedContextProtocol(Protocol):
 
     user_id: int | None
     is_superuser: bool
+
+    request_exception: RequestException | None
 
 
 class TypedContext(TypedContextProtocol, _Context):
