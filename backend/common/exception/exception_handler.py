@@ -10,6 +10,7 @@ from backend.common.dataclasses import RequestException
 from backend.common.enums import RequestExceptionKind
 from backend.common.exception.errors import BaseExceptionError
 from backend.common.i18n import i18n, t
+from backend.common.redaction import redaction
 from backend.common.response.response_code import CustomResponseCode, StandardResponseCode
 from backend.common.response.response_schema import MsgSpecJSONResponse, response_base
 from backend.core.conf import settings
@@ -44,28 +45,11 @@ async def _validation_exception_handler(exc: RequestValidationError | Validation
     """
     errors = []
     for error in exc.errors():
-        # 用于 ai-buddy 插件，脱敏校验错误中的敏感输入，避免异常响应泄露请求内容
-        if (
-            error.get('type') == 'json_invalid'
-            or any(
-                str(part).lower()
-                in {
-                    *settings.OPERA_LOG_REDACT_KEYS,
-                    'secret',
-                    'messages',
-                    'forwardedprops',
-                    'forwarded_props',
-                }
-                for part in error.get('loc', ())
+        # 脱敏回显的输入，避免异常响应泄露敏感内容
+        if 'input' in error:
+            error['input'] = redaction.redact_error_input(
+                error_type=error['type'], loc=error.get('loc', ()), value=error['input']
             )
-            or (
-                isinstance(error.get('input'), dict)
-                and any(str(key).lower() in {'messages', 'forwardedprops', 'forwarded_props'} for key in error['input'])
-            )
-        ):
-            error['input'] = '[REDACTED]'
-        elif isinstance(error.get('input'), dict) and 'secret' in error['input']:
-            error['input'] = {**error['input'], 'secret': '[REDACTED]'}
         # 非 en-US 语言下，使用自定义错误信息
         if i18n.current_language != 'en-US':
             custom_message = t(f'pydantic.{error["type"]}')
