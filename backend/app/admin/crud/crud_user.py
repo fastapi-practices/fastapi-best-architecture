@@ -28,6 +28,7 @@ from backend.app.admin.schema.user import (
 from backend.app.admin.utils.password_security import get_hash_password
 from backend.common.enums import StatusType
 from backend.common.exception import errors
+from backend.common.i18n import t
 from backend.plugin.core import check_plugin_installed
 from backend.utils.serializers import select_join_serialize
 from backend.utils.timezone import timezone
@@ -170,7 +171,7 @@ class CRUDUser(CRUDPlus[User]):
         result = await db.execute(role_stmt)
         role = result.scalars().first()  # 默认绑定第一个角色
         if role is None:
-            raise errors.NotFoundError(msg='未找到可用角色，请联系系统管理员')
+            raise errors.NotFoundError(msg=t('error.role.unavailable'))
 
         user_role_stmt = insert(user_role).values(AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump())
         await db.execute(user_role_stmt)
@@ -329,7 +330,7 @@ class CRUDUser(CRUDPlus[User]):
 
                 await user_social_dao.delete_by_user_id(db, user_id)
             except ImportError:
-                raise errors.ServerError(msg='OAuth2 插件用法导入失败，请联系系统管理员')
+                raise errors.ServerError(msg=t('error.plugin.oauth2_import_failed'))
 
         user_role_stmt = delete(user_role).where(user_role.c.user_id == user_id)
         await db.execute(user_role_stmt)

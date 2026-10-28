@@ -48,11 +48,11 @@ class AuthService:
         """
         user = await user_dao.get_by_username(db, username)
         if not user:
-            raise errors.NotFoundError(msg='用户名或密码有误')
+            raise errors.NotFoundError(msg=t('error.auth.invalid_credentials'))
         await password_security_service.check_status(user.id, user.status)
         if user.password is None or not password_verify(password, user.password):
             await password_security_service.handle_login_failure(db, user.id)
-            raise errors.AuthorizationError(msg='用户名或密码有误')
+            raise errors.AuthorizationError(msg=t('error.auth.invalid_credentials'))
 
         days_remaining = await password_security_service.check_password_expiry_status(
             db, user.last_password_changed_time
@@ -209,16 +209,16 @@ class AuthService:
         """
         refresh_token = request.cookies.get(settings.COOKIE_REFRESH_TOKEN_KEY)
         if not refresh_token:
-            raise errors.RequestError(msg='Refresh Token 已过期，请重新登录')
+            raise errors.RequestError(msg=t('error.auth.refresh_token_expired'))
 
         token_payload = jwt_decode(refresh_token)
         user = await user_dao.get(db, token_payload.user_id)
         if not user:
-            raise errors.NotFoundError(msg='用户不存在')
+            raise errors.NotFoundError(msg=t('error.user.not_found'))
         if not user.status:
-            raise errors.AuthorizationError(msg='用户已被锁定, 请联系统管理员')
+            raise errors.AuthorizationError(msg=t('error.auth.user_locked'))
         if not user.is_multi_login and await get_user_sessions(user.id) - {token_payload.session_uuid}:
-            raise errors.ForbiddenError(msg='此用户已在异地登录，请重新登录并及时修改密码')
+            raise errors.ForbiddenError(msg=t('error.auth.remote_login'))
 
         new_token = await create_new_token(
             refresh_token,

@@ -10,6 +10,7 @@ from starlette.concurrency import run_in_threadpool
 
 from backend.common.enums import PluginType, StatusType
 from backend.common.exception import errors
+from backend.common.i18n import t
 from backend.core.conf import settings
 from backend.core.path_conf import PLUGIN_DIR
 from backend.database.redis import redis_client
@@ -59,13 +60,13 @@ class PluginService:
         :return:
         """
         if settings.ENVIRONMENT != 'dev':
-            raise errors.RequestError(msg='禁止在非开发环境下安装插件')
+            raise errors.RequestError(msg=t('error.plugin.install_forbidden'))
         if type == PluginType.zip:
             if not file:
-                raise errors.RequestError(msg='ZIP 压缩包不能为空')
+                raise errors.RequestError(msg=t('error.plugin.zip_required'))
             return await install_zip_plugin(file)
         if not repo_url:
-            raise errors.RequestError(msg='Git 仓库地址不能为空')
+            raise errors.RequestError(msg=t('error.plugin.git_url_required'))
         return await install_git_plugin(repo_url)
 
     @staticmethod
@@ -77,12 +78,12 @@ class PluginService:
         :return:
         """
         if settings.ENVIRONMENT != 'dev':
-            raise errors.RequestError(msg='禁止在非开发环境下卸载插件')
+            raise errors.RequestError(msg=t('error.plugin.uninstall_forbidden'))
         if plugin in get_required_plugins():
-            raise errors.RequestError(msg=f'插件 {plugin} 为必需插件，禁止卸载')
+            raise errors.RequestError(msg=t('error.plugin.required', plugin=plugin))
         plugin_dir = anyio.Path(PLUGIN_DIR / plugin)
         if not await plugin_dir.exists():
-            raise errors.NotFoundError(msg='插件不存在')
+            raise errors.NotFoundError(msg=t('error.plugin.not_found'))
         await uninstall_requirements_async(plugin)
         backup_file = PLUGIN_DIR / f'{plugin}.{timezone.now().strftime("%Y%m%d%H%M%S")}.backup.zip'
         await run_in_threadpool(zip_plugin, plugin_dir, backup_file)
@@ -101,7 +102,7 @@ class PluginService:
         plugin_key = f'{settings.PLUGIN_REDIS_PREFIX}:{plugin}'
         plugin_info = await redis_client.get(plugin_key)
         if not plugin_info:
-            raise errors.NotFoundError(msg='插件不存在')
+            raise errors.NotFoundError(msg=t('error.plugin.not_found'))
         plugin_info = json.loads(plugin_info)
 
         # 更新持久缓存状态
@@ -124,7 +125,7 @@ class PluginService:
         """
         plugin_dir = anyio.Path(PLUGIN_DIR / plugin)
         if not await plugin_dir.exists():
-            raise errors.NotFoundError(msg='插件不存在')
+            raise errors.NotFoundError(msg=t('error.plugin.not_found'))
 
         bio = io.BytesIO()
         await run_in_threadpool(zip_plugin, plugin_dir, bio)

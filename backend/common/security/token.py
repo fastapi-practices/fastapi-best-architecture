@@ -10,6 +10,7 @@ from fastapi.security.utils import get_authorization_scheme_param
 
 from backend.common.dataclasses import AccessToken, NewToken, RefreshToken
 from backend.common.exception import errors
+from backend.common.i18n import t
 from backend.common.security.jwt import jwt_encode
 from backend.core.conf import settings
 from backend.database.redis import redis_client
@@ -29,7 +30,7 @@ def get_token(request: Request) -> str:
     authorization = request.headers.get('Authorization')
     scheme, token = get_authorization_scheme_param(authorization)
     if not authorization or scheme.lower() != 'bearer':
-        raise errors.TokenError(msg='Token 无效')
+        raise errors.TokenError(msg=t('error.token.invalid'))
     return token
 
 
@@ -228,7 +229,7 @@ async def create_new_token(
     """
     redis_refresh_token = await redis_client.get(f'{settings.TOKEN_REFRESH_REDIS_PREFIX}:{user_id}:{session_uuid}')
     if not redis_refresh_token or redis_refresh_token != refresh_token:
-        raise errors.TokenError(msg='Refresh Token 已过期，请重新登录')
+        raise errors.TokenError(msg=t('error.auth.refresh_token_expired'))
 
     new_access_token = await create_access_token(
         user_id,

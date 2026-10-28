@@ -5,6 +5,7 @@ from typing import Any
 import anyio
 
 from backend.common.exception import errors
+from backend.common.i18n import t
 from backend.core.path_conf import RELOAD_LOCK_FILE
 from backend.database.redis import redis_client
 
@@ -18,7 +19,7 @@ async def acquire_distributed_reload_lock() -> AsyncGenerator[None, Any]:
         blocking_timeout=60,  # 获取锁等待超时：60 秒
     )
     if not await lock.acquire():
-        raise errors.ServerError(msg='获取热重载锁超时，请稍后重试')
+        raise errors.ServerError(msg=t('error.lock.reload_timeout'))
 
     # 文件锁（通知文件监控器跳过重载）
     lock_path = anyio.Path(RELOAD_LOCK_FILE)

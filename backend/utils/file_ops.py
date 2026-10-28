@@ -2,6 +2,7 @@ from anyio import open_file
 from fastapi import UploadFile
 
 from backend.common.exception import errors
+from backend.common.i18n import t
 from backend.common.log import log
 from backend.core.conf import settings
 from backend.core.path_conf import UPLOAD_DIR
@@ -32,16 +33,16 @@ def upload_file_verify(file: UploadFile) -> None:
     filename = file.filename
     file_ext = filename.split('.')[-1].lower()
     if not file_ext:
-        raise errors.RequestError(msg='未知的文件类型')
+        raise errors.RequestError(msg=t('error.file.unknown_type'))
 
     if file_ext in settings.UPLOAD_IMAGE_EXT_INCLUDE:
         if file.size > settings.UPLOAD_IMAGE_SIZE_MAX:
-            raise errors.RequestError(msg='图片超出最大限制，请重新选择')
+            raise errors.RequestError(msg=t('error.file.image_too_large'))
     elif file_ext in settings.UPLOAD_VIDEO_EXT_INCLUDE:
         if file.size > settings.UPLOAD_VIDEO_SIZE_MAX:
-            raise errors.RequestError(msg='视频超出最大限制，请重新选择')
+            raise errors.RequestError(msg=t('error.file.video_too_large'))
     else:
-        raise errors.RequestError(msg=f'此文件格式 {file_ext} 暂不支持')
+        raise errors.RequestError(msg=t('error.file.unsupported_ext', file_ext=file_ext))
 
 
 async def upload_file(file: UploadFile) -> str:
@@ -61,6 +62,6 @@ async def upload_file(file: UploadFile) -> str:
                 await fb.write(content)
     except Exception as e:
         log.error(f'上传文件 {filename} 失败：{e!s}')
-        raise errors.RequestError(msg='上传文件失败')
+        raise errors.RequestError(msg=t('error.file.upload_failed'))
     await file.close()
     return filename

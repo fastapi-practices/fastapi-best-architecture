@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from backend.common.dataclasses import SnowflakeInfo
 from backend.common.exception import errors
+from backend.common.i18n import t
 from backend.common.log import log
 from backend.core.conf import settings
 from backend.database.redis import redis_client
@@ -69,7 +70,7 @@ class SnowflakeNodeManager:
                 if (datacenter_id, worker_id) not in occupied_nodes and await self._register(datacenter_id, worker_id):
                     return datacenter_id, worker_id
 
-        raise errors.ServerError(msg='无可用的雪花算法节点，节点已耗尽')
+        raise errors.ServerError(msg=t('error.snowflake.exhausted'))
 
     async def _register(self, datacenter_id: int, worker_id: int) -> bool:
         key = f'{self.node_redis_prefix}:{datacenter_id}:{worker_id}'
@@ -144,7 +145,7 @@ class Snowflake:
                 settings.SNOWFLAKE_DATACENTER_ID is None and settings.SNOWFLAKE_WORKER_ID is not None
             ):
                 log.error('雪花算法 datacenter_id 和 worker_id 配置错误，只允许同时非 None 或同时为 None')
-                raise errors.ServerError(msg='雪花算法配置失败，请联系系统管理员')
+                raise errors.ServerError(msg=t('error.snowflake.config'))
             else:
                 # Redis 动态分配
                 self._node_manager = SnowflakeNodeManager()
@@ -158,10 +159,10 @@ class Snowflake:
             # 严格校验范围
             if not (0 <= self.datacenter_id <= SnowflakeConfig.MAX_DATACENTER_ID):
                 log.error(f'雪花算法 datacenter_id 配置失败，必须在 0~{SnowflakeConfig.MAX_DATACENTER_ID} 之间')
-                raise errors.ServerError(msg='雪花算法数据中心配置失败，请联系系统管理员')
+                raise errors.ServerError(msg=t('error.snowflake.datacenter_config'))
             if not (0 <= self.worker_id <= SnowflakeConfig.MAX_WORKER_ID):
                 log.error(f'雪花算法 worker_id 配置失败，必须在 0~{SnowflakeConfig.MAX_WORKER_ID} 之间')
-                raise errors.ServerError(msg='雪花算法工作机器配置失败，请联系系统管理员')
+                raise errors.ServerError(msg=t('error.snowflake.worker_config'))
 
             self._initialized = True
 
@@ -185,7 +186,7 @@ class Snowflake:
     def generate(self) -> int:
         """生成雪花 ID"""
         if not self._initialized:
-            raise errors.ServerError(msg='雪花 ID 生成失败，雪花算法未初始化')
+            raise errors.ServerError(msg=t('error.snowflake.uninitialized'))
 
         with self._lock:
             timestamp = self._current_ms()
@@ -197,7 +198,7 @@ class Snowflake:
                     log.warning(f'检测到时钟回拨 {back_ms} ms，等待恢复...')
                     timestamp = self._till_next_ms(self.last_timestamp)
                 else:
-                    raise errors.ServerError(msg=f'雪花 ID 生成失败，时钟回拨超过 {back_ms} ms，请立即联系系统管理员')
+                    raise errors.ServerError(msg=t('error.snowflake.clock_backwards', back_ms=back_ms))
 
             # 同毫秒内序列号递增
             if timestamp == self.last_timestamp:
