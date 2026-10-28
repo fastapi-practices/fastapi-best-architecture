@@ -10,11 +10,13 @@ from backend.app.admin.crud.crud_user import user_dao
 from backend.app.admin.model import Role, User
 from backend.app.admin.schema.user import (
     AddUserParam,
+    GetUserInfoWithRelationDetail,
     ResetPasswordParam,
     UpdateUserParam,
 )
 from backend.app.admin.schema.user_password_history import CreateUserPasswordHistoryParam
 from backend.app.admin.service.user_password_history_service import password_security_service
+from backend.app.admin.utils.cache import user_cache_manager
 from backend.app.admin.utils.password_security import password_verify, validate_new_password
 from backend.common.context import ctx
 from backend.common.enums import UserPermissionType
@@ -25,6 +27,7 @@ from backend.common.response.response_code import CustomErrorCode
 from backend.common.security.jwt import jwt_decode
 from backend.common.security.token import get_token, revoke_user_tokens
 from backend.core.conf import settings
+from backend.database.db import async_db_session
 from backend.database.redis import redis_client
 from backend.utils.serializers import select_join_serialize
 
@@ -60,6 +63,43 @@ class UserService:
         if not user:
             raise errors.NotFoundError(msg=t('error.user.not_found'))
         return user.roles
+
+    @staticmethod
+    async def get_available(*, db: AsyncSession, pk: int) -> User:
+        """
+        获取可用用户，用户、所属部门或所属角色被锁定时拒绝访问
+
+        :param db: 数据库会话
+        :param pk: 用户 ID
+        :return:
+        """
+        user = await user_dao.get_join(db, user_id=pk)
+        if not user:
+            raise errors.TokenError(msg='Token 无效')
+        if not user.status:
+            raise errors.AuthorizationError(msg='用户已被锁定，请联系系统管理员')
+        if user.dept_id and not user.dept:
+            raise errors.AuthorizationError(msg='用户所属部门不存在或已被删除，请联系系统管理员')
+        if user.dept and not user.dept.status:
+            raise errors.AuthorizationError(msg='用户所属部门已被锁定，请联系系统管理员')
+        if user.roles and all(role.status == 0 for role in user.roles):
+            raise errors.AuthorizationError(msg='用户所属角色已被锁定，请联系系统管理员')
+        return user
+
+    async def get_jwt_user(self, *, user_id: int) -> GetUserInfoWithRelationDetail:
+        """
+        获取 JWT 认证用户，优先读取缓存，由 JWT 认证在应用启动时注册为用户提供者
+
+        :param user_id: 用户 ID
+        :return:
+        """
+        user = await user_cache_manager.get(user_id)
+        if user is None:
+            async with async_db_session() as db:
+                current_user = await self.get_available(db=db, pk=user_id)
+                user = GetUserInfoWithRelationDetail.model_validate(current_user)
+            await user_cache_manager.set(user_id, user)
+        return user
 
     @staticmethod
     async def get_list(*, db: AsyncSession, dept: int, username: str, phone: str, status: int) -> dict[str, Any]:
@@ -131,7 +171,7 @@ class UserService:
             if {role.id for role in roles} != set(obj.roles):
                 raise errors.NotFoundError(msg=t('error.role.not_found'))
         count = await user_dao.update(db, user.id, obj)
-        await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user.id}')
+        await user_cache_manager.clear([user.id])
         return count
 
     @staticmethod
@@ -187,7 +227,7 @@ class UserService:
             case _:
                 raise errors.RequestError(msg=t('error.user.permission_type_not_found'))
 
-        await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user.id}')
+        await user_cache_manager.clear([user.id])
         return count
 
     @staticmethod
@@ -210,7 +250,7 @@ class UserService:
         await password_security_service.save_password_history(db, history_obj)
         await user_dao.update_password_changed_time(db, user.id)
         await revoke_user_tokens(user.id)
-        await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user.id}')
+        await user_cache_manager.clear([user.id])
 
         return count
 
@@ -225,7 +265,7 @@ class UserService:
         :return:
         """
         count = await user_dao.update_nickname(db, user_id, nickname)
-        await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}')
+        await user_cache_manager.clear([user_id])
         return count
 
     @staticmethod
@@ -239,7 +279,7 @@ class UserService:
         :return:
         """
         count = await user_dao.update_avatar(db, user_id, avatar)
-        await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}')
+        await user_cache_manager.clear([user_id])
         return count
 
     @staticmethod
@@ -264,7 +304,7 @@ class UserService:
             raise errors.ConflictError(msg=t('error.user.email_bound'))
         await redis_client.delete(captcha_key)
         count = await user_dao.update_email(db, user_id, email)
-        await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}')
+        await user_cache_manager.clear([user_id])
         return count
 
     @staticmethod
@@ -289,7 +329,7 @@ class UserService:
         await password_security_service.save_password_history(db, history_obj)
         await user_dao.update_password_changed_time(db, user.id)
         await revoke_user_tokens(user_id)
-        await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user_id}')
+        await user_cache_manager.clear([user_id])
 
         return count
 
@@ -308,7 +348,7 @@ class UserService:
 
         count = await user_dao.delete(db, user.id)
         await revoke_user_tokens(user.id)
-        await redis_client.delete(f'{settings.JWT_USER_REDIS_PREFIX}:{user.id}')
+        await user_cache_manager.clear([user.id])
 
         return count
 

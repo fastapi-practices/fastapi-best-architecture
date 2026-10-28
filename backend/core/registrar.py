@@ -103,6 +103,7 @@ def register_app() -> FastAPI:
 
     # 注册组件
     register_logger()
+    register_security()
     register_socket_app(app)
     register_static_file(app)
     register_middleware(app)
@@ -123,6 +124,14 @@ def register_logger() -> None:
     """注册日志"""
     setup_logging()
     set_custom_logfile()
+
+
+def register_security() -> None:
+    """注册安全组件，让 JWT 认证从用户体系获取认证用户"""
+    from backend.app.admin.service.user_service import user_service
+    from backend.common.security.jwt import register_jwt_user_provider
+
+    register_jwt_user_provider(user_service.get_jwt_user)
 
 
 def register_static_file(app: FastAPI) -> None:

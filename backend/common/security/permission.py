@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastapi import Request
 from sqlalchemy import Alias, ColumnElement, Table, and_, or_
@@ -11,9 +11,6 @@ from backend.common.exception import errors
 from backend.core.conf import settings
 from backend.utils.dynamic_import import get_all_models
 from backend.utils.timezone import timezone
-
-if TYPE_CHECKING:
-    from backend.app.admin.model import DataRule
 
 
 class RequestPermission:
@@ -77,7 +74,7 @@ def filter_data_permission(  # ruff:ignore[complex-structure]
             return or_(1 == 1)
 
     # 获取数据规则
-    data_rules: set[DataRule] = set()
+    data_rules = set()
     for role in request.user.roles:
         if not role.status:
             continue
