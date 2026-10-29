@@ -40,7 +40,7 @@ celery==5.6.3
     #   flower
 celery-aio-pool==0.1.0rc8
     # via fastapi-best-architecture
-certifi==2026.10.19
+certifi==2026.10.23
     # via
     #   httpcore
     #   httpx
@@ -75,13 +75,13 @@ cryptography==50.0.2
     # via fastapi-best-architecture
 dnspython==2.9.0
     # via email-validator
-dulwich==1.2.19
+dulwich==1.2.20
     # via fastapi-best-architecture
 email-validator==2.3.0
     # via fastapi
 fast-captcha==0.3.2
     # via fastapi-best-architecture
-fastapi==0.161.1
+fastapi==0.162.0
     # via
     #   fastapi-best-architecture
     #   fastapi-pagination
@@ -100,13 +100,13 @@ googleapis-common-protos==1.76.0
     # via
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-granian==2.8.5
+granian==2.8.7
     # via fastapi-best-architecture
 greenlet==3.5.6
     # via
     #   gevent
     #   sqlalchemy
-grpcio==1.84.1
+grpcio==1.85.0
     # via opentelemetry-exporter-otlp-proto-grpc
 h11==0.16.0
     # via
@@ -283,7 +283,7 @@ pydantic-core==2.50.1
     # via pydantic
 pydantic-extra-types==2.11.1
     # via fastapi
-pydantic-settings==2.16.1
+pydantic-settings==2.16.2
     # via
     #   fastapi
     #   fastapi-best-architecture
@@ -293,10 +293,10 @@ pygments==2.21.0
     #   pytest
     #   rich
 pyjwt==2.15.1
-    # via fastapi
+    # via fastapi-best-architecture
 pymysql==1.2.3
     # via fastapi-best-architecture
-pytest==9.1.1
+pytest==9.2.0
     # via pytest-sugar
 pytest-sugar==1.1.1
 python-dateutil==3.0.0
@@ -307,7 +307,7 @@ python-dotenv==1.2.4
     # via
     #   pydantic-settings
     #   uvicorn
-python-engineio==4.14.0
+python-engineio==4.15.1
     # via python-socketio
 python-multipart==0.0.32
     # via fastapi
@@ -353,7 +353,7 @@ sqlalchemy-crud-plus==1.13.3
     # via fastapi-best-architecture
 sqlparse==0.6.0
     # via fastapi-best-architecture
-starlette==1.9.0
+starlette==1.10.0
     # via
     #   fastapi
     #   starlette-context
@@ -402,7 +402,7 @@ typing-inspection==0.4.4
     #   fastapi
     #   pydantic
     #   pydantic-settings
-tzdata==2026.5
+tzdata==2026.6
     # via
     #   kombu
     #   psycopg
@@ -433,11 +433,11 @@ vine==5.1.0
     #   kombu
 watchfiles==1.3.0
     # via uvicorn
-wcwidth==0.9.3
+wcwidth==0.9.4
     # via prompt-toolkit
 websockets==17.3
     # via uvicorn
-win32-setctime==1.2.0 ; sys_platform == 'win32'
+win32-setctime==1.2.1 ; sys_platform == 'win32'
     # via loguru
 wrapt==2.5.1
     # via

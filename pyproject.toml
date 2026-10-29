@@ -19,14 +19,14 @@ dependencies = [
   # https://github.com/celery/celery/issues/7874
   "celery-aio-pool>=0.1.0rc8",
   "cryptography>=50.0.2",
-  "dulwich>=1.2.19",
+  "dulwich>=1.2.20",
   "fast-captcha>=0.3.2",
   "fastapi-pagination[sqlalchemy]>=0.16.1",
   "fastapi-redis-sdk[otel]>=0.9.1",
-  "fastapi[standard-no-fastapi-cloud-cli]>=0.161.1",
+  "fastapi[standard-no-fastapi-cloud-cli]>=0.162.0",
   "flower>=2.2.0",
   "gevent>=26.9.0",
-  "granian>=2.8.5",
+  "granian>=2.8.7",
   "itsdangerous>=2.2.0",
   "jinja2>=3.1.6",
   "loguru>=0.7.3",
@@ -46,7 +46,7 @@ dependencies = [
   "pwdlib>=0.3.1",
   "py-ip2region>=3.0.6",
   "pydantic>=2.14.1",
-  "pydantic-settings>=2.16.1",
+  "pydantic-settings>=2.16.2",
   "pyjwt>=2.15.1",
   "pymysql>=1.2.3",
   "python-socketio>=5.17.0",
@@ -66,7 +66,7 @@ fba = "backend.cli:main"
 [dependency-groups]
 dev = [
   "aiosqlite>=0.22.1",
-  "pytest>=9.1.1",
+  "pytest>=9.2.0",
   "pytest-sugar>=1.1.1",
 ]
 lint = [
