@@ -121,27 +121,27 @@ class CRUDDataScope(CRUDPlus[DataScope]):
         return await self.update_model_by_column(db, obj, id=pk, deleted=0)
 
     @staticmethod
-    async def update_rules(db: AsyncSession, pk: int, rule_ids: UpdateDataScopeRuleParam) -> int:
+    async def update_rules(db: AsyncSession, pk: int, obj: UpdateDataScopeRuleParam) -> int:
         """
         更新数据范围规则
 
         :param db: 数据库会话
         :param pk: 范围 ID
-        :param rule_ids: 数据规则 ID 列表
+        :param obj: 更新数据范围规则参数
         :return:
         """
         data_scope_rule_stmt = delete(data_scope_rule).where(data_scope_rule.c.data_scope_id == pk)
         await db.execute(data_scope_rule_stmt)
 
-        if rule_ids.rules:
+        if obj.rule_ids:
             data_scope_rule_data = [
                 CreateDataScopeRuleParam(data_scope_id=pk, data_rule_id=rule_id).model_dump()
-                for rule_id in rule_ids.rules
+                for rule_id in obj.rule_ids
             ]
             data_scope_rule_stmt = insert(data_scope_rule)
             await db.execute(data_scope_rule_stmt, data_scope_rule_data)
 
-        return len(rule_ids.rules)
+        return len(obj.rule_ids)
 
     async def delete(self, db: AsyncSession, pks: list[int]) -> int:
         """

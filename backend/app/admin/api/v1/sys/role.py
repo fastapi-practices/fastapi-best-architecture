@@ -112,9 +112,9 @@ async def update_role(
 async def update_role_menus(
     db: CurrentSessionTransaction,
     pk: Annotated[int, Path(description='角色 ID')],
-    menu_ids: UpdateRoleMenuParam,
+    obj: UpdateRoleMenuParam,
 ) -> ResponseModel:
-    count = await role_service.update_role_menu(db=db, pk=pk, menu_ids=menu_ids)
+    count = await role_service.update_role_menu(db=db, pk=pk, obj=obj)
     if count > 0:
         return response_base.success()
     return response_base.fail()
@@ -131,9 +131,9 @@ async def update_role_menus(
 async def update_role_scopes(
     db: CurrentSessionTransaction,
     pk: Annotated[int, Path(description='角色 ID')],
-    scope_ids: UpdateRoleScopeParam,
+    obj: UpdateRoleScopeParam,
 ) -> ResponseModel:
-    count = await role_service.update_role_scope(db=db, pk=pk, scope_ids=scope_ids)
+    count = await role_service.update_role_scope(db=db, pk=pk, obj=obj)
     if count > 0:
         return response_base.success()
     return response_base.fail()

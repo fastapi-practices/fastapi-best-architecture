@@ -39,7 +39,7 @@ class AddUserParam(AuthSchemaBase):
     email: CustomEmailStr | None = Field(None, description='邮箱')
     phone: CustomPhoneNumber | None = Field(None, description='手机号码')
     dept_id: int = Field(description='部门 ID')
-    roles: list[int] = Field(description='角色 ID 列表')
+    role_ids: list[int] = Field(description='角色 ID 列表')
 
 
 class AddUserRoleParam(SchemaBase):
@@ -80,7 +80,7 @@ class UserInfoSchemaBase(SchemaBase):
 class UpdateUserParam(UserInfoSchemaBase):
     """更新用户参数"""
 
-    roles: list[int] = Field(description='角色 ID 列表')
+    role_ids: list[int] = Field(description='角色 ID 列表')
 
 
 class GetUserInfoDetail(UserInfoSchemaBase):

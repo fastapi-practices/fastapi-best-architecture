@@ -133,46 +133,46 @@ class RoleService:
         return count
 
     @staticmethod
-    async def update_role_menu(*, db: AsyncSession, pk: int, menu_ids: UpdateRoleMenuParam) -> int:
+    async def update_role_menu(*, db: AsyncSession, pk: int, obj: UpdateRoleMenuParam) -> int:
         """
         更新角色菜单
 
         :param db: 数据库会话
         :param pk: 角色 ID
-        :param menu_ids: 菜单 ID 列表
+        :param obj: 更新角色菜单参数
         :return:
         """
 
         role = await role_dao.get(db, pk)
         if not role:
             raise errors.NotFoundError(msg=t('error.role.not_found'))
-        if menu_ids.menus:
-            menus = await menu_dao.get_all_by_ids(db, list(set(menu_ids.menus)))
-            if {menu.id for menu in menus} != set(menu_ids.menus):
+        if obj.menu_ids:
+            menus = await menu_dao.get_all_by_ids(db, list(set(obj.menu_ids)))
+            if {menu.id for menu in menus} != set(obj.menu_ids):
                 raise errors.NotFoundError(msg=t('error.menu.not_found'))
-        count = await role_dao.update_menus(db, pk, menu_ids)
+        count = await role_dao.update_menus(db, pk, obj)
         await user_cache_manager.clear_by_role_id(db, [pk])
         return count
 
     @staticmethod
-    async def update_role_scope(*, db: AsyncSession, pk: int, scope_ids: UpdateRoleScopeParam) -> int:
+    async def update_role_scope(*, db: AsyncSession, pk: int, obj: UpdateRoleScopeParam) -> int:
         """
         更新角色数据范围
 
         :param db: 数据库会话
         :param pk: 角色 ID
-        :param scope_ids: 权限规则 ID 列表
+        :param obj: 更新角色数据范围参数
         :return:
         """
 
         role = await role_dao.get(db, pk)
         if not role:
             raise errors.NotFoundError(msg=t('error.role.not_found'))
-        if scope_ids.scopes:
-            scopes = await data_scope_dao.get_all_by_ids(db, list(set(scope_ids.scopes)))
-            if {scope.id for scope in scopes} != set(scope_ids.scopes):
+        if obj.scope_ids:
+            scopes = await data_scope_dao.get_all_by_ids(db, list(set(obj.scope_ids)))
+            if {scope.id for scope in scopes} != set(obj.scope_ids):
                 raise errors.NotFoundError(msg=t('error.data_scope.not_found'))
-        count = await role_dao.update_scopes(db, pk, scope_ids)
+        count = await role_dao.update_scopes(db, pk, obj)
         await user_cache_manager.clear_by_role_id(db, [pk])
         return count
 

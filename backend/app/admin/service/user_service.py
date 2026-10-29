@@ -138,9 +138,9 @@ class UserService:
             raise errors.RequestError(msg=t('error.user.password_required'))
         if not await dept_dao.get(db, obj.dept_id):
             raise errors.NotFoundError(msg=t('error.dept.not_found'))
-        if obj.roles:
-            roles = await role_dao.get_all_by_ids(db, list(set(obj.roles)))
-            if {role.id for role in roles} != set(obj.roles):
+        if obj.role_ids:
+            roles = await role_dao.get_all_by_ids(db, list(set(obj.role_ids)))
+            if {role.id for role in roles} != set(obj.role_ids):
                 raise errors.NotFoundError(msg=t('error.role.not_found'))
         obj.nickname = obj.nickname or obj.username
         await user_dao.add(db, obj)
@@ -166,9 +166,9 @@ class UserService:
                 raise errors.ConflictError(msg=t('error.user.email_bound'))
         if obj.dept_id and obj.dept_id != user.dept_id and not await dept_dao.get(db, dept_id=obj.dept_id):
             raise errors.NotFoundError(msg=t('error.dept.not_found'))
-        if obj.roles:
-            roles = await role_dao.get_all_by_ids(db, list(set(obj.roles)))
-            if {role.id for role in roles} != set(obj.roles):
+        if obj.role_ids:
+            roles = await role_dao.get_all_by_ids(db, list(set(obj.role_ids)))
+            if {role.id for role in roles} != set(obj.role_ids):
                 raise errors.NotFoundError(msg=t('error.role.not_found'))
         count = await user_dao.update(db, user.id, obj)
         await user_cache_manager.clear([user.id])

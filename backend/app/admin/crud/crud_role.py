@@ -147,49 +147,48 @@ class CRUDRole(CRUDPlus[Role]):
         return await self.update_model_by_column(db, obj, id=role_id, deleted=0)
 
     @staticmethod
-    async def update_menus(db: AsyncSession, role_id: int, menu_ids: UpdateRoleMenuParam) -> int:
+    async def update_menus(db: AsyncSession, role_id: int, obj: UpdateRoleMenuParam) -> int:
         """
         更新角色菜单
 
         :param db: 数据库会话
         :param role_id: 角色 ID
-        :param menu_ids: 菜单 ID 列表
+        :param obj: 更新角色菜单参数
         :return:
         """
         role_menu_stmt = delete(role_menu).where(role_menu.c.role_id == role_id)
         await db.execute(role_menu_stmt)
 
-        if menu_ids.menus:
+        if obj.menu_ids:
             role_menu_data = [
-                CreateRoleMenuParam(role_id=role_id, menu_id=menu_id).model_dump() for menu_id in menu_ids.menus
+                CreateRoleMenuParam(role_id=role_id, menu_id=menu_id).model_dump() for menu_id in obj.menu_ids
             ]
             role_menu_stmt = insert(role_menu)
             await db.execute(role_menu_stmt, role_menu_data)
 
-        return len(menu_ids.menus)
+        return len(obj.menu_ids)
 
     @staticmethod
-    async def update_scopes(db: AsyncSession, role_id: int, scope_ids: UpdateRoleScopeParam) -> int:
+    async def update_scopes(db: AsyncSession, role_id: int, obj: UpdateRoleScopeParam) -> int:
         """
         更新角色数据范围
 
         :param db: 数据库会话
         :param role_id: 角色 ID
-        :param scope_ids: 权限范围 ID 列表
+        :param obj: 更新角色数据范围参数
         :return:
         """
         role_scope_stmt = delete(role_data_scope).where(role_data_scope.c.role_id == role_id)
         await db.execute(role_scope_stmt)
 
-        if scope_ids.scopes:
+        if obj.scope_ids:
             role_scope_data = [
-                CreateRoleScopeParam(role_id=role_id, data_scope_id=scope_id).model_dump()
-                for scope_id in scope_ids.scopes
+                CreateRoleScopeParam(role_id=role_id, data_scope_id=scope_id).model_dump() for scope_id in obj.scope_ids
             ]
             role_scope_stmt = insert(role_data_scope)
             await db.execute(role_scope_stmt, role_scope_data)
 
-        return len(scope_ids.scopes)
+        return len(obj.scope_ids)
 
     async def delete(self, db: AsyncSession, role_ids: list[int]) -> int:
         """
