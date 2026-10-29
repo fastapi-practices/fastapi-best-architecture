@@ -105,9 +105,9 @@ async def update_data_scope(
 async def update_data_scope_rules(
     db: CurrentSessionTransaction,
     pk: Annotated[int, Path(description='数据范围 ID')],
-    rule_ids: UpdateDataScopeRuleParam,
+    obj: UpdateDataScopeRuleParam,
 ) -> ResponseModel:
-    count = await data_scope_service.update_data_scope_rule(db=db, pk=pk, rule_ids=rule_ids)
+    count = await data_scope_service.update_data_scope_rule(db=db, pk=pk, obj=obj)
     if count > 0:
         return response_base.success()
     return response_base.fail()

@@ -110,23 +110,23 @@ class DataScopeService:
         return count
 
     @staticmethod
-    async def update_data_scope_rule(*, db: AsyncSession, pk: int, rule_ids: UpdateDataScopeRuleParam) -> int:
+    async def update_data_scope_rule(*, db: AsyncSession, pk: int, obj: UpdateDataScopeRuleParam) -> int:
         """
         更新数据范围规则
 
         :param db: 数据库会话
         :param pk: 范围 ID
-        :param rule_ids: 规则 ID 列表
+        :param obj: 更新数据范围规则参数
         :return:
         """
         data_scope = await data_scope_dao.get(db, pk)
         if not data_scope:
             raise errors.NotFoundError(msg=t('error.data_scope.not_found'))
-        if rule_ids.rules:
-            rules = await data_rule_dao.get_all_by_ids(db, list(set(rule_ids.rules)))
-            if {rule.id for rule in rules} != set(rule_ids.rules):
+        if obj.rule_ids:
+            rules = await data_rule_dao.get_all_by_ids(db, list(set(obj.rule_ids)))
+            if {rule.id for rule in rules} != set(obj.rule_ids):
                 raise errors.NotFoundError(msg=t('error.data_rule.not_found'))
-        count = await data_scope_dao.update_rules(db, pk, rule_ids)
+        count = await data_scope_dao.update_rules(db, pk, obj)
         await user_cache_manager.clear_by_data_scope_id(db, [pk])
         return count
 

@@ -138,14 +138,14 @@ class CRUDUser(CRUDPlus[User]):
         salt = bcrypt.gensalt()
         obj.password = get_hash_password(obj.password, salt)
 
-        dict_obj = obj.model_dump(exclude={'roles'})
+        dict_obj = obj.model_dump(exclude={'role_ids'})
         dict_obj.update({'salt': salt})
         new_user = self.model(**dict_obj)
         db.add(new_user)
         await db.flush()
 
-        if obj.roles:
-            role_stmt = select(Role).where(Role.id.in_(obj.roles), Role.deleted == 0)
+        if obj.role_ids:
+            role_stmt = select(Role).where(Role.id.in_(obj.role_ids), Role.deleted == 0)
             result = await db.execute(role_stmt)
             roles = result.scalars().all()
 
@@ -185,8 +185,8 @@ class CRUDUser(CRUDPlus[User]):
         :param obj: 更新用户参数
         :return:
         """
-        role_ids = obj.roles
-        del obj.roles
+        role_ids = obj.role_ids
+        del obj.role_ids
 
         count = await self.update_model_by_column(db, obj, id=user_id, deleted=0)
 

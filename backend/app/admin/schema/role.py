@@ -48,7 +48,7 @@ class CreateRoleMenuParam(SchemaBase):
 class UpdateRoleMenuParam(SchemaBase):
     """更新角色菜单参数"""
 
-    menus: list[int] = Field(description='菜单 ID 列表')
+    menu_ids: list[int] = Field(description='菜单 ID 列表')
 
 
 class CreateRoleScopeParam(SchemaBase):
@@ -61,7 +61,7 @@ class CreateRoleScopeParam(SchemaBase):
 class UpdateRoleScopeParam(SchemaBase):
     """更新角色数据范围参数"""
 
-    scopes: list[int] = Field(description='数据范围 ID 列表')
+    scope_ids: list[int] = Field(description='数据范围 ID 列表')
 
 
 class GetRoleDetail(RoleSchemaBase):
