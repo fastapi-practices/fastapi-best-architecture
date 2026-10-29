@@ -1,3 +1,42 @@
+<a id="v1.17.0"></a>
+# [v1.17.0](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v1.17.0) - 2026-10-29
+
+## What's Changed
+* Update changelog for v1.16.0 by [@wu-clan](https://github.com/wu-clan) in [#1267](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1267)
+* Redact AI Buddy request parameters in operation logs by [@wu-clan](https://github.com/wu-clan) in [#1269](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1269)
+* Redact sensitive inputs in validation errors by [@wu-clan](https://github.com/wu-clan) in [#1268](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1268)
+* Allow all CORS origins by default by [@wu-clan](https://github.com/wu-clan) in [#1270](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1270)
+* Fix plugin dependency index resolution by [@wu-clan](https://github.com/wu-clan) in [#1271](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1271)
+* Replace local caching with Redis SDK HTTP caching by [@wu-clan](https://github.com/wu-clan) in [#1273](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1273)
+* Replace local rate limiting with Redis SDK rate limiting by [@wu-clan](https://github.com/wu-clan) in [#1274](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1274)
+* Fix special character password support in connection URLs by [@wu-clan](https://github.com/wu-clan) in [#1276](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1276)
+* Fix celery beat async scheduling by [@wu-clan](https://github.com/wu-clan) in [#1277](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1277)
+* Update dependencies and adopt query parameter models by [@wu-clan](https://github.com/wu-clan) in [#1278](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1278)
+* Bump dependencies and pre-commits by [@wu-clan](https://github.com/wu-clan) in [#1279](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1279)
+* Refactor MsgSpecJSONResponse into the response module by [@wu-clan](https://github.com/wu-clan) in [#1284](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1284)
+* Fix operation log queue shutdown and overflow by [@wu-clan](https://github.com/wu-clan) in [#1283](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1283)
+* Refactor request exception recording in context by [@wu-clan](https://github.com/wu-clan) in [#1282](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1282)
+* Add a redaction registry for plugins by [@wu-clan](https://github.com/wu-clan) in [#1281](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1281)
+* Update core exception messages to use i18n keys by [@wu-clan](https://github.com/wu-clan) in [#1280](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1280)
+* Refactor foundation layer and switch to PyJWT by [@wu-clan](https://github.com/wu-clan) in [#1285](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1285)
+* Add IPv6 support for offline IP location parsing by [@wang1792-lstm](https://github.com/wang1792-lstm) in [#1263](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1263)
+* Rename relation id list request fields to *_ids by [@wu-clan](https://github.com/wu-clan) in [#1286](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1286)
+* Bump dependencies and pre-commits by [@wu-clan](https://github.com/wu-clan) in [#1287](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1287)
+* Update the version number to 1.17.0 by [@wu-clan](https://github.com/wu-clan) in [#1288](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1288)
+
+## New Contributors
+* [@wang1792-lstm](https://github.com/wang1792-lstm) made their first contribution in [#1263](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1263)
+
+**Full Changelog**: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.16.0...v1.17.0
+
+## Contributors
+
+<a href="https://github.com/wang1792-lstm"><img src="https://wsrv.nl/?url=https%3A%2F%2Fgithub.com%2Fwang1792-lstm.png&w=128&h=128&fit=cover&mask=circle" width="64" height="64" alt="@wang1792-lstm"></a>
+<a href="https://github.com/wu-clan"><img src="https://wsrv.nl/?url=https%3A%2F%2Fgithub.com%2Fwu-clan.png&w=128&h=128&fit=cover&mask=circle" width="64" height="64" alt="@wu-clan"></a>
+
+[Changes][v1.17.0]
+
+
 <a id="v1.16.0"></a>
 # [v1.16.0](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v1.16.0) - 2026-10-05
 
@@ -1643,6 +1682,7 @@
 [Changes][v1.0.0]
 
 
+[v1.17.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.16.0...v1.17.0
 [v1.16.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.15.1...v1.16.0
 [v1.15.1]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.15.0...v1.15.1
 [v1.15.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.14.0...v1.15.0
