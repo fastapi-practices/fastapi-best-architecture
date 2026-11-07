@@ -1,19 +1,50 @@
+"""celery 数据库结果后端重写
+
+以 celery 5.7.0 官方实现 celery/backends/database/__init__.py 为蓝本 1:1 复刻，
+改用 fba 自有模型，解决上游模型与 fba 创建表、alembic 迁移配合不佳的问题；
+所有重写之处均已就地注释说明
+
+复刻约定：
+    1. 方法体逻辑与上游保持一致，仅在必须适配 fba 时改写并注释
+    2. 仓库 lint 规则要求补齐类型注解，少数上游写法需 ruff:ignore 抑制，均不改变行为
+"""
+
+import logging
+import pickle
+
 from celery import states
 from celery.backends.base import BaseBackend
-from celery.backends.database import retry, session_cleanup
-from celery.exceptions import ImproperlyConfigured
-from celery.utils.time import maybe_timedelta
-from sqlalchemy import PickleType
-from sqlalchemy.orm import Session
 
+# fba 重写：上游在本模块内自行定义 RETRYABLE_DB_ERRORS 与 session_cleanup，
+# fba 作为外部模块，改从 celery 公开入口导入
+from celery.backends.database import RETRYABLE_DB_ERRORS, session_cleanup
+from celery.exceptions import ImproperlyConfigured
+from celery.result import result_from_tuple
+from celery.utils.imports import symbol_by_name
+from celery.utils.time import maybe_timedelta
+from kombu.utils.encoding import ensure_bytes
+
+# fba 重写：上游用 try/except 包裹 sqlalchemy 导入以兼容未安装 SQLAlchemy 的场景，
+# fba 将 SQLAlchemy 作为必需依赖直接导入
+from sqlalchemy.exc import DatabaseError
+from sqlalchemy.orm import Session, defer
+from sqlalchemy.orm.attributes import flag_modified
+
+# fba 重写：上游使用 celery 自有模型（celery_taskmeta / celery_tasksetmeta 表），
+# fba 使用自有模型（task_result / task_set_result 表），以适配建表与 alembic 迁移
 from backend.app.task.model.result import Task, TaskExtended, TaskSet
+
+# fba 重写：上游使用 celery 自带的 SessionManager，
+# fba 覆写后禁止 celery 自动创建其内部任务结果表
 from backend.app.task.session import SessionManager
+
+logger = logging.getLogger(__name__)
+
+__all__ = ('DatabaseBackend',)
 
 
 class DatabaseBackend(BaseBackend):
-    """
-    重写 celery.backends.database DatabaseBackend，此类实现与模型配合不佳，导致 fba 创建表和 alembic 迁移困难
-    """
+    """The database result backend."""
 
     # ResultSet.iterate should sleep this much between each pool,
     # to not bombard the database with queries.
@@ -28,11 +59,25 @@ class DatabaseBackend(BaseBackend):
         super().__init__(expires_type=maybe_timedelta, url=url, **kwargs)
         conf = self.app.conf
 
+        # Override retry defaults to preserve backward compatibility.
+        # Previously, DatabaseBackend used a custom @retry decorator that always
+        # retried with max_retries=3. We maintain this behavior by default.
+        # Both settings always have a value, so check if the user set them.
+        # None also means the default.
+        if not conf.value_set_for('result_backend_always_retry') or self.always_retry is None:
+            self.always_retry = True
+        if not conf.value_set_for('result_backend_max_retries') or self.max_retries is None:
+            self.max_retries = 3
+
         if self.extended_result:
             self.task_cls = TaskExtended
 
         self.url = url or dburi or conf.database_url
-        self.engine_options = dict(engine_options or {}, **conf.database_engine_options or {})
+
+        # Merge engine options: defaults from config <- constructor overrides
+        # The defaults (pool_pre_ping=True, pool_recycle=3600) are defined in
+        # celery/app/defaults.py under database_engine_options
+        self.engine_options = dict(conf.database_engine_options or {}, **(engine_options or {}))
         self.short_lived_sessions = kwargs.get('short_lived_sessions', conf.database_short_lived_sessions)
 
         schemas = conf.database_table_schemas or {}
@@ -42,51 +87,99 @@ class DatabaseBackend(BaseBackend):
 
         if not self.url:
             raise ImproperlyConfigured(
-                'Missing connection string! Do you have the database_url setting set to a real value?',
+                'Missing connection string! Do you have the database_url setting set to a real value?'
             )
 
-        self.session_manager = SessionManager()
+        engine_callback = kwargs.get('engine_callback', conf.database_engine_callback)
+        if isinstance(engine_callback, str):
+            engine_callback = symbol_by_name(engine_callback)
+        if engine_callback is not None and not callable(engine_callback):
+            raise ImproperlyConfigured(
+                'database_engine_callback must be callable, got {!r}'.format(  # ruff:ignore[f-string]
+                    engine_callback
+                )
+            )
+        self.session_manager = SessionManager(engine_callback=engine_callback)
 
         create_tables_at_setup = conf.database_create_tables_at_setup
         if create_tables_at_setup is True:
             self._create_tables()
 
     @property
-    def extended_result(self):  # ruff:ignore[missing-return-type-undocumented-public-function]
+    def extended_result(self) -> bool:
         return self.app.conf.find_value_for_key('extended', 'result')
+
+    def exception_safe_to_retry(self, exc) -> bool:  # ruff:ignore[missing-type-function-argument]
+        return isinstance(exc, RETRYABLE_DB_ERRORS)
+
+    def on_backend_retryable_error(self, exc) -> None:  # ruff:ignore[missing-type-function-argument]
+        self.session_manager.invalidate(self.url)
 
     def _create_tables(self) -> None:
         """Create the task and taskset tables."""
-        self.result_session()
+        self._ensure_retryable(self.ResultSession)
 
-    def result_session(self, session_manager=None) -> Session:  # ruff:ignore[missing-type-function-argument]
+    def ResultSession(self, session_manager=None) -> Session:  # ruff:ignore[invalid-function-name, missing-type-function-argument]
         if session_manager is None:
             session_manager = self.session_manager
         return session_manager.session_factory(
-            dburi=self.url,
-            short_lived_sessions=self.short_lived_sessions,
-            **self.engine_options,
+            dburi=self.url, short_lived_sessions=self.short_lived_sessions, **self.engine_options
         )
 
-    @retry
+    def _query_task(self, session, task_id, for_update=False):  # ruff:ignore[missing-type-function-argument, missing-return-type-private-function, boolean-default-value-positional-argument]
+        """Query task by id, falling back to deferring missing columns from database."""
+        query = session.query(self.task_cls)
+        if for_update:
+            # Lock the row, and read it again even if the session has it.
+            query = query.with_for_update().populate_existing()
+        try:
+            tasks = list(query.filter(self.task_cls.task_id == task_id))
+            return tasks and tasks[0]
+        except DatabaseError as exc:
+            exc_str = str(exc).lower()
+            defers = []
+            if 'children' in exc_str and hasattr(self.task_cls, 'children'):
+                defers.append(defer(self.task_cls.children))
+            if 'stamps' in exc_str and hasattr(self.task_cls, 'stamps'):
+                defers.append(defer(self.task_cls.stamps))
+            if defers:
+                tasks = list(query.options(*defers).filter(self.task_cls.task_id == task_id))
+                return tasks and tasks[0]
+            raise
+
     def _store_result(self, task_id, result, state, traceback=None, request=None, **kwargs) -> None:  # ruff:ignore[missing-type-function-argument]
         """Store return value and state of an executed task."""
-        session = self.result_session()
+        session = self.ResultSession()
         with session_cleanup(session):
-            task = list(session.query(self.task_cls).filter(self.task_cls.task_id == task_id))
-            task = task and task[0]
+            task = self._query_task(session, task_id)
+            if task:
+                # Lock the row and read it again, so a run that stores SUCCESS
+                # at the same time can't be written over. Only an existing row
+                # is locked: on MySQL, locking a missing row takes a gap lock,
+                # which deadlocks concurrent inserts.
+                task = self._query_task(session, task_id, for_update=True)
             if not task:
                 task = self.task_cls(task_id)
                 task.task_id = task_id
                 session.add(task)
                 session.flush()
+            elif task.status == states.SUCCESS:
+                # Like BaseKeyValueStoreBackend, ignore any write after a
+                # SUCCESS is saved, so a repeated run of the task doesn't
+                # replace its result.
+                return
 
             self._update_result(task, result, state, traceback=traceback, request=request)
+            # Write the state even if it looks unchanged. Without row locks, as
+            # on SQLite, another run may have saved a SUCCESS after we read the
+            # row, and that SUCCESS must not stay next to the result written here.
+            flag_modified(task, 'status')
             session.commit()
 
     def _update_result(self, task, result, state, traceback=None, request=None) -> None:  # ruff:ignore[missing-type-function-argument]
+
         meta = self._get_result_meta(
-            result=result,
+            result=ensure_bytes(self.encode(result)),
             state=state,
             traceback=traceback,
             request=request,
@@ -94,9 +187,13 @@ class DatabaseBackend(BaseBackend):
             encode=True,
         )
 
-        # Exclude the primary key id and task_id columns
-        # as we should not set it None
-        columns = [column.name for column in self.task_cls.__table__.columns if column.name not in {'id', 'task_id'}]
+        # Exclude the primary key id, task_id, children, and stamps columns
+        # as we should not set it None or handle them separately
+        columns = [
+            column.name
+            for column in self.task_cls.__table__.columns
+            if column.name not in {'id', 'task_id', 'children', 'stamps'}
+        ]
 
         # Iterate through the columns name of the table
         # to set the value from meta.
@@ -105,65 +202,144 @@ class DatabaseBackend(BaseBackend):
             value = meta.get(column)
             setattr(task, column, value)
 
-    @retry
-    def _get_task_meta_for(self, task_id: str):  # ruff:ignore[missing-return-type-private-function]
+        if hasattr(task, 'children') and 'children' in self.task_cls.__table__.columns:
+            children = meta.get('children')
+            if children:
+                setattr(task, 'children', ensure_bytes(self.encode(children)))  # ruff:ignore[set-attr-with-constant]
+            else:
+                setattr(task, 'children', None)  # ruff:ignore[set-attr-with-constant]
+
+        if hasattr(task, 'stamps') and 'stamps' in self.task_cls.__table__.columns:
+            stamped_headers = meta.get('stamped_headers')
+            if stamped_headers:
+                stamps_data = {h: meta.get(h) for h in stamped_headers if h in meta}
+                stamps_info = {
+                    'stamped_headers': stamped_headers,
+                    'stamps': stamps_data,
+                }
+                setattr(task, 'stamps', ensure_bytes(self.encode(stamps_info)))  # ruff:ignore[set-attr-with-constant]
+            elif getattr(task, 'stamps', None) is None:
+                setattr(task, 'stamps', None)  # ruff:ignore[set-attr-with-constant]
+
+    def _get_task_meta_for(self, task_id):  # ruff:ignore[missing-type-function-argument, missing-return-type-private-function]
         """Get task meta-data for a task by id."""
-        session = self.result_session()
+        session = self.ResultSession()
         with session_cleanup(session):
-            task = list(session.query(self.task_cls).filter(self.task_cls.task_id == task_id))
-            task = task and task[0]
+            task = self._query_task(session, task_id)
             if not task:
                 task = self.task_cls(task_id)
                 task.status = states.PENDING
                 task.result = None
             data = task.to_dict()
+            data['result'] = self._decode_stored_result(data['result'])
             if data.get('args', None) is not None:
                 data['args'] = self.decode(data['args'])
             if data.get('kwargs', None) is not None:
                 data['kwargs'] = self.decode(data['kwargs'])
+            if data.get('children', None) is not None:
+                data['children'] = self.decode(data['children'])
+            raw_stamps = data.pop('stamps', None)
+            if raw_stamps is not None:
+                try:
+                    stamps_info = self.decode(raw_stamps)
+                    if isinstance(stamps_info, dict):
+                        if 'stamped_headers' in stamps_info:
+                            data['stamped_headers'] = stamps_info['stamped_headers']
+                        if 'stamps' in stamps_info and isinstance(stamps_info['stamps'], dict):
+                            data.update(stamps_info['stamps'])
+                except Exception:
+                    pass
             return self.meta_from_decoded(data)
 
-    @retry
-    def _save_group(self, group_id: str, result: PickleType):  # ruff:ignore[missing-return-type-private-function]
-        """Store the result of an executed group."""
-        session = self.result_session()
+    def _decode_stored_result(self, payload):  # ruff:ignore[missing-type-function-argument, missing-return-type-private-function]
+        """Decode a value stored in the ``result`` column.
+
+        Rows written before the fix for celery/celery#3025 always stored a
+        raw pickle blob regardless of the configured ``result_serializer``,
+        so a row that can't be decoded with the current serializer, but
+        looks like a pickle payload (starts with the pickle protocol 2+
+        marker that every pickle Celery/kombu produces starts with), is
+        assumed to be one of those and is unpickled directly instead.
+        Anything else re-raises the original decode error instead of
+        blindly unpickling arbitrary bytes.
+        """
+        if payload is None:
+            return payload
+        payload = ensure_bytes(payload)
+        try:
+            return self.decode(payload)
+        except Exception:
+            # Legacy rows written before celery/celery#3025 were stored via
+            # SQLAlchemy's PickleType, which uses a binary pickle protocol.
+            if payload[:1] != b'\x80':
+                raise
+            logger.warning(
+                'Task result payload could not be decoded using the '
+                'configured result_serializer; falling back to pickle '
+                'for backward compatibility with pre-fix data.',
+                exc_info=True,
+            )
+            return pickle.loads(payload)
+
+    def task_result_exists(self, task_id) -> bool:  # ruff:ignore[missing-type-function-argument]
+        """Check if a result exists in the database for the given task ID.
+
+        .. versionadded:: 5.7.0
+        """
+        return self._ensure_retryable(self._task_result_exists, task_id=task_id)
+
+    def _task_result_exists(self, task_id) -> bool:  # ruff:ignore[missing-type-function-argument]
+        session = self.ResultSession()
         with session_cleanup(session):
-            group = self.taskset_cls(group_id, result)
+            return session.query(self.task_cls).filter(self.task_cls.task_id == task_id).first() is not None
+
+    def _save_group(self, group_id, result):  # ruff:ignore[missing-type-function-argument, missing-return-type-private-function]
+        """Store the result of an executed group."""
+        session = self.ResultSession()
+        with session_cleanup(session):
+            value = ensure_bytes(self.encode(self.prepare_value(result)))
+            group = self.taskset_cls(group_id, value)
             session.add(group)
             session.flush()
             session.commit()
             return result
 
-    @retry
-    def _restore_group(self, group_id: str) -> dict | None:
+    def _restore_group(self, group_id):  # ruff:ignore[missing-type-function-argument, missing-return-type-private-function]
         """Get meta-data for group by id."""
-        session = self.result_session()
+        session = self.ResultSession()
         with session_cleanup(session):
             group = session.query(self.taskset_cls).filter(self.taskset_cls.taskset_id == group_id).first()
             if group:
-                return group.to_dict()
+                data = group.to_dict()
+                value = self._decode_stored_result(data['result'])
+                data['result'] = value if value is None else result_from_tuple(value, self.app)
+                return data
 
-    @retry
-    def _delete_group(self, group_id: str) -> None:
+    def _delete_group(self, group_id) -> None:  # ruff:ignore[missing-type-function-argument]
         """Delete meta-data for group by id."""
-        session = self.result_session()
+        session = self.ResultSession()
         with session_cleanup(session):
             session.query(self.taskset_cls).filter(self.taskset_cls.taskset_id == group_id).delete()
             session.flush()
             session.commit()
 
-    @retry
-    def _forget(self, task_id: str) -> None:
+    def _forget(self, task_id) -> None:  # ruff:ignore[missing-type-function-argument]
         """Forget about result."""
-        session = self.result_session()
+        session = self.ResultSession()
         with session_cleanup(session):
             session.query(self.task_cls).filter(self.task_cls.task_id == task_id).delete()
             session.commit()
 
     def cleanup(self) -> None:
         """Delete expired meta-data."""
-        session = self.result_session()
+        self._ensure_retryable(self._cleanup)
+
+    def _cleanup(self) -> None:
+        session = self.ResultSession()
         expires = self.expires
+        # fba 重写：上游固定使用 UTC，而 fba 未开启 enable_utc、date_done 列按本地时区存储，
+        # 此处改用 app.now() 以保证时区一致
+        # now = datetime.now(timezone.utc)
         now = self.app.now()
         with session_cleanup(session):
             session.query(self.task_cls).filter(self.task_cls.date_done < (now - expires)).delete()
@@ -171,6 +347,6 @@ class DatabaseBackend(BaseBackend):
             session.commit()
 
     def __reduce__(self, args=(), kwargs=None):  # ruff:ignore[missing-type-function-argument, missing-return-type-special-method]
-        kwargs = kwargs or {}
+        kwargs = {} if not kwargs else kwargs  # ruff:ignore[if-expr-with-twisted-arms]
         kwargs.update({'dburi': self.url, 'expires': self.expires, 'engine_options': self.engine_options})
         return super().__reduce__(args, kwargs)
