@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, Path, Query
 
-from backend.app.admin.schema.token import GetTokenDetail, OnlineSessionQueryParam
+from backend.app.admin.schema.token import DeleteSessionQueryParam, GetTokenDetail, OnlineSessionQueryParam
 from backend.common.enums import StatusType
 from backend.common.exception import errors
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
@@ -113,7 +113,7 @@ async def get_sessions(  # ruff:ignore[complex-structure]
 )
 async def delete_session(
     pk: Annotated[int, Path(description='用户 ID')],
-    session_uuid: Annotated[str, Query(description='会话 UUID')],
+    query: Annotated[DeleteSessionQueryParam, Query()],
 ) -> ResponseModel:
-    await revoke_token(pk, session_uuid)
+    await revoke_token(pk, query.session_uuid)
     return response_base.success()

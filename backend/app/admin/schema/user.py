@@ -5,7 +5,7 @@ from pydantic import ConfigDict, Field, HttpUrl, PlainSerializer, model_validato
 
 from backend.app.admin.schema.dept import GetDeptDetail
 from backend.app.admin.schema.role import GetRoleWithRelationDetail
-from backend.common.enums import StatusType
+from backend.common.enums import StatusType, UserPermissionType
 from backend.common.schema import CustomEmailStr, CustomPhoneNumber, SchemaBase, ser_string
 
 
@@ -16,6 +16,12 @@ class UserQueryParam(SchemaBase):
     username: str | None = Field(None, description='用户名')
     phone: str | None = Field(None, description='手机号')
     status: int | None = Field(None, description='状态')
+
+
+class UpdateUserPermissionQueryParam(SchemaBase):
+    """更新用户权限查询参数"""
+
+    type: UserPermissionType = Field(description='权限类型')
 
 
 class AuthSchemaBase(SchemaBase):

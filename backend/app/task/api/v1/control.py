@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path
 from starlette.concurrency import run_in_threadpool
 
-from backend.app.task import celery_app
+from backend.app.task.celery import celery_app
 from backend.app.task.schema.control import GetTaskRegisteredDetail
 from backend.common.exception import errors
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base

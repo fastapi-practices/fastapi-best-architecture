@@ -4,4 +4,5 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
-from .actions import *  # ruff:ignore[undefined-local-with-import-star]
+# 导入动作处理器以注册 Socket.IO 事件
+from backend.app.task.actions import task_worker_status as task_worker_status
