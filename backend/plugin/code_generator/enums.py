@@ -155,3 +155,13 @@ class GenPostgreSQLColumnType(StrEnum):
     TSTZMULTIRANGE = 'list[datetime]'
     TSTZRANGE = 'tuple[datetime, datetime]'
     TSVECTOR = 'str'
+
+
+class MergeMode(StrEnum):
+    """生成代码合并模式"""
+
+    OVERWRITE = 'overwrite'  # 覆盖写入
+    ROUTER = 'router'  # 路由文件追加
+    MODEL_INIT = 'model_init'  # 模型包初始化文件追加
+    SQL = 'sql'  # SQL 脚本追加
+    INIT = 'init'  # 包初始化文件保留原有内容

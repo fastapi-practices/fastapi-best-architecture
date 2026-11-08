@@ -15,11 +15,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from backend.common.exception import errors
+from backend.common.log import log
 from backend.core.conf import settings
 from backend.core.path_conf import BASE_PATH
 from backend.plugin.code_generator.crud.crud_business import code_gen_business_dao
 from backend.plugin.code_generator.crud.crud_code_gen import code_gen_dao
 from backend.plugin.code_generator.crud.crud_column import code_gen_column_dao
+from backend.plugin.code_generator.enums import MergeMode
 from backend.plugin.code_generator.model import CodeGenBusiness
 from backend.plugin.code_generator.schema.business import CreateCodeGenBusinessParam
 from backend.plugin.code_generator.schema.code_gen import ImportParam
@@ -27,6 +29,7 @@ from backend.plugin.code_generator.schema.column import CreateCodeGenColumnInter
 from backend.plugin.code_generator.service.column_service import code_gen_column_service
 from backend.plugin.code_generator.utils.format_code import format_python_code
 from backend.plugin.code_generator.utils.gen_template import gen_template
+from backend.plugin.code_generator.utils.merge_code import get_merge_mode, insert_import_statement, merge_code
 from backend.plugin.code_generator.utils.type_conversion import sql_type_to_pydantic
 from backend.utils.locks import acquire_distributed_reload_lock
 
@@ -134,6 +137,57 @@ class CodeGenService:
         return rendered_codes
 
     @staticmethod
+    async def _get_init_files(*, business: CodeGenBusiness) -> dict[str, str]:
+        """
+        获取需要生成的包初始化文件内容，Python 文件统一格式化
+
+        :param business: 业务对象
+        :return:
+        """
+        init_files = gen_template.get_init_files(business)
+        for filepath, code in init_files.items():
+            if code and filepath.endswith('.py'):
+                init_files[filepath] = await format_python_code(code)
+        return init_files
+
+    @staticmethod
+    async def _merge_existing_files(*, gen_path: str, files: dict[str, str], notify: bool = False) -> dict[str, str]:
+        """
+        将生成代码与磁盘上已有文件合并，避免覆盖应用内既有代码
+
+        :param gen_path: 生成根路径
+        :param files: 生成文件内容映射
+        :param notify: 是否输出合并提示日志
+        :return:
+        """
+        merged_files = {}
+        for filepath, code in files.items():
+            full_path = anyio.Path(gen_path, *filepath.split('/'))
+            if not await full_path.is_file():
+                merged_files[filepath] = code
+                continue
+
+            try:
+                async with await open_file(full_path, encoding='utf-8') as f:
+                    existing = await f.read()
+            except (OSError, UnicodeDecodeError) as e:
+                log.warning(f'代码生成：读取已有文件 {filepath} 失败，将直接写入：{e!s}')
+                merged_files[filepath] = code
+                continue
+
+            mode = get_merge_mode(filepath)
+            merged = merge_code(mode=mode, existing=existing, generated=code)
+            merged_files[filepath] = merged
+
+            if notify and merged != existing:
+                if mode == MergeMode.OVERWRITE:
+                    log.warning(f'代码生成：{filepath} 已存在，将被覆盖')
+                else:
+                    log.warning(f'代码生成：{filepath} 已存在，已采用追加模式合并，原有内容未被覆盖')
+
+        return merged_files
+
+    @staticmethod
     async def _inject_app_router(*, app_name: str, write: bool = True) -> str | None:
         """
         注入应用路由
@@ -155,10 +209,11 @@ class CodeGenService:
         if has_import and has_include:
             return None
 
-        if not has_import:
-            content = f'{import_line}\n{content}'
+        lines = content.splitlines()
+        insert_import_statement(lines=lines, statement=import_line)
         if not has_include:
-            content = f'{content}\n{include_line}'
+            lines.extend(['', include_line])
+        content = '\n'.join(lines) + '\n'
 
         content = await format_python_code(content)
 
@@ -182,13 +237,14 @@ class CodeGenService:
 
         codes = {}
         backend_path = 'fastapi-best-architecture/backend/app/'
+        gen_path = business.gen_path or str(BASE_PATH / 'app')
 
-        init_files = gen_template.get_init_files(business)
-        for filepath, content in init_files.items():
-            codes[f'{backend_path}{filepath}'] = content.encode('utf-8')
+        all_files = {}
+        all_files.update(await self._get_init_files(business=business))
+        all_files.update(await self._render_tpl_code(db=db, business=business))
+        all_files = await self._merge_existing_files(gen_path=gen_path, files=all_files)
 
-        rendered_codes = await self._render_tpl_code(db=db, business=business)
-        for filepath, code in rendered_codes.items():
+        for filepath, code in all_files.items():
             codes[f'{backend_path}{filepath}'] = code.encode('utf-8')
 
         app_router_content = await self._inject_app_router(app_name=business.app_name, write=False)
@@ -241,10 +297,10 @@ class CodeGenService:
         async with acquire_distributed_reload_lock():
             with tempfile.TemporaryDirectory() as tmp_dir:
                 all_files = {}
-                init_files = gen_template.get_init_files(business)
-                all_files.update(init_files)
+                all_files.update(await self._get_init_files(business=business))
                 rendered_codes = await self._render_tpl_code(db=db, business=business)
                 all_files.update(rendered_codes)
+                all_files = await self._merge_existing_files(gen_path=gen_path, files=all_files, notify=True)
 
                 for filepath, content in all_files.items():
                     full_path = os.path.join(tmp_dir, *filepath.split('/'))
@@ -278,11 +334,13 @@ class CodeGenService:
         if not business:
             raise errors.NotFoundError(msg='业务不存在')
 
+        gen_path = business.gen_path or str(BASE_PATH / 'app')
+
         all_files = {}
-        init_files = gen_template.get_init_files(business)
-        all_files.update(init_files)
+        all_files.update(await self._get_init_files(business=business))
         rendered_codes = await self._render_tpl_code(db=db, business=business)
         all_files.update(rendered_codes)
+        all_files = await self._merge_existing_files(gen_path=gen_path, files=all_files)
 
         app_router_content = await self._inject_app_router(app_name=business.app_name, write=False)
         if app_router_content:

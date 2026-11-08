@@ -673,7 +673,10 @@ async def generate(*, preview: bool = False) -> None:
             return
 
         # 生成
-        console.print('\n[bold red]警告：代码生成将进行磁盘文件（覆盖）写入，切勿在生产环境中使用！！！[/]')
+        console.print(
+            '\n[bold red]警告：代码生成将进行磁盘文件写入，已有应用的路由、模型等文件将采用追加模式合并，'
+            '其余文件会被覆盖，切勿在生产环境中使用！！！[/]'
+        )
         ok = Prompt.ask('\n确认继续生成代码吗？', choices=['y', 'n'], default='n')
 
         if ok.lower() == 'y':
