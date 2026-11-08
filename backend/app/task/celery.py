@@ -1,8 +1,11 @@
 import os
 
+from typing import Any
+
 import celery
 import celery_aio_pool
 
+from celery.app.defaults import NAMESPACES
 from celery.signals import worker_process_init
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from sqlalchemy import URL
@@ -30,6 +33,13 @@ def init_celery_tracing(*args, **kwargs) -> None:
     init_tracer(resource)
     CeleryInstrumentor().instrument()
     _celery_otel_initialized = True
+
+
+def get_database_engine_options() -> dict[str, Any]:
+    """获取数据库引擎参数，在 celery 默认值的基础上合并 echo 配置"""
+    options = dict(NAMESPACES['database']['engine_options'].default or {})
+    options['echo'] = settings.DATABASE_ECHO
+    return options
 
 
 def find_task_packages() -> list[str]:
@@ -77,7 +87,7 @@ def init_celery() -> celery.Celery:
         broker_connection_retry_on_startup=True,
         result_backend=result_backend,
         result_extended=True,
-        database_engine_options={'echo': settings.DATABASE_ECHO},
+        database_engine_options=get_database_engine_options(),
         # result_expires=0,
         # beat_sync_every=1,
         beat_schedule=get_local_beat_schedule(),
