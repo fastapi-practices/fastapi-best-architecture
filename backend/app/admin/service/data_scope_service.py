@@ -30,7 +30,6 @@ class DataScopeService:
         :param pk: 范围 ID
         :return:
         """
-
         data_scope = await data_scope_dao.get(db, pk)
         if not data_scope:
             raise errors.NotFoundError(msg=t('error.data_scope.not_found'))
@@ -44,7 +43,6 @@ class DataScopeService:
         :param db: 数据库会话
         :return:
         """
-
         data_scopes = await data_scope_dao.get_all(db)
         return data_scopes
 
@@ -57,7 +55,6 @@ class DataScopeService:
         :param pk: 范围 ID
         :return:
         """
-
         data_scope = await data_scope_dao.get_join(db, pk)
         if not data_scope:
             raise errors.NotFoundError(msg=t('error.data_scope.not_found'))

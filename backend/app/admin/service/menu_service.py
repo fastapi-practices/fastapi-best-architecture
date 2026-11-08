@@ -25,7 +25,6 @@ class MenuService:
         :param pk: 菜单 ID
         :return:
         """
-
         menu = await menu_dao.get(db, menu_id=pk)
         if not menu:
             raise errors.NotFoundError(msg=t('error.menu.not_found'))
@@ -41,7 +40,6 @@ class MenuService:
         :param status: 状态
         :return:
         """
-
         menu_data = await menu_dao.get_all(db, title=title, status=status)
         menu_tree = get_tree_data(menu_data)
         return menu_tree
@@ -65,7 +63,6 @@ class MenuService:
                 for role in roles:
                     menu_ids.update(menu.id for menu in role.menus)
                 menu_data = await menu_dao.get_sidebar(db, list(menu_ids))
-
         if menu_data:
             return get_vben5_tree_data(menu_data)
 
@@ -80,7 +77,6 @@ class MenuService:
         :param obj: 菜单创建参数
         :return:
         """
-
         title = await menu_dao.get_by_title(db, obj.title)
         if title:
             raise errors.ConflictError(msg=t('error.menu.title_exists'))
@@ -100,7 +96,6 @@ class MenuService:
         :param obj: 菜单更新参数
         :return:
         """
-
         menu = await menu_dao.get(db, pk)
         if not menu:
             raise errors.NotFoundError(msg=t('error.menu.not_found'))
@@ -125,7 +120,6 @@ class MenuService:
         :param pk: 菜单 ID
         :return:
         """
-
         children = await menu_dao.get_children(db, pk)
         if children:
             raise errors.ConflictError(msg=t('error.menu.has_children'))

@@ -96,16 +96,13 @@ def setup_env_file() -> bool:
         db_port = Prompt.ask('数据库端口', default='5432' if db_type == 'postgresql' else '3306')
         db_user = Prompt.ask('数据库用户名', default='postgres' if db_type == 'postgresql' else 'root')
         db_password = Prompt.ask('数据库密码', password=True, default='123456')
-
         console.note('配置 Redis 连接信息...')
         redis_host = Prompt.ask('Redis 主机', default='127.0.0.1')
         redis_port = Prompt.ask('Redis 端口', default='6379')
         redis_password = Prompt.ask('Redis 密码（留空表示无密码）', password=True, default='')
         redis_db = Prompt.ask('Redis 数据库编号', default='0')
-
         console.info('生成 Token 密钥...')
         token_secret = secrets.token_urlsafe(32)
-
         console.info('写入 .env 文件...')
         env_content = env_content.replace("DATABASE_TYPE='postgresql'", f"DATABASE_TYPE='{db_type}'")
         settings.DATABASE_TYPE = db_type
@@ -127,7 +124,6 @@ def setup_env_file() -> bool:
         settings.REDIS_DATABASE = redis_db
         env_content = re.sub(r"TOKEN_SECRET_KEY='[^']*'", f"TOKEN_SECRET_KEY='{token_secret}'", env_content)
         settings.TOKEN_SECRET_KEY = token_secret
-
         Path(ENV_FILE_PATH).write_text(env_content, encoding='utf-8')
         console.tip('.env 文件创建成功')
     except Exception as e:
@@ -156,7 +152,6 @@ async def create_database(conn: AsyncConnection) -> bool:
                 f'SELECT pg_terminate_backend(pid) FROM pg_stat_activity '
                 f"WHERE datname = '{settings.DATABASE_SCHEMA}' AND pid <> pg_backend_pid()"
             )
-
         result = await conn.execute(text(check_sql))
         exists = result.fetchone() is not None
         console.note(f'重建 {settings.DATABASE_SCHEMA} 数据库...')
@@ -267,18 +262,15 @@ async def init(db: AsyncSession, redis: RedisCli) -> None:
                 settings.TOKEN_SESSION_REDIS_PREFIX,
             ]:
                 await redis.delete_by_prefix(prefix)
-
             console.note('重建数据库表')
             conn = await db.connection()
             await conn.run_sync(MappedBase.metadata.drop_all)
             await conn.run_sync(MappedBase.metadata.create_all)
-
             console.note('执行 SQL 脚本')
             sql_scripts = await get_sql_scripts()
             for sql_script in sql_scripts:
                 console.note(f'正在执行：{sql_script}')
                 await execute_sql_scripts(db, sql_script, is_init=True)
-
             console.tip('初始化成功')
             console.print('\n快试试 [bold cyan]fba run[/bold cyan] 启动服务吧~')
         except Exception as e:
@@ -311,7 +303,6 @@ def run(host: str, port: int, reload: bool, workers: int) -> None:  # ruff:ignor
         panel_content.append(f'{", ".join(plugins)}', style='yellow')
     else:
         panel_content.append('无', style='white')
-
     if settings.ENVIRONMENT == 'dev':
         panel_content.append(f'\n\n📖 Swagger 文档: {docs_url}', style='bold magenta')
         panel_content.append(f'\n📚 Redoc   文档: {redoc_url}', style='bold magenta')
@@ -386,24 +377,19 @@ async def install_plugin(  # ruff:ignore[complex-structure]
         if frontend:
             if repo_url is None:
                 raise cappa.Exit('前端插件仅允许通过 Git 仓库地址安装', code=1)
-
             frontend_project_root = Prompt.ask('请输入前端项目根路径')
             plugin_name = await install_git_frontend_plugin(repo_url, frontend_project_root)
             console.tip(f'前端插件 {plugin_name} 安装成功')
             return
-
         if path is None and repo_url is None:
             raise cappa.Exit('path 或 repo_url 必须指定其中一项', code=1)
         if path and repo_url:
             raise cappa.Exit('path 和 repo_url 不能同时指定', code=1)
-
         if path:
             plugin_name = await install_zip_plugin(file=path)
         if repo_url:
             plugin_name = await install_git_plugin(repo_url=repo_url)
-
         console.tip(f'插件 {plugin_name} 安装成功')
-
         console.note(f'正在同步插件 {plugin_name} 数据库表...')
         try:
             import_module_cached(f'backend.plugin.{plugin_name}.model')
@@ -413,7 +399,6 @@ async def install_plugin(  # ruff:ignore[complex-structure]
             async with async_db_session.begin() as db:
                 conn = await db.connection()
                 await conn.run_sync(MappedBase.metadata.create_all)
-
         if not no_sql:
             sql_file = await get_plugin_sql(plugin_name, db_type, pk_type)
             if sql_file:
@@ -485,7 +470,6 @@ async def remove_plugin(plugin: str | None, *, no_sql: bool = False) -> None:  #
         plugin_dir = PLUGIN_DIR / plugin
         if not plugin_dir.exists():
             raise cappa.Exit(f'插件 {plugin} 不存在', code=1)
-
         if not no_sql:
             destroy_sql_file = await get_plugin_destroy_sql(plugin, settings.DATABASE_TYPE, settings.DATABASE_PK_MODE)
             if destroy_sql_file:
@@ -511,22 +495,18 @@ async def remove_plugin(plugin: str | None, *, no_sql: bool = False) -> None:  #
     plugins = get_plugins()
     if not plugins:
         raise cappa.Exit('当前没有已安装的插件', code=1)
-
     if not plugin:
         table = Table(show_header=True, header_style='bold magenta')
         table.add_column('编号', style='cyan', no_wrap=True, justify='center')
         table.add_column('插件名称', style='green', no_wrap=True)
-
         for idx, name in enumerate(plugins, 1):
             table.add_row(str(idx), name)
-
         console.print(table)
         choice = IntPrompt.ask('请选择要卸载的插件编号', choices=[str(i) for i in range(1, len(plugins) + 1)])
         plugin = plugins[choice - 1]
     else:
         if plugin not in plugins:
             raise cappa.Exit(f'插件 {plugin} 不存在', code=1)
-
     if plugin in get_required_plugins():
         raise cappa.Exit(f'插件 {plugin} 为必需插件，禁止卸载', code=1)
 
@@ -630,16 +610,13 @@ async def generate(*, preview: bool = False) -> None:
         ids = []
         async with async_db_session() as db:
             results = await code_gen_business_service.get_all(db=db)
-
         if not results:
             raise cappa.Exit('[red]暂无可用的代码生成业务！请先通过 import 命令导入！[/]')
-
         table = Table(show_header=True, header_style='bold magenta')
         table.add_column('业务编号', style='cyan', no_wrap=True, justify='center')
         table.add_column('应用名称', style='green', no_wrap=True)
         table.add_column('生成路径', style='yellow')
         table.add_column('备注', style='blue')
-
         for result in results:
             ids.append(result.id)
             table.add_row(
@@ -648,26 +625,21 @@ async def generate(*, preview: bool = False) -> None:
                 result.gen_path or f'应用 {result.app_name} 根路径',
                 result.remark or '',
             )
-
         console.print(table)
         business = IntPrompt.ask('请从中选择一个业务编号', choices=[str(id_) for id_ in ids])
 
         # 预览
         async with async_db_session() as db:
             preview_data = await code_gen_service.preview(db=db, pk=business)
-
         console.print('\n[bold yellow]将要生成以下文件：[/]')
         file_table = Table(show_header=True, header_style='bold cyan')
         file_table.add_column('文件路径', style='white')
         file_table.add_column('大小', style='green', justify='right')
-
         for filepath, content in sorted(preview_data.items()):
             size = len(content)
             size_str = f'{size} B' if size < 1024 else f'{size / 1024:.1f} KB'
             file_table.add_row(filepath, size_str)
-
         console.print(file_table)
-
         if preview:
             console.print('\n[bold cyan]预览模式：未执行实际生成操作[/]')
             return
@@ -675,11 +647,9 @@ async def generate(*, preview: bool = False) -> None:
         # 生成
         console.print('\n[bold red]警告：代码生成将进行磁盘文件（覆盖）写入，切勿在生产环境中使用！！！[/]')
         ok = Prompt.ask('\n确认继续生成代码吗？', choices=['y', 'n'], default='n')
-
         if ok.lower() == 'y':
             async with async_db_session.begin() as db:
                 gen_path = await code_gen_service.generate(db=db, pk=business)
-
             console.print()
             console.tip('代码已生成完成')
             console.print(Text('\n详情请查看：'), Text(str(gen_path), style='bold white'))

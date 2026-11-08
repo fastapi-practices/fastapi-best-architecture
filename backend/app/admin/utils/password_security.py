@@ -47,16 +47,12 @@ async def validate_new_password(db: AsyncSession, user_id: int, new_password: st
 
     if len(new_password) < settings.USER_PASSWORD_MIN_LENGTH:
         raise errors.RequestError(msg=t('error.password.too_short', min_length=settings.USER_PASSWORD_MIN_LENGTH))
-
     if len(new_password) > settings.USER_PASSWORD_MAX_LENGTH:
         raise errors.RequestError(msg=t('error.password.too_long', max_length=settings.USER_PASSWORD_MAX_LENGTH))
-
     if not is_has_number(new_password):
         raise errors.RequestError(msg=t('error.password.need_digit'))
-
     if not is_has_letter(new_password):
         raise errors.RequestError(msg=t('error.password.need_letter'))
-
     if settings.USER_PASSWORD_REQUIRE_SPECIAL_CHAR and not is_has_special_char(new_password):
         raise errors.RequestError(msg=t('error.password.need_special'))
 

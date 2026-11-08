@@ -66,10 +66,8 @@ class LifespanManager:
                         result = await exit_stack.enter_async_context(lifespan_fn(app))
                         if isinstance(result, dict):
                             state.update(result)
-
                 for key, value in state.items():
                     setattr(app.state, key, value)
-
                 yield state or None
 
         return combined_lifespan

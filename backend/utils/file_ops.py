@@ -34,7 +34,6 @@ def upload_file_verify(file: UploadFile) -> None:
     file_ext = filename.split('.')[-1].lower()
     if not file_ext:
         raise errors.RequestError(msg=t('error.file.unknown_type'))
-
     if file_ext in settings.UPLOAD_IMAGE_EXT_INCLUDE:
         if file.size > settings.UPLOAD_IMAGE_SIZE_MAX:
             raise errors.RequestError(msg=t('error.file.image_too_large'))

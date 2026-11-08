@@ -23,7 +23,6 @@ class DeptService:
         :param pk: 部门 ID
         :return:
         """
-
         dept = await dept_dao.get(db, pk)
         if not dept:
             raise errors.NotFoundError(msg=t('error.dept.not_found'))

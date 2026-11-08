@@ -98,7 +98,6 @@ async def batch_consume[T](
             if stop_event is not None and stop_event.is_set():
                 return
             continue
-
         try:
             await handler(items)
         except Exception as e:

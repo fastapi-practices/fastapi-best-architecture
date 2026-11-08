@@ -82,7 +82,6 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def register_app() -> FastAPI:
     """注册 FastAPI 应用"""
-
     app = FastAPI(
         title=settings.FASTAPI_TITLE,
         version=__version__,

@@ -25,7 +25,6 @@ class CodeGenColumnService:
         :param pk: 模型列 ID
         :return:
         """
-
         column = await code_gen_column_dao.get(db, pk)
         if not column:
             raise errors.NotFoundError(msg='代码生成模型列不存在')
@@ -52,7 +51,6 @@ class CodeGenColumnService:
         :param business_id: 业务 ID
         :return:
         """
-
         if not await code_gen_business_dao.get(db, business_id):
             raise errors.NotFoundError(msg='代码生成业务不存在')
         return await code_gen_column_dao.get_all_by_business(db, business_id)
@@ -66,7 +64,6 @@ class CodeGenColumnService:
         :param obj: 创建模型列参数
         :return:
         """
-
         if not await code_gen_business_dao.get(db, obj.code_gen_business_id):
             raise errors.NotFoundError(msg='代码生成业务不存在')
 
@@ -87,7 +84,6 @@ class CodeGenColumnService:
         :param obj: 更新模型列参数
         :return:
         """
-
         column = await code_gen_column_dao.get(db, pk)
         if not column:
             raise errors.NotFoundError(msg='代码生成模型列不存在')
@@ -112,7 +108,6 @@ class CodeGenColumnService:
         :param pk: 模型列 ID
         :return:
         """
-
         column = await code_gen_column_dao.get(db, pk)
         if not column:
             raise errors.NotFoundError(msg='代码生成模型列不存在')

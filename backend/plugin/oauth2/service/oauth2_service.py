@@ -158,7 +158,6 @@ class OAuth2Service:
         :param state: OAuth2 state 参数
         :return:
         """
-
         sid = user.get('uuid')
         username = user.get('username')
         nickname = user.get('nickname')

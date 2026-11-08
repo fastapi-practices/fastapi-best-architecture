@@ -22,7 +22,6 @@ class NoticeService:
         :param pk: 通知公告 ID
         :return:
         """
-
         notice = await notice_dao.get(db, pk)
         if not notice:
             raise errors.NotFoundError(msg='通知公告不存在')
@@ -50,7 +49,6 @@ class NoticeService:
         :param db: 数据库会话
         :return:
         """
-
         notices = await notice_dao.get_all(db)
         return notices
 
@@ -63,7 +61,6 @@ class NoticeService:
         :param obj: 创建通知公告参数
         :return:
         """
-
         await notice_dao.create(db, obj)
 
     @staticmethod
@@ -76,7 +73,6 @@ class NoticeService:
         :param obj: 更新通知公告参数
         :return:
         """
-
         notice = await notice_dao.get(db, pk)
         if not notice:
             raise errors.NotFoundError(msg='通知公告不存在')
@@ -92,7 +88,6 @@ class NoticeService:
         :param obj: 通知公告 ID 列表
         :return:
         """
-
         count = await notice_dao.delete(db, obj.pks)
         return count
 

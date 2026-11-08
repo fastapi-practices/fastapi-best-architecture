@@ -148,7 +148,6 @@ class CRUDUser(CRUDPlus[User]):
             role_stmt = select(Role).where(Role.id.in_(obj.role_ids), Role.deleted == 0)
             result = await db.execute(role_stmt)
             roles = result.scalars().all()
-
             user_role_data = [AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump() for role in roles]
             user_role_stmt = insert(user_role)
             await db.execute(user_role_stmt, user_role_data)
@@ -197,7 +196,6 @@ class CRUDUser(CRUDPlus[User]):
             role_stmt = select(Role).where(Role.id.in_(role_ids), Role.deleted == 0)
             result = await db.execute(role_stmt)
             roles = result.scalars().all()
-
             user_role_data = [AddUserRoleParam(user_id=user_id, role_id=role.id).model_dump() for role in roles]
             user_role_stmt = insert(user_role)
             await db.execute(user_role_stmt, user_role_data)

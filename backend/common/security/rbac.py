@@ -28,7 +28,6 @@ async def rbac_verify(request: Request, _token: str = DependsJwtAuth) -> None:  
     # JWT 授权状态强制校验
     if not request.auth.scopes:
         raise errors.TokenError
-
     # 超级管理员免校验
     if request.user.is_superuser:
         return
@@ -38,7 +37,6 @@ async def rbac_verify(request: Request, _token: str = DependsJwtAuth) -> None:  
     enabled_roles = [role for role in user_roles if role.status == StatusType.enable]
     if not enabled_roles:
         raise errors.AuthorizationError(msg=t('error.token.role_locked'))
-
     # 检测用户所属角色菜单
     if not any(len(role.menus) > 0 for role in enabled_roles):
         raise errors.AuthorizationError(msg=t('error.rbac.no_menu'))
@@ -47,7 +45,6 @@ async def rbac_verify(request: Request, _token: str = DependsJwtAuth) -> None:  
     method = request.method
     if method not in {MethodType.GET, MethodType.OPTIONS} and not request.user.is_staff:
         raise errors.AuthorizationError(msg=t('error.rbac.staff_forbidden'))
-
     # RBAC 鉴权
     if settings.RBAC_ROLE_MENU_MODE:
         path_auth_perm = ctx.permission
@@ -55,7 +52,6 @@ async def rbac_verify(request: Request, _token: str = DependsJwtAuth) -> None:  
         # 没有菜单操作权限标识不校验
         if not path_auth_perm:
             return
-
         # 菜单鉴权白名单
         if path_auth_perm in settings.RBAC_ROLE_MENU_EXCLUDE:
             return

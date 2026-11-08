@@ -82,7 +82,6 @@ class UserPasswordHistoryService:
 
         if settings.USER_PASSWORD_EXPIRY_DAYS == 0:
             return None
-
         if not password_changed_time:
             raise errors.AuthorizationError(msg=t('error.auth.password_expired'))
 
@@ -91,7 +90,6 @@ class UserPasswordHistoryService:
 
         if days_remaining < 0:
             raise errors.AuthorizationError(msg=t('error.auth.password_expired'))
-
         if days_remaining <= settings.USER_PASSWORD_REMINDER_DAYS:
             return days_remaining
 

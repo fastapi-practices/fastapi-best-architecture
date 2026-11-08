@@ -22,7 +22,6 @@ class CodeGenBusinessService:
         :param pk: 业务 ID
         :return:
         """
-
         business = await code_gen_business_dao.get(db, pk)
         if not business:
             raise errors.NotFoundError(msg='代码生成业务不存在')
@@ -36,7 +35,6 @@ class CodeGenBusinessService:
         :param db: 数据库会话
         :return:
         """
-
         return await code_gen_business_dao.get_all(db)
 
     @staticmethod
@@ -60,7 +58,6 @@ class CodeGenBusinessService:
         :param obj: 创建业务参数
         :return:
         """
-
         business = await code_gen_business_dao.get_by_name(db, obj.table_name)
         if business:
             raise errors.ConflictError(msg='代码生成业务已存在')
@@ -76,7 +73,6 @@ class CodeGenBusinessService:
         :param obj: 更新业务参数
         :return:
         """
-
         business = await code_gen_business_dao.get(db, pk)
         if not business:
             raise errors.NotFoundError(msg='代码生成业务不存在')
@@ -93,7 +89,6 @@ class CodeGenBusinessService:
         :param pk: 业务 ID
         :return:
         """
-
         business = await code_gen_business_dao.get(db, pk)
         if not business:
             raise errors.NotFoundError(msg='代码生成业务不存在')

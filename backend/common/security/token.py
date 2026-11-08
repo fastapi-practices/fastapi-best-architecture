@@ -286,7 +286,6 @@ async def _revoke_sessions(user_id: int, session_uuids: set[str]) -> None:
     )
     if not await redis_client.smembers(f'{settings.TOKEN_SESSION_REDIS_PREFIX}:{user_id}'):
         await redis_client.srem(f'{settings.TOKEN_SESSION_REDIS_PREFIX}:users', str(user_id))
-
     if sids:
         from backend.common.socketio.server import sio
 

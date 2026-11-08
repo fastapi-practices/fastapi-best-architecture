@@ -105,7 +105,6 @@ class CRUDRole(CRUDPlus[Role]):
         :param status: 角色状态
         :return:
         """
-
         filters = {'deleted': 0}
 
         if name is not None:

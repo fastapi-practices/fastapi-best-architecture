@@ -235,11 +235,9 @@ def validate_plugin_config(plugin_name: str, config: dict[str, Any]) -> PluginLe
     if model_dir.is_dir():
         if not config['plugin'].get('database'):
             raise PluginConfigError(f'插件 {plugin_name} 包含 model 目录时必须声明支持的数据库')
-
         sql_dir = plugin_dir / 'sql'
         supported_db_types = []
         missing_details = []
-
         for db_type in ('mysql', 'postgresql'):
             db_sql_dir = sql_dir / db_type
             required_sql_files = (
@@ -251,13 +249,10 @@ def validate_plugin_config(plugin_name: str, config: dict[str, Any]) -> PluginLe
             missing_files = [
                 str(sql_file.relative_to(plugin_dir)) for sql_file in required_sql_files if not sql_file.is_file()
             ]
-
             if not missing_files:
                 supported_db_types.append(db_type)
                 continue
-
             missing_details.append(f'{db_type}: {", ".join(missing_files)}')
-
         if not supported_db_types:
             raise PluginConfigError(
                 f'插件 {plugin_name} 必须至少提供一种数据库的初始化和销毁 SQL 脚本，'

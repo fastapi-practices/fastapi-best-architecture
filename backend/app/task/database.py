@@ -68,7 +68,6 @@ class DatabaseBackend(BaseBackend):
             self.always_retry = True
         if not conf.value_set_for('result_backend_max_retries') or self.max_retries is None:
             self.max_retries = 3
-
         if self.extended_result:
             self.task_cls = TaskExtended
 
@@ -168,7 +167,6 @@ class DatabaseBackend(BaseBackend):
                 # SUCCESS is saved, so a repeated run of the task doesn't
                 # replace its result.
                 return
-
             self._update_result(task, result, state, traceback=traceback, request=request)
             # Write the state even if it looks unchanged. Without row locks, as
             # on SQLite, another run may have saved a SUCCESS after we read the
@@ -208,7 +206,6 @@ class DatabaseBackend(BaseBackend):
                 setattr(task, 'children', ensure_bytes(self.encode(children)))  # ruff:ignore[set-attr-with-constant]
             else:
                 setattr(task, 'children', None)  # ruff:ignore[set-attr-with-constant]
-
         if hasattr(task, 'stamps') and 'stamps' in self.task_cls.__table__.columns:
             stamped_headers = meta.get('stamped_headers')
             if stamped_headers:

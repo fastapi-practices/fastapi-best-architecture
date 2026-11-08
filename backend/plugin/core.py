@@ -55,7 +55,6 @@ def get_plugins() -> tuple[str, ...]:
         item_path = PLUGIN_DIR / item
         if not os.path.isdir(item_path) and item == '__pycache__':
             continue
-
         # 检查是否为目录且包含 __init__.py 文件
         if os.path.isdir(item_path) and '__init__.py' in os.listdir(item_path):
             plugin_packages.append(item)
@@ -119,7 +118,6 @@ def parse_plugin_config() -> tuple[list[PluginEntry], list[PluginEntry]]:
             settings.PLUGIN_REDIS_PREFIX,
             exclude_keys=exclude_keys,
         )
-
         for plugin in plugins:
             plugin_config = load_plugin_config(plugin)
             plugin_type = validate_plugin_config(plugin, plugin_config)
@@ -129,7 +127,6 @@ def parse_plugin_config() -> tuple[list[PluginEntry], list[PluginEntry]]:
             plugin_cache_key = f'{settings.PLUGIN_REDIS_PREFIX}:{plugin}'
             plugin_cache_info = run_await(current_redis_client.get)(plugin_cache_key)
             plugin_config['plugin']['enable'] = get_plugin_enable(plugin_cache_info, StatusType.enable.value)
-
             if plugin_type == PluginLevelType.extend:
                 extend_plugins.append(
                     PluginEntry(
@@ -178,7 +175,6 @@ def resolve_plugin_order(plugins: list[PluginEntry]) -> list[PluginEntry]:
             cycle_start = visiting.index(plugin.name)
             cycle_path = [*visiting[cycle_start:], plugin.name]
             raise PluginConfigError(f'插件存在循环依赖: {" -> ".join(cycle_path)}')
-
         if plugin.depends_on is not None:
             visiting.append(plugin.name)
             for dep_name in plugin.depends_on:
