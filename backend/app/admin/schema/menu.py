@@ -10,7 +10,7 @@ class MenuQueryParam(SchemaBase):
     """菜单查询参数"""
 
     title: str | None = Field(None, description='菜单标题')
-    status: int | None = Field(None, description='状体')
+    status: int | None = Field(None, description='状态')
 
 
 class MenuSchemaBase(SchemaBase):
