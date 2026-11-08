@@ -33,7 +33,6 @@ class RoleService:
         :param pk: 角色 ID
         :return:
         """
-
         role = await role_dao.get_join(db, pk)
         if not role:
             raise errors.NotFoundError(msg=t('error.role.not_found'))
@@ -47,7 +46,6 @@ class RoleService:
         :param db: 数据库会话
         :return:
         """
-
         roles = await role_dao.get_all(db)
         return roles
 
@@ -73,7 +71,6 @@ class RoleService:
         :param pk: 角色 ID
         :return:
         """
-
         role = await role_dao.get(db, pk)
         if not role:
             raise errors.NotFoundError(msg=t('error.role.not_found'))
@@ -90,7 +87,6 @@ class RoleService:
         :param pk:
         :return:
         """
-
         role = await role_dao.get_join(db, pk)
         if not role:
             raise errors.NotFoundError(msg=t('error.role.not_found'))
@@ -106,7 +102,6 @@ class RoleService:
         :param obj: 角色创建参数
         :return:
         """
-
         role = await role_dao.get_by_name(db, obj.name)
         if role:
             raise errors.ConflictError(msg=t('error.role.exists'))
@@ -122,7 +117,6 @@ class RoleService:
         :param obj: 角色更新参数
         :return:
         """
-
         role = await role_dao.get(db, pk)
         if not role:
             raise errors.NotFoundError(msg=t('error.role.not_found'))
@@ -142,7 +136,6 @@ class RoleService:
         :param obj: 更新角色菜单参数
         :return:
         """
-
         role = await role_dao.get(db, pk)
         if not role:
             raise errors.NotFoundError(msg=t('error.role.not_found'))
@@ -164,7 +157,6 @@ class RoleService:
         :param obj: 更新角色数据范围参数
         :return:
         """
-
         role = await role_dao.get(db, pk)
         if not role:
             raise errors.NotFoundError(msg=t('error.role.not_found'))
@@ -185,7 +177,6 @@ class RoleService:
         :param obj: 角色 ID 列表
         :return:
         """
-
         count = await role_dao.delete(db, obj.pks)
         await user_cache_manager.clear_by_role_id(db, obj.pks)
         return count

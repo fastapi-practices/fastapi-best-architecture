@@ -33,7 +33,6 @@ class DataRuleService:
         :param pk: 规则 ID
         :return:
         """
-
         data_rule = await data_rule_dao.get(db, pk)
         if not data_rule:
             raise errors.NotFoundError(msg=t('error.data_rule.not_found'))
@@ -103,7 +102,6 @@ class DataRuleService:
         :param db: 数据库会话
         :return:
         """
-
         data_rules = await data_rule_dao.get_all(db)
         return data_rules
 

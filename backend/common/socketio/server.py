@@ -49,7 +49,6 @@ async def connect(namespace: str, sid: str, _environ: dict[str, Any], auth: dict
     if not isinstance(token, str) or not token or not isinstance(session_uuid, str) or not session_uuid:
         log.error('WebSocket 连接失败：授权失败，请检查')
         return False
-
     # 免授权直连
     if token == settings.WS_NO_AUTH_MARKER:
         if settings.ENVIRONMENT == 'prod':

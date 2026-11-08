@@ -108,7 +108,6 @@ class AuthService:
                 if captcha_code.lower() != obj.captcha.lower():
                     raise errors.CustomError(error=CustomErrorCode.CAPTCHA_ERROR)
                 await redis_client.delete(captcha_key)
-
             user, days_remaining = await self.user_verify(db=db, username=obj.username, password=obj.password)
             await user_dao.update_login_time(db, obj.username)
             await db.refresh(user)

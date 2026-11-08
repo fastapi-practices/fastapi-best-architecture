@@ -29,7 +29,6 @@ class PluginSettingsSource(PydanticBaseSettingsSource):
                 continue
             if '__init__.py' not in os.listdir(item_path):
                 continue
-
             toml_path = item_path / 'plugin.toml'
             if toml_path.exists():
                 with open(toml_path, encoding='utf-8') as f:

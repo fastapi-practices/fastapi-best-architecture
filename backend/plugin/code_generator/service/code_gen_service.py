@@ -154,7 +154,6 @@ class CodeGenService:
 
         if has_import and has_include:
             return None
-
         if not has_import:
             content = f'{import_line}\n{content}'
         if not has_include:
@@ -245,14 +244,12 @@ class CodeGenService:
                 all_files.update(init_files)
                 rendered_codes = await self._render_tpl_code(db=db, business=business)
                 all_files.update(rendered_codes)
-
                 for filepath, content in all_files.items():
                     full_path = os.path.join(tmp_dir, *filepath.split('/'))
                     code_folder = anyio.Path(full_path).parent
                     await code_folder.mkdir(parents=True, exist_ok=True)
                     async with await open_file(full_path, 'w', encoding='utf-8') as f:
                         await f.write(content)
-
                 for item in os.listdir(tmp_dir):
                     src = os.path.join(tmp_dir, item)
                     dst = os.path.join(gen_path, item)
@@ -261,7 +258,6 @@ class CodeGenService:
                         await run_in_threadpool(shutil.copytree, src, dst, dirs_exist_ok=True)
                     else:
                         await run_in_threadpool(shutil.copy2, src, dst)
-
             await self._inject_app_router(app_name=business.app_name)
 
         return gen_path

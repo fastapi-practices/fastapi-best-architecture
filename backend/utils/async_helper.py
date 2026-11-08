@@ -94,7 +94,6 @@ def run_await[T](coro: Callable[..., Awaitable[T]] | Callable[..., Coroutine[Any
             if asyncio.iscoroutine(inner):
                 inner.close()
             raise RuntimeError('run_await 不能在自身事件循环线程中同步等待')
-
         if asyncio.isfuture(inner):
             loop = inner.get_loop()
             if not loop.is_running():

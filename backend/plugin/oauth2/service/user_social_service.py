@@ -45,7 +45,6 @@ class UserSocialService:
         """
         if await user_social_dao.check_binding(db, user_id, source.value):
             raise errors.RequestError(msg=f'用户已绑定 {source.value} 账号')
-
         if await user_social_dao.get_by_sid(db, sid, source.value):
             raise errors.RequestError(msg=f'该 {source.value} 账号已被其他用户绑定')
 

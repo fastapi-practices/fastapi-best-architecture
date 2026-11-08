@@ -20,7 +20,6 @@ async def format_python_code(code: str) -> str:
     try:
         async with await open_file(temp_file, 'w', encoding='utf-8') as f:
             await f.write(code)
-
         process = await asyncio.create_subprocess_exec(
             'ruff',
             'format',
@@ -29,7 +28,6 @@ async def format_python_code(code: str) -> str:
             stderr=asyncio.subprocess.DEVNULL,
         )
         await process.wait()
-
         if process.returncode == 0:
             async with await open_file(temp_file, encoding='utf-8') as f:
                 formatted_code = await f.read()

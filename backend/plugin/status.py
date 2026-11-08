@@ -78,6 +78,5 @@ class PluginStatusChecker:
             except Exception as e:
                 log.exception('插件 {} 状态自动修复失败', self.plugin)
                 raise PluginInjectError('插件状态未初始化或丢失，请联系系统管理员') from e
-
         if get_plugin_enable(plugin_info, StatusType.disable.value) != str(StatusType.enable.value):
             raise errors.ServerError(msg=f'插件 {self.plugin} 未启用，请联系系统管理员')

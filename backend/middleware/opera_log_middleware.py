@@ -88,10 +88,8 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
 
             if request.method != 'OPTIONS':
                 log.debug('<-- 请求结束')
-
             if path.startswith(settings.FASTAPI_API_V1_PATH):
                 log.info(f'{ctx.ip: <15} | {method: <8} | {code!s: <6} | {path} | {elapsed:.3f}ms')
-
             if should_log_opera and request.method != 'OPTIONS':
                 opera_log_in = CreateOperaLogParam(
                     trace_id=get_request_trace_id(),
@@ -157,7 +155,6 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
         if content_length is not None and content_length > settings.OPERA_LOG_BODY_MAX_SIZE:
             args['body'] = self.build_truncated_body(content_length, settings.OPERA_LOG_BODY_MAX_SIZE)
             return args or None
-
         if is_multipart and content_length is None:
             args['body'] = self.build_truncated_body(None, settings.OPERA_LOG_BODY_MAX_SIZE)
             return args or None
@@ -174,7 +171,6 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                     args['json'] = self.desensitization(json_data)
                 else:
                     args['data'] = str(json_data)
-
         if is_form:
             # 表单参数
             form_data = await request.form()
@@ -193,7 +189,6 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                     args['x-www-form-urlencoded'] = self.desensitization(serialized_form)
                 else:
                     args['form-data'] = self.desensitization(serialized_form)
-
         if args:
             try:
                 args_str = json.dumps(args, ensure_ascii=False)

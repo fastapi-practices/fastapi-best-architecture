@@ -113,7 +113,6 @@ def filter_data_permission(  # ruff:ignore[complex-structure]
         else:
             target_model = target_model_map.get(data_rule.model)
             target_models = [target_model] if target_model is not None else []
-
         for target_model in target_models:
             table = target_model if isinstance(target_model, Table) else target_model.__table__
             rule_column = column_template_resolvers.get(data_rule.column, data_rule.column)

@@ -84,7 +84,6 @@ class ModelEntry(ScheduleEntry):
             self.options['expires'] = model.expire_seconds
         elif model.expire_time is not None:
             self.options['expires'] = timezone.from_datetime(model.expire_time)
-
         if not model.last_run_time:
             model.last_run_time = timezone.now()
             if model.start_time:
@@ -113,7 +112,6 @@ class ModelEntry(ScheduleEntry):
         if self.model.status != StatusType.enable:
             # 重新启用时延迟 5 秒
             return schedules.schedstate(is_due=False, next=5)
-
         # 仅在 'start_time' 之后运行
         if self.model.start_time is not None:
             now = timezone.now()
@@ -121,7 +119,6 @@ class ModelEntry(ScheduleEntry):
             if now < start_time:
                 delay = math.ceil((start_time - now).total_seconds())
                 return schedules.schedstate(is_due=False, next=delay)
-
         # 一次性任务
         if self.model.one_off and self.model.status == StatusType.enable and self.model.total_run_count > 0:
             self.model.status = StatusType.disable
@@ -214,7 +211,6 @@ class ModelEntry(ScheduleEntry):
                     obj = TaskScheduler(**CreateTaskSchedulerParam(task=task, **spec).model_dump())
             else:
                 raise errors.NotFoundError(msg=f'暂不支持的计划类型：{schedule}')
-
             return obj
 
     @classmethod
@@ -428,7 +424,6 @@ class DatabaseScheduler(Scheduler):
         elif self.schedule_changed():
             logger.info('DatabaseScheduler: Schedule changed.')
             update = True
-
         if update:
             logger.debug('beat: Synchronizing schedule...')
             self.sync()

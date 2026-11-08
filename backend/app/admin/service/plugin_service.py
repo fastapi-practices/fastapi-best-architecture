@@ -26,7 +26,6 @@ class PluginService:
     @staticmethod
     async def get_all() -> list[dict[str, Any]]:
         """获取所有插件"""
-
         changed_key = f'{settings.PLUGIN_REDIS_PREFIX}:changed'
         keys = [key for key in await redis_client.get_by_prefix(settings.PLUGIN_REDIS_PREFIX) if key != changed_key]
         if not keys:
@@ -37,7 +36,6 @@ class PluginService:
         for info in plugin_infos:
             if info is None:
                 continue
-
             plugin_info = json.loads(info)
             if isinstance(plugin_info, dict):
                 result.append(plugin_info)

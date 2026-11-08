@@ -102,7 +102,6 @@ class SnowflakeNodeManager:
                 await self._heartbeat_task
             except asyncio.CancelledError:
                 log.debug(f'雪花算法节点心跳任务释放：datacenter_id={self.datacenter_id}, worker_id={self.worker_id}')
-
         if self.datacenter_id is not None and self.worker_id is not None:
             key = f'{self.node_redis_prefix}:{self.datacenter_id}:{self.worker_id}'
             await redis_client.delete(key)
@@ -163,7 +162,6 @@ class Snowflake:
             if not (0 <= self.worker_id <= SnowflakeConfig.MAX_WORKER_ID):
                 log.error(f'雪花算法 worker_id 配置失败，必须在 0~{SnowflakeConfig.MAX_WORKER_ID} 之间')
                 raise errors.ServerError(msg=t('error.snowflake.worker_config'))
-
             self._initialized = True
 
     async def shutdown(self) -> None:
@@ -207,7 +205,6 @@ class Snowflake:
                     timestamp = self._till_next_ms(self.last_timestamp)
             else:
                 self.sequence = 0
-
             self.last_timestamp = timestamp
 
             # 组合 64 位 ID

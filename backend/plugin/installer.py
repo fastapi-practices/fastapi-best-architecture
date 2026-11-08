@@ -105,22 +105,17 @@ async def install_zip_plugin(file: UploadFile | str) -> str:  # ruff:ignore[comp
                     continue
                 if not member.filename.startswith(prefix):
                     continue
-
                 relative_filename = member.filename.removeprefix(prefix)
                 if not relative_filename:
                     if member.is_dir():
                         continue
                     raise errors.RequestError(msg='插件压缩包内容非法')
-
                 member.filename = relative_filename
                 members.append(member)
-
             if not members:
                 raise errors.RequestError(msg='插件压缩包内容非法')
-
             await full_plugin_path.mkdir(parents=True, exist_ok=True)
             await run_in_threadpool(zf.extractall, full_plugin_path, members)
-
         await _append_env_example(full_plugin_path)
         await install_requirements_async(plugin_name)
         await redis_client.set(f'{settings.PLUGIN_REDIS_PREFIX}:changed', 'true')
@@ -149,7 +144,6 @@ async def install_git_plugin(repo_url: str) -> str:
         except Exception as e:
             log.error(f'插件安装失败: {e}')
             raise errors.ServerError(msg='插件安装失败，请稍后重试') from e
-
         await _append_env_example(path)
         await install_requirements_async(repo_name)
         await redis_client.set(f'{settings.PLUGIN_REDIS_PREFIX}:changed', 'true')
@@ -168,7 +162,6 @@ async def install_git_frontend_plugin(repo_url: str, frontend_project_root: str)
     match = is_git_url(repo_url)
     if not match:
         raise errors.RequestError(msg='Git 仓库地址格式非法，仅支持 HTTP/HTTPS 协议')
-
     if not frontend_project_root.strip():
         raise errors.RequestError(msg='前端项目根路径不能为空')
 

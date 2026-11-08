@@ -28,10 +28,8 @@ def get_request_ip(request: Request) -> str:
     forwarded = request.headers.get('X-Forwarded-For')
     if forwarded:
         return forwarded.split(',')[0]
-
     if request.client is None:
         return '127.0.0.1'
-
     # 忽略 pytest
     if request.client.host == 'testclient':
         return '127.0.0.1'
@@ -111,7 +109,6 @@ async def parse_ip_info(request: Request) -> IpInfo:
         location_info = await get_location_online(ip)
     elif settings.IP_LOCATION_PARSE == 'offline':
         location_info = get_location_offline(ip)
-
     if location_info:
         country = location_info.get('country')
         region = location_info.get('regionName')

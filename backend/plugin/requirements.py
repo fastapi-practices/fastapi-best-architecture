@@ -84,7 +84,6 @@ def install_requirements(plugin: str | None) -> None:  # ruff:ignore[complex-str
         requirements_file = PLUGIN_DIR / plugin / 'requirements.txt'
         if not requirements_file.exists() or _requirements_installed(requirements_file):
             continue
-
         pip_install = ['uv', 'pip', 'install', '-r', str(requirements_file), '--prerelease=allow']
         if not _is_in_virtualenv():
             pip_install.append('--system')
@@ -100,7 +99,6 @@ def install_requirements(plugin: str | None) -> None:  # ruff:ignore[complex-str
             ])
         else:
             pip_install.extend(['--index', 'https://pypi.org/simple/'])
-
         max_retries = settings.PLUGIN_PIP_MAX_RETRY
         for attempt in range(max_retries):
             try:
