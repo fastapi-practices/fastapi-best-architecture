@@ -111,7 +111,7 @@ async def create_config(db: CurrentSessionTransaction, obj: CreateConfigParam) -
     '',
     summary='批量更新参数配置',
     dependencies=[
-        Depends(RequestPermission('sys.config.edits')),
+        Depends(RequestPermission('sys:config:edit')),
         DependsRBAC,
         Depends(cache_evict(eviction_group='config'), scope='function'),
     ],
