@@ -40,8 +40,6 @@ from backend.app.task.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
-__all__ = ('DatabaseBackend',)
-
 
 class DatabaseBackend(BaseBackend):
     """The database result backend."""
