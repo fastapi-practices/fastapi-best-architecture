@@ -22,7 +22,7 @@ async def repair_plugin_cache(plugin: str) -> str:
     from backend.plugin.core import load_plugin_config
     from backend.plugin.validator import validate_plugin_config
 
-    plugin_config = load_plugin_config(plugin)
+    plugin_config = await load_plugin_config(plugin)
     validate_plugin_config(plugin, plugin_config)
     plugin_config['plugin']['name'] = plugin
     plugin_config['plugin']['enable'] = str(StatusType.enable.value)

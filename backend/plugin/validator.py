@@ -230,33 +230,48 @@ def validate_plugin_config(plugin_name: str, config: dict[str, Any]) -> PluginLe
     if plugin_name in depends_on:
         raise PluginConfigError(f'插件 {plugin_name} 不能依赖自身')
 
+    return plugin_level
+
+
+def validate_plugin_files(plugin_name: str, config: dict[str, Any]) -> None:
+    """
+    校验插件文件完整性
+
+    检查插件声明的数据库与 SQL 脚本是否齐备
+
+    :param plugin_name: 插件名称
+    :param config: 插件配置
+    :return:
+    """
     plugin_dir = Path(PLUGIN_DIR) / plugin_name
     model_dir = plugin_dir / 'model'
-    if model_dir.is_dir():
-        if not config['plugin'].get('database'):
-            raise PluginConfigError(f'插件 {plugin_name} 包含 model 目录时必须声明支持的数据库')
-        sql_dir = plugin_dir / 'sql'
-        supported_db_types = []
-        missing_details = []
-        for db_type in ('mysql', 'postgresql'):
-            db_sql_dir = sql_dir / db_type
-            required_sql_files = (
-                db_sql_dir / 'init.sql',
-                db_sql_dir / 'destroy.sql',
-                db_sql_dir / 'init_snowflake.sql',
-                db_sql_dir / 'destroy_snowflake.sql',
-            )
-            missing_files = [
-                str(sql_file.relative_to(plugin_dir)) for sql_file in required_sql_files if not sql_file.is_file()
-            ]
-            if not missing_files:
-                supported_db_types.append(db_type)
-                continue
-            missing_details.append(f'{db_type}: {", ".join(missing_files)}')
-        if not supported_db_types:
-            raise PluginConfigError(
-                f'插件 {plugin_name} 必须至少提供一种数据库的初始化和销毁 SQL 脚本，'
-                f'当前缺失: {"; ".join(missing_details)}'
-            )
+    if not model_dir.is_dir():
+        return
 
-    return plugin_level
+    if not config['plugin'].get('database'):
+        raise PluginConfigError(f'插件 {plugin_name} 包含 model 目录时必须声明支持的数据库')
+
+    sql_dir = plugin_dir / 'sql'
+    supported_db_types = []
+    missing_details = []
+    for db_type in ('mysql', 'postgresql'):
+        db_sql_dir = sql_dir / db_type
+        required_sql_files = (
+            db_sql_dir / 'init.sql',
+            db_sql_dir / 'destroy.sql',
+            db_sql_dir / 'init_snowflake.sql',
+            db_sql_dir / 'destroy_snowflake.sql',
+        )
+        missing_files = [
+            str(sql_file.relative_to(plugin_dir)) for sql_file in required_sql_files if not sql_file.is_file()
+        ]
+        if not missing_files:
+            supported_db_types.append(db_type)
+            continue
+
+        missing_details.append(f'{db_type}: {", ".join(missing_files)}')
+
+    if not supported_db_types:
+        raise PluginConfigError(
+            f'插件 {plugin_name} 必须至少提供一种数据库的初始化和销毁 SQL 脚本，当前缺失: {"; ".join(missing_details)}'
+        )
