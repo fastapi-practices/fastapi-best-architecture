@@ -90,3 +90,12 @@ class RequestException:
     kind: RequestExceptionKind
     code: int | None
     msg: str | None
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class CompatibilityResult:
+    """插件与 fba 版本兼容性检测结果"""
+
+    compatible: bool
+    required: str
+    current: str

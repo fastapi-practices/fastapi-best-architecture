@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "FBA Plugin Manifest Schema",
+  "title": "fba Plugin Manifest Schema",
   "description": "JSON Schema for FastAPI Best Architecture plugin.toml files. See: https://fastapi-practices.github.io/fastapi_best_architecture_docs/plugin/dev.html",
 
   "type": "object",
@@ -11,7 +11,7 @@
     "plugin": {
       "type": "object",
       "description": "Plugin metadata",
-      "required": ["summary", "version", "description", "author", "tags"],
+      "required": ["summary", "version", "fba_version", "description", "author", "tags"],
       "additionalProperties": false,
       "x-tombi-table-keys-order": "schema",
       "properties": {
@@ -29,6 +29,12 @@
           "type": "string",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "description": "Plugin version (semver format: x.y.z)"
+        },
+        "fba_version": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^\\s*(===|==|!=|<=|>=|<|>|~=)\\s*[^\\s,]+(\\s*,\\s*(===|==|!=|<=|>=|<|>|~=)\\s*[^\\s,]+)*\\s*$",
+          "description": "Version specifier of fba required by the plugin (PEP 440 version specifiers, e.g. \">=1.17.0,<2.0.0\"). See https://packaging.python.org/en/latest/specifications/version-specifiers/"
         },
         "description": {
           "type": "string",
