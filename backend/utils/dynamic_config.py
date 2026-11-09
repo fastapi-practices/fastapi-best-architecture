@@ -3,7 +3,7 @@ from collections.abc import Callable
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.conf import settings
-from backend.plugin.core import check_plugin_installed
+from backend.plugin.core import check_plugin_installed_async
 from backend.utils.serializers import select_list_serialize
 
 
@@ -27,7 +27,7 @@ async def load_config(
     :param status_key: 状态键
     :return:
     """
-    if not check_plugin_installed('config'):
+    if not await check_plugin_installed_async('config'):
         return
 
     try:

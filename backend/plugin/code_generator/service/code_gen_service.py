@@ -31,6 +31,15 @@ from backend.plugin.code_generator.utils.type_conversion import sql_type_to_pyda
 from backend.utils.locks import acquire_distributed_reload_lock
 
 
+def _build_zip_bytes(files: dict[str, str]) -> bytes:
+    """构建代码下载压缩包"""
+    bio = io.BytesIO()
+    with zipfile.ZipFile(bio, 'w') as zf:
+        for filepath, content in files.items():
+            zf.writestr(filepath, content)
+    return bio.getvalue()
+
+
 class CodeGenService:
     """代码生成服务类"""
 
@@ -121,12 +130,13 @@ class CodeGenService:
         if not gen_models:
             raise errors.NotFoundError(msg='代码生成模型表为空')
 
-        gen_vars = gen_template.get_vars(business, gen_models)
+        gen_vars = await run_in_threadpool(gen_template.get_vars, business, gen_models)
         template_mapping = gen_template.get_template_path_mapping(business)
 
         rendered_codes = {}
         for template_path, output_path in template_mapping.items():
-            code = await gen_template.get_template(template_path).render_async(**gen_vars)
+            template = await run_in_threadpool(gen_template.get_template, template_path)
+            code = await template.render_async(**gen_vars)
             if output_path.endswith('.py'):
                 code = await format_python_code(code)
             rendered_codes[output_path] = code
@@ -238,7 +248,8 @@ class CodeGenService:
         gen_path = business.gen_path or str(BASE_PATH / 'app')
 
         async with acquire_distributed_reload_lock():
-            with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_dir = await run_in_threadpool(tempfile.mkdtemp)
+            try:
                 all_files = {}
                 init_files = gen_template.get_init_files(business)
                 all_files.update(init_files)
@@ -250,7 +261,7 @@ class CodeGenService:
                     await code_folder.mkdir(parents=True, exist_ok=True)
                     async with await open_file(full_path, 'w', encoding='utf-8') as f:
                         await f.write(content)
-                for item in os.listdir(tmp_dir):
+                for item in await run_in_threadpool(os.listdir, tmp_dir):
                     src = os.path.join(tmp_dir, item)
                     dst = os.path.join(gen_path, item)
                     src_path = anyio.Path(src)
@@ -258,6 +269,8 @@ class CodeGenService:
                         await run_in_threadpool(shutil.copytree, src, dst, dirs_exist_ok=True)
                     else:
                         await run_in_threadpool(shutil.copy2, src, dst)
+            finally:
+                await run_in_threadpool(shutil.rmtree, tmp_dir, ignore_errors=True)
             await self._inject_app_router(app_name=business.app_name)
 
         return gen_path
@@ -284,13 +297,8 @@ class CodeGenService:
         if app_router_content:
             all_files['router.py'] = app_router_content
 
-        bio = io.BytesIO()
-        with zipfile.ZipFile(bio, 'w') as zf:
-            for filepath, content in all_files.items():
-                zf.writestr(filepath, content)
-
-        bio.seek(0)
-        return bio
+        zip_bytes = await run_in_threadpool(_build_zip_bytes, all_files)
+        return io.BytesIO(zip_bytes)
 
 
 code_gen_service: CodeGenService = CodeGenService()

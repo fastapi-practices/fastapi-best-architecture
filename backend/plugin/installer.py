@@ -4,6 +4,7 @@ import re
 import stat
 import zipfile
 
+from pathlib import Path
 from typing import Any
 
 import anyio
@@ -99,7 +100,62 @@ def _parse_manifest(content: str, plugin_name: str) -> dict[str, Any]:
     return manifest
 
 
-async def install_zip_plugin(file: UploadFile | str) -> str:  # ruff:ignore[complex-structure]
+def _install_zip_contents(  # ruff:ignore[complex-structure]
+    *, contents: bytes, plugin_name: str, destination: Path
+) -> None:
+    """
+    校验并安装 ZIP 插件内容
+
+    :param contents: 插件压缩包内容
+    :param plugin_name: 插件名称
+    :param destination: 插件安装目录
+    :return:
+    """
+    file_bytes = io.BytesIO(contents)
+    if not zipfile.is_zipfile(file_bytes):
+        raise errors.RequestError(msg='插件压缩包格式非法')
+
+    with zipfile.ZipFile(file_bytes) as zf:
+        plugin_namelist = zf.namelist()
+        if not plugin_namelist:
+            raise errors.RequestError(msg='插件压缩包内容非法')
+        plugin_dir_name = plugin_namelist[0].split('/', 1)[0].strip()
+        if not plugin_dir_name:
+            raise errors.RequestError(msg='插件压缩包内容非法')
+        if (
+            len(plugin_namelist) <= 3
+            or f'{plugin_dir_name}/plugin.toml' not in plugin_namelist
+            or f'{plugin_dir_name}/README.md' not in plugin_namelist
+        ):
+            raise errors.RequestError(msg='插件压缩包内缺少必要文件')
+
+        manifest = _parse_manifest(
+            zf.read(f'{plugin_dir_name}/plugin.toml').decode('utf-8'),
+            plugin_name,
+        )
+        _check_manifest_fba_compatibility(plugin_name, manifest)
+
+        members = []
+        prefix = f'{plugin_dir_name}/'
+        for member in zf.infolist():
+            if member.filename in {plugin_dir_name, prefix}:
+                continue
+            if not member.filename.startswith(prefix):
+                continue
+            relative_filename = member.filename.removeprefix(prefix)
+            if not relative_filename:
+                if member.is_dir():
+                    continue
+                raise errors.RequestError(msg='插件压缩包内容非法')
+            member.filename = relative_filename
+            members.append(member)
+        if not members:
+            raise errors.RequestError(msg='插件压缩包内容非法')
+        destination.mkdir(parents=True, exist_ok=True)
+        zf.extractall(destination, members)
+
+
+async def install_zip_plugin(file: UploadFile | str) -> str:
     """
     安装 ZIP 插件
 
@@ -111,66 +167,24 @@ async def install_zip_plugin(file: UploadFile | str) -> str:  # ruff:ignore[comp
             contents = await fb.read()
     else:
         contents = await file.read()
-    file_bytes = io.BytesIO(contents)
-    if not zipfile.is_zipfile(file_bytes):
-        raise errors.RequestError(msg='插件压缩包格式非法')
+    plugin_name_match = re.match(
+        r'^([a-zA-Z0-9_]+)',
+        file.split(os.sep)[-1].split('.')[0].strip() if isinstance(file, str) else file.filename.split('.')[0].strip(),
+    )
+    if not plugin_name_match:
+        raise errors.RequestError(msg='插件压缩包文件名非法')
+    plugin_name = plugin_name_match.group()
 
     async with acquire_distributed_reload_lock():
-        with zipfile.ZipFile(file_bytes) as zf:
-            # 校验压缩包
-            plugin_namelist = zf.namelist()
-            if not plugin_namelist:
-                raise errors.RequestError(msg='插件压缩包内容非法')
-            plugin_dir_name = plugin_namelist[0].split('/', 1)[0].strip()
-            if not plugin_dir_name:
-                raise errors.RequestError(msg='插件压缩包内容非法')
-            if (
-                len(plugin_namelist) <= 3
-                or f'{plugin_dir_name}/plugin.toml' not in plugin_namelist
-                or f'{plugin_dir_name}/README.md' not in plugin_namelist
-            ):
-                raise errors.RequestError(msg='插件压缩包内缺少必要文件')
-
-            # 插件是否可安装
-            plugin_name_match = re.match(
-                r'^([a-zA-Z0-9_]+)',
-                file.split(os.sep)[-1].split('.')[0].strip()
-                if isinstance(file, str)
-                else file.filename.split('.')[0].strip(),
-            )
-            if not plugin_name_match:
-                raise errors.RequestError(msg='插件压缩包文件名非法')
-            plugin_name = plugin_name_match.group()
-            full_plugin_path = anyio.Path(PLUGIN_DIR / plugin_name)
-            if await full_plugin_path.exists():
-                raise errors.ConflictError(msg='此插件已安装')
-
-            # 检测插件与当前 fba 版本的兼容性
-            manifest = _parse_manifest(
-                zf.read(f'{plugin_dir_name}/plugin.toml').decode('utf-8'),
-                plugin_name,
-            )
-            _check_manifest_fba_compatibility(plugin_name, manifest)
-
-            # 解压（安装）
-            members = []
-            prefix = f'{plugin_dir_name}/'
-            for member in zf.infolist():
-                if member.filename in {plugin_dir_name, prefix}:
-                    continue
-                if not member.filename.startswith(prefix):
-                    continue
-                relative_filename = member.filename.removeprefix(prefix)
-                if not relative_filename:
-                    if member.is_dir():
-                        continue
-                    raise errors.RequestError(msg='插件压缩包内容非法')
-                member.filename = relative_filename
-                members.append(member)
-            if not members:
-                raise errors.RequestError(msg='插件压缩包内容非法')
-            await full_plugin_path.mkdir(parents=True, exist_ok=True)
-            await run_in_threadpool(zf.extractall, full_plugin_path, members)
+        full_plugin_path = anyio.Path(PLUGIN_DIR / plugin_name)
+        if await full_plugin_path.exists():
+            raise errors.ConflictError(msg='此插件已安装')
+        await run_in_threadpool(
+            _install_zip_contents,
+            contents=contents,
+            plugin_name=plugin_name,
+            destination=PLUGIN_DIR / plugin_name,
+        )
         await _append_env_example(full_plugin_path)
         await install_requirements_async(plugin_name)
         await redis_client.set(f'{settings.PLUGIN_REDIS_PREFIX}:changed', 'true')
