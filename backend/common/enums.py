@@ -132,13 +132,6 @@ class UserPermissionType(StrEnum):
     multi_login = 'multi_login'
 
 
-class DataBaseType(StrEnum):
-    """数据库类型"""
-
-    mysql = 'mysql'
-    postgresql = 'postgresql'
-
-
 class PrimaryKeyType(StrEnum):
     """主键类型"""
 

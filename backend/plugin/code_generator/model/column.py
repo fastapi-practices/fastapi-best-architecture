@@ -2,7 +2,7 @@ import sqlalchemy as sa
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.common.model import DataClassBase, UniversalText, id_key
+from backend.common.model import DataClassBase, id_key
 
 
 class CodeGenColumn(DataClassBase):
@@ -19,7 +19,7 @@ class CodeGenColumn(DataClassBase):
     comment: Mapped[str | None] = mapped_column(sa.String(256), default=None, comment='列描述')
     type: Mapped[str] = mapped_column(sa.String(32), default='String', comment='SQLA 模型列类型')
     pd_type: Mapped[str] = mapped_column(sa.String(32), default='str', comment='列类型对应的 pydantic 类型')
-    default: Mapped[str | None] = mapped_column(UniversalText, default=None, comment='列默认值')
+    default: Mapped[str | None] = mapped_column(sa.Text, default=None, comment='列默认值')
     sort: Mapped[int | None] = mapped_column(default=1, comment='列排序')
     length: Mapped[int] = mapped_column(default=0, comment='列长度')
     is_pk: Mapped[bool] = mapped_column(default=False, comment='是否主键')

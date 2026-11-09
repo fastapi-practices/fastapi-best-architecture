@@ -27,9 +27,6 @@ PLUGIN_DIR = BASE_PATH / 'plugin'
 # 国际化文件目录
 LOCALE_DIR = BASE_PATH / 'locale'
 
-# MySQL 脚本目录
-MYSQL_SCRIPT_DIR = BASE_PATH / 'sql' / 'mysql'
-
 # PostgreSQL 脚本目录
 POSTGRESQL_SCRIPT_DIR = BASE_PATH / 'sql' / 'postgresql'
 

@@ -8,7 +8,6 @@ networks:
         - subnet: 172.10.10.0/24
 
 volumes:
-  # 如果你是 mysql 用户，应将 fba_postgres 修改为 fba_mysql
   fba_postgres:
     name: fba_postgres
   fba_redis:
@@ -38,7 +37,6 @@ services:
     restart: always
     environment:
       - TZ=Asia/Shanghai
-    # 如果你是 mysql 用户，应将 fba_postgres 修改为 fba_mysql
     depends_on:
       - fba_postgres
       - fba_redis
@@ -49,7 +47,6 @@ services:
       - ${DOCKER_FBA_SERVER_LOG:-./logs/fba}:/var/log/fba
     networks:
       - fba_network
-    # 如果你是 mysql 用户，应将 fba_postgres:5432 修改为 fba_mysql:3306
     command:
       - bash
       - -c
@@ -72,27 +69,6 @@ services:
       - fba_postgres:/var/lib/postgresql/data
     networks:
       - fba_network
-
-#  # 如果你是 mysql 用户，应保留 fba_mysql 容器脚本并删除 fba_postgres 容器脚本
-#  fba_mysql:
-#    image: mysql:8.0.41
-#    ports:
-#      - "${DOCKER_MAP_MYSQL_PORT:-3306}:3306"
-#    container_name: fba_mysql
-#    restart: always
-#    environment:
-#      MYSQL_DATABASE: fba
-#      MYSQL_ROOT_PASSWORD: 123456
-#      TZ: Asia/Shanghai
-#    volumes:
-#      - fba_mysql:/var/lib/mysql
-#    networks:
-#      - fba_network
-#    command:
-#      --default-authentication-plugin=mysql_native_password
-#      --character-set-server=utf8mb4
-#      --collation-server=utf8mb4_general_ci
-#      --lower_case_table_names=1
 
   fba_redis:
     image: redis:latest

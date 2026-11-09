@@ -5,7 +5,7 @@ fba_version = "~=1.17"
 description = "生成通用业务代码"
 author = "wu-clan"
 tags = ["other"]
-database = ["mysql", "postgresql"]
+database = ["postgresql"]
 
 [app]
 router = ["v1"]

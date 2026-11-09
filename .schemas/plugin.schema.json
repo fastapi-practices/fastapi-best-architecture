@@ -64,7 +64,7 @@
           "description": "Supported databases. Required for app-level and extend-level plugins, optional for capability-level plugins without models.",
           "items": {
             "type": "string",
-            "enum": ["mysql", "postgresql"]
+            "enum": ["postgresql"]
           },
           "x-tombi-array-values-order": "ascending"
         },

@@ -2,7 +2,7 @@ import sqlalchemy as sa
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.common.model import Base, UniversalText, id_key
+from backend.common.model import Base, id_key
 
 
 class DictType(Base):
@@ -17,4 +17,4 @@ class DictType(Base):
     id: Mapped[id_key] = mapped_column(init=False)
     name: Mapped[str] = mapped_column(sa.String(32), comment='字典类型名称')
     code: Mapped[str] = mapped_column(sa.String(32), comment='字典类型编码')
-    remark: Mapped[str | None] = mapped_column(UniversalText, default=None, comment='备注')
+    remark: Mapped[str | None] = mapped_column(sa.Text, default=None, comment='备注')

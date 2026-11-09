@@ -10,7 +10,6 @@
 
 [![GitHub](https://img.shields.io/github/license/fastapi-practices/fastapi_best_architecture)](https://github.com/fastapi-practices/fastapi_best_architecture/blob/master/LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/downloads/)
-![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-%2300758f)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16.0%2B-%23336791)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-%23778877)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)

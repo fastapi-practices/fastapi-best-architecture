@@ -4,7 +4,7 @@ import sqlalchemy as sa
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.common.model import DataClassBase, TimeZone, UniversalText, id_key
+from backend.common.model import DataClassBase, id_key
 from backend.utils.timezone import timezone
 
 
@@ -25,10 +25,10 @@ class LoginLog(DataClassBase):
     os: Mapped[str | None] = mapped_column(sa.String(64), comment='操作系统')
     browser: Mapped[str | None] = mapped_column(sa.String(64), comment='浏览器')
     device: Mapped[str | None] = mapped_column(sa.String(64), comment='设备')
-    msg: Mapped[str] = mapped_column(UniversalText, comment='提示消息')
-    login_time: Mapped[datetime] = mapped_column(TimeZone, comment='登录时间')
+    msg: Mapped[str] = mapped_column(sa.Text, comment='提示消息')
+    login_time: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), comment='登录时间')
     created_time: Mapped[datetime] = mapped_column(
-        TimeZone,
+        sa.DateTime(timezone=True),
         init=False,
         default_factory=timezone.now,
         comment='创建时间',

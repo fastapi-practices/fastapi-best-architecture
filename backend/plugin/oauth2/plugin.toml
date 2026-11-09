@@ -5,7 +5,7 @@ fba_version = "~=1.17"
 description = "支持 GitHub、Google 等社交平台登录"
 author = "wu-clan"
 tags = ["auth"]
-database = ["mysql", "postgresql"]
+database = ["postgresql"]
 
 [app]
 router = ["v1"]

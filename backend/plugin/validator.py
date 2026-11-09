@@ -14,7 +14,7 @@ from backend.utils.pattern_validate import match_string
 _VALID_TAGS: Final = frozenset({'ai', 'mcp', 'agent', 'auth', 'storage', 'notification', 'task', 'payment', 'other'})
 
 # 支持的数据库类型
-_VALID_DATABASES: Final = frozenset({'mysql', 'postgresql'})
+_VALID_DATABASES: Final = frozenset({'postgresql'})
 
 
 def _validate_settings(v: dict[str, Any]) -> dict[str, Any]:
@@ -271,27 +271,15 @@ def validate_plugin_files(plugin_name: str, config: dict[str, Any]) -> None:
     if not config['plugin'].get('database'):
         raise PluginConfigError(f'插件 {plugin_name} 包含 model 目录时必须声明支持的数据库')
 
-    sql_dir = plugin_dir / 'sql'
-    supported_db_types = []
-    missing_details = []
-    for db_type in ('mysql', 'postgresql'):
-        db_sql_dir = sql_dir / db_type
-        required_sql_files = (
-            db_sql_dir / 'init.sql',
-            db_sql_dir / 'destroy.sql',
-            db_sql_dir / 'init_snowflake.sql',
-            db_sql_dir / 'destroy_snowflake.sql',
-        )
-        missing_files = [
-            str(sql_file.relative_to(plugin_dir)) for sql_file in required_sql_files if not sql_file.is_file()
-        ]
-        if not missing_files:
-            supported_db_types.append(db_type)
-            continue
-
-        missing_details.append(f'{db_type}: {", ".join(missing_files)}')
-
-    if not supported_db_types:
+    sql_dir = plugin_dir / 'sql' / 'postgresql'
+    required_sql_files = (
+        sql_dir / 'init.sql',
+        sql_dir / 'destroy.sql',
+        sql_dir / 'init_snowflake.sql',
+        sql_dir / 'destroy_snowflake.sql',
+    )
+    missing_files = [str(sql_file.relative_to(plugin_dir)) for sql_file in required_sql_files if not sql_file.is_file()]
+    if missing_files:
         raise PluginConfigError(
-            f'插件 {plugin_name} 必须至少提供一种数据库的初始化和销毁 SQL 脚本，当前缺失: {"; ".join(missing_details)}'
+            f'插件 {plugin_name} 缺少 PostgreSQL 的初始化和销毁 SQL 脚本，当前缺失: {", ".join(missing_files)}'
         )

@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from backend.common.enums import DataBaseType
 from backend.common.log import log
 from backend.common.model import MappedBase
 from backend.common.observability.prometheus.sqlalchemy import observe_sqlalchemy_pool_connections
@@ -33,19 +32,16 @@ def get_database_url(*, unittest: bool = False, with_database: bool = True) -> U
     if with_database:
         database = settings.DATABASE_SCHEMA if not unittest else f'{settings.DATABASE_SCHEMA}_test'
     else:
-        database = None if DataBaseType.mysql == settings.DATABASE_TYPE else 'postgres'
+        database = 'postgres'
 
-    url = URL.create(
-        drivername='mysql+asyncmy' if DataBaseType.mysql == settings.DATABASE_TYPE else 'postgresql+asyncpg',
+    return URL.create(
+        drivername='postgresql+asyncpg',
         username=settings.DATABASE_USER,
         password=settings.DATABASE_PASSWORD,
         host=settings.DATABASE_HOST,
         port=settings.DATABASE_PORT,
         database=database,
     )
-    if DataBaseType.mysql == settings.DATABASE_TYPE and with_database:
-        url = url.update_query_dict({'charset': settings.DATABASE_CHARSET})
-    return url
 
 
 def create_database_async_engine(url: str | URL) -> AsyncEngine:
