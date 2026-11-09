@@ -21,8 +21,6 @@ anyio==4.16.0
     #   watchfiles
 asgiref==3.13.0
     # via fastapi-best-architecture
-asyncmy==0.2.17
-    # via fastapi-best-architecture
 asyncpg==0.32.0
     # via fastapi-best-architecture
 bcrypt==5.0.0
@@ -293,8 +291,6 @@ pygments==2.21.0
     #   pytest
     #   rich
 pyjwt==2.15.1
-    # via fastapi-best-architecture
-pymysql==1.2.3
     # via fastapi-best-architecture
 pytest==9.2.0
     # via pytest-sugar

@@ -4,7 +4,7 @@ import sqlalchemy as sa
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.common.model import Base, TimeZone, id_key
+from backend.common.model import Base, id_key
 from backend.database.db import uuid4_str
 from backend.utils.timezone import timezone
 
@@ -32,12 +32,14 @@ class User(Base):
     is_superuser: Mapped[bool] = mapped_column(default=False, comment='超级权限(0否 1是)')
     is_staff: Mapped[bool] = mapped_column(default=False, comment='后台管理登陆(0否 1是)')
     is_multi_login: Mapped[bool] = mapped_column(default=False, comment='是否重复登陆(0否 1是)')
-    join_time: Mapped[datetime] = mapped_column(TimeZone, init=False, default_factory=timezone.now, comment='注册时间')
+    join_time: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), init=False, default_factory=timezone.now, comment='注册时间'
+    )
     last_login_time: Mapped[datetime | None] = mapped_column(
-        TimeZone, init=False, onupdate=timezone.now, comment='上次登录时间'
+        sa.DateTime(timezone=True), init=False, onupdate=timezone.now, comment='上次登录时间'
     )
     last_password_changed_time: Mapped[datetime | None] = mapped_column(
-        TimeZone, init=False, default_factory=timezone.now, comment='上次密码变更时间'
+        sa.DateTime(timezone=True), init=False, default_factory=timezone.now, comment='上次密码变更时间'
     )
 
     # 逻辑外键

@@ -2,7 +2,7 @@ import sqlalchemy as sa
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.common.model import Base, UniversalText, id_key
+from backend.common.model import Base, id_key
 
 
 class CodeGenBusiness(Base):
@@ -26,4 +26,4 @@ class CodeGenBusiness(Base):
     api_version: Mapped[str] = mapped_column(sa.String(32), default='v1', comment='API 版本')
     tag: Mapped[str | None] = mapped_column(sa.String(64), default=None, comment='API 标签')
     gen_path: Mapped[str | None] = mapped_column(sa.String(256), default=None, comment='生成路径')
-    remark: Mapped[str | None] = mapped_column(UniversalText, default=None, comment='备注')
+    remark: Mapped[str | None] = mapped_column(sa.Text, default=None, comment='备注')

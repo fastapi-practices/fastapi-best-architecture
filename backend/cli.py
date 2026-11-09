@@ -24,7 +24,7 @@ from watchfiles import Change, PythonFilter
 
 from backend import __version__
 from backend.common.dataclasses import PluginEntry
-from backend.common.enums import DataBaseType, PrimaryKeyType
+from backend.common.enums import PrimaryKeyType
 from backend.common.exception.errors import BaseExceptionError
 from backend.common.model import MappedBase
 from backend.core.conf import settings
@@ -33,7 +33,6 @@ from backend.core.path_conf import (
     ENV_EXAMPLE_FILE_PATH,
     ENV_FILE_PATH,
     LOCALE_DIR,
-    MYSQL_SCRIPT_DIR,
     PLUGIN_DIR,
     POSTGRESQL_SCRIPT_DIR,
     RELOAD_LOCK_FILE,
@@ -91,10 +90,9 @@ def setup_env_file() -> bool:
     try:
         env_content = Path(ENV_EXAMPLE_FILE_PATH).read_text(encoding='utf-8')
         console.note('配置数据库连接信息...')
-        db_type = Prompt.ask('数据库类型', choices=['mysql', 'postgresql'], default='postgresql')
         db_host = Prompt.ask('数据库主机', default='127.0.0.1')
-        db_port = Prompt.ask('数据库端口', default='5432' if db_type == 'postgresql' else '3306')
-        db_user = Prompt.ask('数据库用户名', default='postgres' if db_type == 'postgresql' else 'root')
+        db_port = Prompt.ask('数据库端口', default='5432')
+        db_user = Prompt.ask('数据库用户名', default='postgres')
         db_password = Prompt.ask('数据库密码', password=True, default='123456')
         console.note('配置 Redis 连接信息...')
         redis_host = Prompt.ask('Redis 主机', default='127.0.0.1')
@@ -104,8 +102,6 @@ def setup_env_file() -> bool:
         console.info('生成 Token 密钥...')
         token_secret = secrets.token_urlsafe(32)
         console.info('写入 .env 文件...')
-        env_content = env_content.replace("DATABASE_TYPE='postgresql'", f"DATABASE_TYPE='{db_type}'")
-        settings.DATABASE_TYPE = db_type
         env_content = env_content.replace("DATABASE_HOST='127.0.0.1'", f"DATABASE_HOST='{db_host}'")
         settings.DATABASE_HOST = db_host
         env_content = env_content.replace('DATABASE_PORT=5432', f'DATABASE_PORT={db_port}')
@@ -136,28 +132,18 @@ def setup_env_file() -> bool:
 async def create_database(conn: AsyncConnection) -> bool:
     """创建或重建数据库"""
     try:
-        terminate_sql = None
-        if DataBaseType.mysql == settings.DATABASE_TYPE:
-            check_sql = f"SHOW DATABASES LIKE '{settings.DATABASE_SCHEMA}'"
-            drop_sql = f'DROP DATABASE IF EXISTS `{settings.DATABASE_SCHEMA}`'
-            create_sql = (
-                f'CREATE DATABASE `{settings.DATABASE_SCHEMA}` CHARACTER SET {settings.DATABASE_CHARSET} '
-                f'COLLATE {settings.DATABASE_CHARSET}_unicode_ci'
-            )
-        else:
-            check_sql = f"SELECT 1 FROM pg_database WHERE datname = '{settings.DATABASE_SCHEMA}'"
-            drop_sql = f'DROP DATABASE IF EXISTS {settings.DATABASE_SCHEMA}'
-            create_sql = f'CREATE DATABASE {settings.DATABASE_SCHEMA}'
-            terminate_sql = (
-                f'SELECT pg_terminate_backend(pid) FROM pg_stat_activity '
-                f"WHERE datname = '{settings.DATABASE_SCHEMA}' AND pid <> pg_backend_pid()"
-            )
+        check_sql = f"SELECT 1 FROM pg_database WHERE datname = '{settings.DATABASE_SCHEMA}'"
+        drop_sql = f'DROP DATABASE IF EXISTS {settings.DATABASE_SCHEMA}'
+        create_sql = f'CREATE DATABASE {settings.DATABASE_SCHEMA}'
+        terminate_sql = (
+            f'SELECT pg_terminate_backend(pid) FROM pg_stat_activity '
+            f"WHERE datname = '{settings.DATABASE_SCHEMA}' AND pid <> pg_backend_pid()"
+        )
         result = await conn.execute(text(check_sql))
         exists = result.fetchone() is not None
         console.note(f'重建 {settings.DATABASE_SCHEMA} 数据库...')
         if exists:
-            if terminate_sql:
-                await conn.execute(text(terminate_sql))
+            await conn.execute(text(terminate_sql))
             await conn.execute(text(drop_sql))
         await conn.execute(text(create_sql))
         console.tip('数据库创建成功')
@@ -172,9 +158,7 @@ def _build_db_config_panel_content() -> Text:
     """构建数据库配置面板内容"""
     panel_content = Text()
     panel_content.append('【数据库配置】', style='bold green')
-    panel_content.append('\n\n  • 类型: ')
-    panel_content.append(f'{settings.DATABASE_TYPE}', style='yellow')
-    panel_content.append('\n  • 主机：')
+    panel_content.append('\n\n  • 主机：')
     panel_content.append(f'{settings.DATABASE_HOST}:{settings.DATABASE_PORT}', style='yellow')
     panel_content.append('\n  • 数据库：')
     panel_content.append(f'{settings.DATABASE_SCHEMA}', style='yellow')
@@ -363,7 +347,6 @@ async def install_plugin(  # ruff:ignore[complex-structure]
     repo_url: str | None,
     frontend: bool,  # ruff:ignore[boolean-type-hint-positional-argument]
     no_sql: bool,  # ruff:ignore[boolean-type-hint-positional-argument]
-    db_type: DataBaseType,
     pk_type: PrimaryKeyType,
 ) -> None:
     """安装插件"""
@@ -400,7 +383,7 @@ async def install_plugin(  # ruff:ignore[complex-structure]
                 conn = await db.connection()
                 await conn.run_sync(MappedBase.metadata.create_all)
         if not no_sql:
-            sql_file = await get_plugin_sql(plugin_name, db_type, pk_type)
+            sql_file = await get_plugin_sql(plugin_name, pk_type)
             if sql_file:
                 console.info(f'正在执行插件 {plugin_name} 初始化 SQL 脚本：{sql_file}')
                 async with async_db_session.begin() as db:
@@ -471,7 +454,7 @@ async def remove_plugin(plugin: str | None, *, no_sql: bool = False) -> None:  #
         if not plugin_dir.exists():
             raise cappa.Exit(f'插件 {plugin} 不存在', code=1)
         if not no_sql:
-            destroy_sql_file = await get_plugin_destroy_sql(plugin, settings.DATABASE_TYPE, settings.DATABASE_PK_MODE)
+            destroy_sql_file = await get_plugin_destroy_sql(plugin, settings.DATABASE_PK_MODE)
             if destroy_sql_file:
                 console.note(f'正在执行插件 {plugin} 销毁 SQL 脚本：{destroy_sql_file}')
                 async with async_db_session.begin() as db:
@@ -519,8 +502,7 @@ async def remove_plugin(plugin: str | None, *, no_sql: bool = False) -> None:  #
 async def get_sql_scripts() -> list[str]:
     """获取所有待执行的 SQL 脚本路径列表"""
     sql_scripts: list[str] = []
-    db_script_dir = MYSQL_SCRIPT_DIR if DataBaseType.mysql == settings.DATABASE_TYPE else POSTGRESQL_SCRIPT_DIR
-    main_sql_file = db_script_dir / build_sql_filename(
+    main_sql_file = POSTGRESQL_SCRIPT_DIR / build_sql_filename(
         'init',
         settings.DATABASE_PK_MODE,
         suffix='test_data',
@@ -537,7 +519,7 @@ async def get_sql_scripts() -> list[str]:
         plugins.append(PluginEntry(name=plugin, depends_on=plugin_config['plugin'].get('depends_on')))
 
     for plugin in resolve_plugin_order(plugins):
-        plugin_sql = await get_plugin_sql(plugin.name, settings.DATABASE_TYPE, settings.DATABASE_PK_MODE)
+        plugin_sql = await get_plugin_sql(plugin.name, settings.DATABASE_PK_MODE)
         if plugin_sql:
             sql_scripts.append(plugin_sql)
 
@@ -730,17 +712,13 @@ class Add:
         bool,
         cappa.Arg(default=False, help='禁用插件 SQL 脚本自动执行'),
     ]
-    db_type: Annotated[
-        DataBaseType,
-        cappa.Arg(default=settings.DATABASE_TYPE, help='执行插件 SQL 脚本的数据库类型'),
-    ]
     pk_type: Annotated[
         PrimaryKeyType,
         cappa.Arg(default=settings.DATABASE_PK_MODE, help='执行插件 SQL 脚本数据库主键类型'),
     ]
 
     async def __call__(self) -> None:
-        await install_plugin(self.path, self.repo_url, self.frontend, self.no_sql, self.db_type, self.pk_type)
+        await install_plugin(self.path, self.repo_url, self.frontend, self.no_sql, self.pk_type)
 
 
 @cappa.command(help='移除插件')

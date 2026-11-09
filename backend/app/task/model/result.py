@@ -4,7 +4,7 @@ import sqlalchemy as sa
 
 from celery import states
 
-from backend.common.model import MappedBase, TimeZone
+from backend.common.model import MappedBase
 from backend.utils.timezone import timezone
 
 
@@ -19,7 +19,7 @@ class Task(MappedBase):
     status = sa.Column(sa.String(64), default=states.PENDING)
     result = sa.Column(sa.LargeBinary, nullable=True)
     date_done = sa.Column(
-        TimeZone,
+        sa.DateTime(timezone=True),
         default=timezone.now,
         onupdate=timezone.now,
         nullable=True,
@@ -95,7 +95,7 @@ class TaskSet(MappedBase):
     id = sa.Column(sa.Integer, sa.Sequence('taskset_id_sequence'), autoincrement=True, primary_key=True)
     taskset_id = sa.Column(sa.String(155), unique=True)
     result = sa.Column(sa.LargeBinary, nullable=True)
-    date_done = sa.Column(TimeZone, default=timezone.now, nullable=True)
+    date_done = sa.Column(sa.DateTime(timezone=True), default=timezone.now, nullable=True)
 
     def __init__(self, taskset_id, result) -> None:  # ruff:ignore[missing-type-function-argument]
         self.taskset_id = taskset_id

@@ -11,7 +11,6 @@ from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from sqlalchemy import URL
 
 from backend.app.task.tasks.beat import get_local_beat_schedule
-from backend.common.enums import DataBaseType
 from backend.common.observability.otel import init_resource, init_tracer
 from backend.core.conf import settings
 from backend.core.path_conf import BASE_PATH
@@ -74,9 +73,7 @@ def init_celery() -> celery.Celery:
         ).render_as_string(hide_password=False)
 
     database_url = get_database_url()
-    result_backend = database_url.set(
-        drivername='mysql+pymysql' if DataBaseType.mysql == settings.DATABASE_TYPE else 'postgresql+psycopg'
-    ).render_as_string(hide_password=False)
+    result_backend = database_url.set(drivername='postgresql+psycopg').render_as_string(hide_password=False)
     result_backend = f'db+{result_backend}'
 
     # https://docs.celeryq.dev/en/stable/userguide/configuration.html

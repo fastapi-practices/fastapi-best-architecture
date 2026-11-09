@@ -2,12 +2,10 @@ from collections.abc import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.common.enums import DataBaseType
 from backend.common.exception import errors
-from backend.core.conf import settings
 from backend.plugin.code_generator.crud.crud_business import code_gen_business_dao
 from backend.plugin.code_generator.crud.crud_column import code_gen_column_dao
-from backend.plugin.code_generator.enums import GenMySQLColumnType, GenPostgreSQLColumnType
+from backend.plugin.code_generator.enums import GenPostgreSQLColumnType
 from backend.plugin.code_generator.model import CodeGenColumn
 from backend.plugin.code_generator.schema.column import CreateCodeGenColumnParam, UpdateCodeGenColumnParam
 from backend.plugin.code_generator.utils.type_conversion import sql_type_to_pydantic
@@ -35,10 +33,7 @@ class CodeGenColumnService:
     @staticmethod
     async def get_types() -> list[str]:
         """获取所有列类型"""
-        if DataBaseType.mysql == settings.DATABASE_TYPE:
-            types = GenMySQLColumnType.get_member_keys()
-        else:
-            types = GenPostgreSQLColumnType.get_member_keys()
+        types = GenPostgreSQLColumnType.get_member_keys()
         types.sort()
         return types
 

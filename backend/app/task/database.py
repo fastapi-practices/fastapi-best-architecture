@@ -152,8 +152,7 @@ class DatabaseBackend(BaseBackend):
             if task:
                 # Lock the row and read it again, so a run that stores SUCCESS
                 # at the same time can't be written over. Only an existing row
-                # is locked: on MySQL, locking a missing row takes a gap lock,
-                # which deadlocks concurrent inserts.
+                # is locked, so a missing row never blocks concurrent inserts.
                 task = self._query_task(session, task_id, for_update=True)
             if not task:
                 task = self.task_cls(task_id)

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.common.enums import StatusType
 from backend.common.exception import errors
-from backend.common.model import Base, TimeZone, UniversalText, id_key
+from backend.common.model import Base, id_key
 from backend.core.conf import settings
 from backend.database.redis import redis_client
 from backend.utils.timezone import timezone
@@ -33,8 +33,8 @@ class TaskScheduler(Base):
     queue: Mapped[str | None] = mapped_column(sa.String(256), comment='CELERY_TASK_QUEUES 中定义的队列')
     exchange: Mapped[str | None] = mapped_column(sa.String(256), comment='低级别 AMQP 路由的交换机')
     routing_key: Mapped[str | None] = mapped_column(sa.String(256), comment='低级别 AMQP 路由的路由密钥')
-    start_time: Mapped[datetime | None] = mapped_column(TimeZone, comment='任务开始触发的时间')
-    expire_time: Mapped[datetime | None] = mapped_column(TimeZone, comment='任务不再触发的截止时间')
+    start_time: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), comment='任务开始触发的时间')
+    expire_time: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), comment='任务不再触发的截止时间')
     expire_seconds: Mapped[int | None] = mapped_column(comment='任务不再触发的秒数时间差')
     type: Mapped[int] = mapped_column(comment='调度类型（0间隔 1定时）')
     interval_every: Mapped[int | None] = mapped_column(comment='任务再次运行前的间隔周期数')
@@ -43,8 +43,10 @@ class TaskScheduler(Base):
     one_off: Mapped[bool] = mapped_column(default=False, comment='是否仅运行一次')
     status: Mapped[int] = mapped_column(default=StatusType.enable.value, comment='状态（0停用 1正常）')
     total_run_count: Mapped[int] = mapped_column(default=0, comment='任务触发的总次数')
-    last_run_time: Mapped[datetime | None] = mapped_column(TimeZone, default=None, comment='任务最后触发的时间')
-    remark: Mapped[str | None] = mapped_column(UniversalText, default=None, comment='备注')
+    last_run_time: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), default=None, comment='任务最后触发的时间'
+    )
+    remark: Mapped[str | None] = mapped_column(sa.Text, default=None, comment='备注')
 
     no_changes: bool = False
     # 持有后台任务引用，避免 create_task 返回的任务在执行前被回收
