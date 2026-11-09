@@ -55,7 +55,7 @@ from backend.plugin.installer import install_git_frontend_plugin, install_git_pl
 from backend.plugin.installer import remove_plugin as _remove_plugin
 from backend.plugin.requirements import install_requirements_async, uninstall_requirements_async
 from backend.plugin.sql import build_sql_filename, get_plugin_destroy_sql, get_plugin_sql
-from backend.plugin.validator import validate_plugin_config
+from backend.plugin.validator import validate_plugin_config, validate_plugin_files
 from backend.utils.console import console
 from backend.utils.dynamic_import import import_module_cached
 from backend.utils.sql_parser import parse_sql_script
@@ -531,8 +531,9 @@ async def get_sql_scripts() -> list[str]:
 
     plugins = []
     for plugin in get_plugins():
-        plugin_config = load_plugin_config(plugin)
+        plugin_config = await load_plugin_config(plugin)
         validate_plugin_config(plugin, plugin_config)
+        validate_plugin_files(plugin, plugin_config)
         plugins.append(PluginEntry(name=plugin, depends_on=plugin_config['plugin'].get('depends_on')))
 
     for plugin in resolve_plugin_order(plugins):
