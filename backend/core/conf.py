@@ -280,11 +280,6 @@ class Settings(BaseSettings):
     CELERY_TASK_MAX_RETRIES: int = 5
 
     ##################################################
-    # [ Plugin ] code_generator
-    ##################################################
-    CODE_GENERATOR_DOWNLOAD_ZIP_FILENAME: str
-
-    ##################################################
     # [ Plugin ] oauth2
     ##################################################
     # .env
