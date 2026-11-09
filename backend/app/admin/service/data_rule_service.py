@@ -3,6 +3,7 @@ from typing import Any
 
 from sqlalchemy import Table
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from backend.app.admin.crud.crud_data_rule import data_rule_dao
 from backend.app.admin.model import DataRule
@@ -42,9 +43,8 @@ class DataRuleService:
     async def get_models() -> list[str]:
         """获取所有数据规则可用模型"""
         model_template_variables = [var['key'] for var in settings.DATA_PERMISSION_MODEL_TEMPLATE_VARIABLES]
-        models = [
-            m for m in list(get_data_permission_models().keys()) if m not in settings.DATA_PERMISSION_MODEL_EXCLUDE
-        ]
+        available_models = await run_in_threadpool(get_data_permission_models)
+        models = [m for m in available_models if m not in settings.DATA_PERMISSION_MODEL_EXCLUDE]
         return model_template_variables + models
 
     @staticmethod
@@ -53,7 +53,7 @@ class DataRuleService:
         return [GetDataRuleTemplateVariableDetail(**var) for var in settings.DATA_PERMISSION_TEMPLATE_VARIABLES]
 
     @staticmethod
-    async def get_columns(model: str) -> list[GetDataRuleColumnDetail]:
+    async def get_columns(*, model: str) -> list[GetDataRuleColumnDetail]:
         """
         获取数据规则可用模型的字段列表
 
@@ -69,7 +69,7 @@ class DataRuleService:
         if model in model_template_variable_keys:
             return column_template_variables
 
-        available_models = get_data_permission_models()
+        available_models = await run_in_threadpool(get_data_permission_models)
         if model not in available_models:
             raise errors.NotFoundError(msg=t('error.data_rule.model_not_found'))
         model_ins = available_models[model]

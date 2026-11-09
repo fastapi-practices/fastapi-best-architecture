@@ -29,7 +29,7 @@ from backend.app.admin.utils.password_security import get_hash_password
 from backend.common.enums import StatusType
 from backend.common.exception import errors
 from backend.common.i18n import t
-from backend.plugin.core import check_plugin_installed
+from backend.plugin.core import check_plugin_installed_async
 from backend.utils.serializers import select_join_serialize
 from backend.utils.timezone import timezone
 
@@ -322,7 +322,7 @@ class CRUDUser(CRUDPlus[User]):
         :param user_id: 用户 ID
         :return:
         """
-        if check_plugin_installed('oauth2'):
+        if await check_plugin_installed_async('oauth2'):
             try:
                 from backend.plugin.oauth2.crud.crud_user_social import user_social_dao
 

@@ -30,6 +30,16 @@ def check_plugin_installed(plugin_name: str) -> bool:
     return (PLUGIN_DIR / plugin_name / '__init__.py').exists()
 
 
+async def check_plugin_installed_async(plugin_name: str) -> bool:
+    """
+    异步检查插件是否已安装
+
+    :param plugin_name: 插件名称
+    :return:
+    """
+    return await anyio.Path(PLUGIN_DIR / plugin_name / '__init__.py').exists()
+
+
 def get_required_plugins() -> tuple[str, ...]:
     """获取必需插件列表"""
     required_plugins = list(settings.PLUGIN_REQUIRED)
