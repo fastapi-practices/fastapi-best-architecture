@@ -1,10 +1,12 @@
 from pathlib import Path
 from typing import Any, Final
 
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.common.enums import PluginLevelType
 from backend.core.path_conf import PLUGIN_DIR
+from backend.plugin.compatibility import validate_fba_compatibility
 from backend.plugin.errors import PluginConfigError
 from backend.utils.pattern_validate import match_string
 
@@ -40,6 +42,7 @@ class PluginInfoSchema(BaseModel):
     icon: str | None = Field(None, description='图标路径或链接地址')
     summary: str = Field(..., min_length=1, max_length=100, description='摘要')
     version: str = Field(..., description='版本号')
+    fba_version: str = Field(..., description='适配的 fba 版本声明，PEP 440 版本规范，如 >=1.17.0,<2.0.0')
     description: str = Field(..., min_length=1, max_length=500, description='描述')
     author: str = Field(..., min_length=1, max_length=50, description='作者')
     tags: list[str] = Field(..., min_length=1, description='标签')
@@ -52,6 +55,21 @@ class PluginInfoSchema(BaseModel):
         """校验版本号格式"""
         if not match_string(r'^\d+\.\d+\.\d+$', v):
             raise PluginConfigError(f'版本号格式错误，应为 x.y.z 格式，如 1.0.0，当前值: {v}')
+        return v
+
+    @field_validator('fba_version')
+    @classmethod
+    def validate_fba_version(cls, v: str) -> str:
+        """校验 fba 版本声明"""
+        if not v.strip():
+            raise PluginConfigError('fba 版本声明不能为空')
+        try:
+            SpecifierSet(v)
+        except InvalidSpecifier as e:
+            raise PluginConfigError(
+                f'fba 版本声明格式错误，应为 PEP 440 版本声明，'
+                f'如 ">=1.17.0"、">=1.17.0,<2.0.0"、"~=1.17"、"==1.17.0"，当前值: {v}'
+            ) from e
         return v
 
     @field_validator('tags')
@@ -225,6 +243,8 @@ def validate_plugin_config(plugin_name: str, config: dict[str, Any]) -> PluginLe
                 error_details.append(f'{loc}: {msg}')
             error_msg = '; '.join(error_details)
         raise PluginConfigError(f'插件 {plugin_name} 配置校验失败: {error_msg}') from e
+
+    validate_fba_compatibility(plugin_name, config['plugin']['fba_version'])
 
     depends_on = config['plugin'].get('depends_on', [])
     if plugin_name in depends_on:
