@@ -515,7 +515,7 @@ async def get_sql_scripts() -> list[str]:
     for plugin in get_plugins():
         plugin_config = await load_plugin_config(plugin)
         validate_plugin_config(plugin, plugin_config)
-        validate_plugin_files(plugin, plugin_config)
+        validate_plugin_files(plugin)
         plugins.append(PluginEntry(name=plugin, depends_on=plugin_config['plugin'].get('depends_on')))
 
     for plugin in resolve_plugin_order(plugins):

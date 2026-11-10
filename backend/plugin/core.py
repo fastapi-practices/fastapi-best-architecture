@@ -131,7 +131,7 @@ def parse_plugin_config() -> tuple[list[PluginEntry], list[PluginEntry]]:
         for plugin in plugins:
             plugin_config = run_await(load_plugin_config)(plugin)
             plugin_type = validate_plugin_config(plugin, plugin_config)
-            validate_plugin_files(plugin, plugin_config)
+            validate_plugin_files(plugin)
 
             # 补充插件信息
             plugin_config['plugin']['name'] = plugin

@@ -8,13 +8,11 @@ from backend.common.enums import PluginLevelType
 from backend.core.path_conf import PLUGIN_DIR
 from backend.plugin.compatibility import validate_fba_compatibility
 from backend.plugin.errors import PluginConfigError
+from backend.utils.dynamic_import import get_model_tables
 from backend.utils.pattern_validate import match_string
 
 # 支持的标签类型
 _VALID_TAGS: Final = frozenset({'ai', 'mcp', 'agent', 'auth', 'storage', 'notification', 'task', 'payment', 'other'})
-
-# 支持的数据库类型
-_VALID_DATABASES: Final = frozenset({'postgresql'})
 
 
 def _validate_settings(v: dict[str, Any]) -> dict[str, Any]:
@@ -46,7 +44,6 @@ class PluginInfoSchema(BaseModel):
     description: str = Field(..., min_length=1, max_length=500, description='描述')
     author: str = Field(..., min_length=1, max_length=50, description='作者')
     tags: list[str] = Field(..., min_length=1, description='标签')
-    database: list[str] = Field(..., min_length=1, description='数据库支持')
     depends_on: list[str] = Field(default_factory=list, description='依赖的插件列表')
 
     @field_validator('version')
@@ -84,18 +81,6 @@ class PluginInfoSchema(BaseModel):
                 )
         return v
 
-    @field_validator('database')
-    @classmethod
-    def validate_database(cls, v: list[str]) -> list[str]:
-        """校验数据库类型"""
-        if v:
-            invalid_dbs = set(v) - _VALID_DATABASES
-            if invalid_dbs:
-                raise PluginConfigError(
-                    f'数据库类型无效: {", ".join(invalid_dbs)}，支持的数据库: {", ".join(sorted(_VALID_DATABASES))}'
-                )
-        return v
-
     @field_validator('depends_on')
     @classmethod
     def validate_depends_on(cls, v: list[str]) -> list[str]:
@@ -108,8 +93,6 @@ class PluginInfoSchema(BaseModel):
 
 class CapabilityPluginInfoSchema(PluginInfoSchema):
     """能力型插件信息模型"""
-
-    database: list[str] = Field(default_factory=list, description='数据库支持')
 
 
 class AppPluginAppSchema(BaseModel):
@@ -253,23 +236,24 @@ def validate_plugin_config(plugin_name: str, config: dict[str, Any]) -> PluginLe
     return plugin_level
 
 
-def validate_plugin_files(plugin_name: str, config: dict[str, Any]) -> None:
+def validate_plugin_files(plugin_name: str) -> None:
     """
     校验插件文件完整性
 
-    检查插件声明的数据库与 SQL 脚本是否齐备
+    插件是否涉及数据库由其是否定义 ORM 表自动判定，无需在清单中声明：
+
+    - 定义了 ORM 表：必须提供完整的 PostgreSQL 初始化与销毁脚本
+    - 未定义表但提供了 sql 目录：脚本同样必须完整
+    - 既没有表也没有 sql 目录：纯能力插件，无需任何数据库脚本
 
     :param plugin_name: 插件名称
-    :param config: 插件配置
     :return:
     """
     plugin_dir = Path(PLUGIN_DIR) / plugin_name
-    model_dir = plugin_dir / 'model'
-    if not model_dir.is_dir():
+    has_tables = bool(get_model_tables(f'backend.plugin.{plugin_name}.model'))
+    has_sql_dir = (plugin_dir / 'sql').is_dir()
+    if not has_tables and not has_sql_dir:
         return
-
-    if not config['plugin'].get('database'):
-        raise PluginConfigError(f'插件 {plugin_name} 包含 model 目录时必须声明支持的数据库')
 
     sql_dir = plugin_dir / 'sql' / 'postgresql'
     required_sql_files = (

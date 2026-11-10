@@ -5,7 +5,6 @@ fba_version = "~=1.17"
 description = "提供邮件发送功能，支持验证码、通知等场景"
 author = "wu-clan"
 tags = ["other"]
-database = ["postgresql"]
 
 [app]
 router = ["v1"]

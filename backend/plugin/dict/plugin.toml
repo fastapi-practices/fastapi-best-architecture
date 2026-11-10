@@ -5,7 +5,6 @@ fba_version = "~=1.17"
 description = "通常用于约束前端工程数据展示"
 author = "wu-clan"
 tags = ["other"]
-database = ["postgresql"]
 
 [app]
 extend = "admin"
