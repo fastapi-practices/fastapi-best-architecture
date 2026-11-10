@@ -5,7 +5,6 @@ fba_version = "~=1.17"
 description = "用于发布系统内部通知、公告"
 author = "wu-clan"
 tags = ["other"]
-database = ["postgresql"]
 
 [app]
 extend = "admin"
