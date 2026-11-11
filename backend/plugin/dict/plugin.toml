@@ -1,7 +1,7 @@
 [plugin]
 summary = "数据字典"
 version = "0.0.8"
-fba_version = "~=1.17"
+fba_version = ">=2.0.0,<3.0.0"
 description = "通常用于约束前端工程数据展示"
 author = "wu-clan"
 tags = ["other"]
