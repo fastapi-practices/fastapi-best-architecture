@@ -235,12 +235,6 @@ class Settings(BaseSettings):
     OPERA_LOG_QUEUE_DRAIN_TIMEOUT: int = 10  # 停止时排空队列的最长等待时间
     OPERA_LOG_BODY_MAX_SIZE: int = 10240  # 10 KB
 
-    # 租户
-    # 租户是可选能力，默认关闭；开启后需要安装 tenant 插件
-    TENANT_ENABLED: bool = False
-    TENANT_DEFAULT_ID: int = 0
-    TENANT_ADMIN_DEFAULT_ROLE_NAME: str = '租户管理员'
-
     # Plugin 配置
     PLUGIN_REQUIRED: list[str] = ['dict']
     PLUGIN_PIP_CHINA: bool = True
@@ -315,6 +309,14 @@ class Settings(BaseSettings):
     EMAIL_SSL: bool
     EMAIL_CAPTCHA_REDIS_PREFIX: str
     EMAIL_CAPTCHA_EXPIRE_SECONDS: int
+
+    ##################################################
+    # [ Plugin ] tenant
+    ##################################################
+    # 基础配置（in plugin.toml）
+    TENANT_ADMIN_DEFAULT_ROLE_NAME: str = '租户管理员'
+    TENANT_DEFAULT_ID: int = 0
+    TENANT_ENABLED: bool = False  # 租户是可选能力，开启后需要安装 tenant 插件
 
     @model_validator(mode='before')
     @classmethod
