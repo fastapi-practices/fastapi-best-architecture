@@ -58,7 +58,7 @@ class NewToken:
 @dataclasses.dataclass
 class TokenPayload:
     user_id: int
-    tenant_id: int
+    tenant_id: int | None
     session_uuid: str
     expire_time: datetime
 

@@ -2,8 +2,8 @@ import sqlalchemy as sa
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.common.model import Base, TenantMixin, id_key
-from backend.core.conf import settings
+from backend.common.model import Base, id_key
+from backend.common.tenant import TenantMixin, tenant_unique_columns
 
 
 class Role(Base, TenantMixin):
@@ -11,16 +11,10 @@ class Role(Base, TenantMixin):
 
     __tablename__ = 'sys_role'
 
-    if settings.TENANT_ENABLED:
-        __table_args__ = (
-            sa.UniqueConstraint('name', 'tenant_id', 'deleted', name='uk_sys_role_name_tenant_deleted'),
-            {'comment': '角色表'},
-        )
-    else:
-        __table_args__ = (
-            sa.UniqueConstraint('name', 'deleted', name='uk_sys_role_name_deleted'),
-            {'comment': '角色表'},
-        )
+    __table_args__ = (
+        sa.UniqueConstraint(*tenant_unique_columns('name'), name='uk_sys_role_name_deleted'),
+        {'comment': '角色表'},
+    )
 
     id: Mapped[id_key] = mapped_column(init=False)
     name: Mapped[str] = mapped_column(sa.String(32), comment='角色名称')

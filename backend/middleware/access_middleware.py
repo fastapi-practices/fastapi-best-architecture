@@ -23,6 +23,12 @@ from backend.utils.trace_id import get_request_trace_id
 class AccessMiddleware(BaseHTTPMiddleware):
     """访问日志中间件"""
 
+    @staticmethod
+    def init_tenant_context() -> None:
+        """初始化请求的租户上下文，授权接口认证成功后会覆盖为真实值"""
+        if settings.TENANT_ENABLED:
+            ctx.tenant_id = settings.TENANT_DEFAULT_ID
+
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """
         处理请求并记录访问日志
@@ -52,7 +58,7 @@ class AccessMiddleware(BaseHTTPMiddleware):
             inc_fastapi_request(method=method, path=path)
 
         # 为每个请求上下文注入默认租户 ID，授权接口认证成功后会覆盖为真实值
-        ctx.tenant_id = settings.TENANT_DEFAULT_ID
+        self.init_tenant_context()
 
         try:
             response = await call_next(request)

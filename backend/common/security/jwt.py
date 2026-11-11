@@ -4,7 +4,6 @@ import jwt
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.authentication import UnauthenticatedUser
 
 from backend.common.context import ctx
@@ -82,45 +81,10 @@ def jwt_decode(token: str) -> TokenPayload:
         raise errors.TokenError(msg='Token 无效')
     return TokenPayload(
         user_id=int(user_id),
-        tenant_id=int(payload.get('tenant_id') or settings.TENANT_DEFAULT_ID),
+        tenant_id=int(payload['tenant_id']) if payload.get('tenant_id') is not None else None,
         session_uuid=session_uuid,
         expire_time=timezone.from_datetime(timezone.to_utc(expire)),
     )
-
-
-async def check_tenant_status(db: AsyncSession, tenant_id: int) -> None:
-    """
-    校验租户状态
-
-    :param db: 数据库会话
-    :param tenant_id: 租户 ID
-    :return:
-    """
-    if not settings.TENANT_ENABLED:
-        return
-
-    if tenant_id == settings.TENANT_DEFAULT_ID:
-        return
-
-    try:
-        from backend.plugin.tenant.crud.crud_package import tenant_package_dao
-        from backend.plugin.tenant.crud.crud_tenant import tenant_dao
-    except ImportError:
-        raise errors.ServerError(msg='租户插件方法导入失败，请联系系统管理员')
-
-    tenant = await tenant_dao.get(db, tenant_id)
-    if not tenant:
-        raise errors.NotFoundError(msg='租户不存在，请联系系统管理员')
-
-    if tenant.status == 0:
-        raise errors.AuthorizationError(msg='租户已被禁用，请联系系统管理员')
-
-    if tenant.expire_time and tenant.expire_time < timezone.now():
-        raise errors.AuthorizationError(msg='租户已过期，请联系系统管理员')
-
-    package = await tenant_package_dao.get(db, tenant.package_id)
-    if package and package.status == 0:
-        raise errors.AuthorizationError(msg='租户套餐已被禁用，请联系系统管理员')
 
 
 async def jwt_authentication(token: str) -> JwtUser:
@@ -132,7 +96,8 @@ async def jwt_authentication(token: str) -> JwtUser:
     """
     token_payload = jwt_decode(token)
     ctx.user_id = token_payload.user_id
-    ctx.tenant_id = token_payload.tenant_id
+    if settings.TENANT_ENABLED and token_payload.tenant_id is not None:
+        ctx.tenant_id = token_payload.tenant_id
     redis_token = await redis_client.get(f'{settings.TOKEN_REDIS_PREFIX}:{ctx.user_id}:{token_payload.session_uuid}')
     if not redis_token:
         raise errors.TokenError(msg='Token 已过期')

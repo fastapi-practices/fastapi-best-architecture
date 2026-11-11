@@ -16,8 +16,8 @@ from backend.common.context import ctx
 from backend.common.enums import LoginLogStatusType
 from backend.common.exception import errors
 from backend.common.i18n import t
-from backend.common.security.jwt import check_tenant_status
 from backend.common.security.token import create_access_token, create_refresh_token
+from backend.common.tenant import check_tenant_status
 from backend.core.conf import settings
 from backend.database.redis import redis_client
 from backend.plugin.oauth2.crud.crud_user_social import user_social_dao
@@ -144,7 +144,6 @@ class OAuth2Service:
         # 创建 token
         access_token_data = await create_access_token(
             sys_user.id,
-            ctx.tenant_id,
             multi_login=sys_user.is_multi_login,
             # extra info
             username=sys_user.username,
@@ -158,7 +157,6 @@ class OAuth2Service:
         refresh_token_data = await create_refresh_token(
             access_token_data.session_uuid,
             sys_user.id,
-            ctx.tenant_id,
             multi_login=sys_user.is_multi_login,
         )
         await user_dao.update_login_time(db, sys_user.username)
@@ -240,11 +238,11 @@ class OAuth2Service:
         if tenant_id is None:
             raise errors.ForbiddenError(msg='OAuth2 状态信息缺少租户 ID')
         tenant_id = int(tenant_id)
-        current_tenant_id = ctx.tenant_id
+        origin_tenant_id = ctx.tenant_id
         ctx.tenant_id = tenant_id
 
         try:
-            await check_tenant_status(db, tenant_id)
+            await check_tenant_status(db=db, tenant_id=tenant_id)
 
             # 绑定流程
             if state_info.get('type') == UserSocialAuthType.binding.value:
@@ -275,7 +273,7 @@ class OAuth2Service:
                 avatar=avatar,
             )
         finally:
-            ctx.tenant_id = current_tenant_id
+            ctx.tenant_id = origin_tenant_id
 
 
 oauth2_service: OAuth2Service = OAuth2Service()

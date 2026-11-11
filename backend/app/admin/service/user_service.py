@@ -24,8 +24,9 @@ from backend.common.exception import errors
 from backend.common.i18n import t
 from backend.common.pagination import paging_data
 from backend.common.response.response_code import CustomErrorCode
-from backend.common.security.jwt import check_tenant_status, jwt_decode
+from backend.common.security.jwt import jwt_decode
 from backend.common.security.token import get_token, revoke_user_tokens
+from backend.common.tenant import check_tenant_status
 from backend.core.conf import settings
 from backend.database.db import async_db_session
 from backend.database.redis import redis_client
@@ -79,7 +80,7 @@ class UserService:
         if not user.status:
             raise errors.AuthorizationError(msg='用户已被锁定，请联系系统管理员')
         if settings.TENANT_ENABLED:
-            await check_tenant_status(db, ctx.tenant_id)
+            await check_tenant_status(db=db, tenant_id=ctx.tenant_id)
         if user.dept_id and not user.dept:
             raise errors.AuthorizationError(msg='用户所属部门不存在或已被删除，请联系系统管理员')
         if user.dept and not user.dept.status:

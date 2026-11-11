@@ -236,8 +236,10 @@ class Settings(BaseSettings):
     OPERA_LOG_BODY_MAX_SIZE: int = 10240  # 10 KB
 
     # 租户
-    TENANT_ENABLED: bool = True
+    # 租户是可选能力，默认关闭；开启后需要安装 tenant 插件
+    TENANT_ENABLED: bool = False
     TENANT_DEFAULT_ID: int = 0
+    TENANT_ADMIN_DEFAULT_ROLE_NAME: str = '租户管理员'
 
     # Plugin 配置
     PLUGIN_REQUIRED: list[str] = ['dict']

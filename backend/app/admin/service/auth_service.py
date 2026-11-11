@@ -17,7 +17,7 @@ from backend.common.exception import errors
 from backend.common.i18n import t
 from backend.common.log import log
 from backend.common.response.response_code import CustomErrorCode
-from backend.common.security.jwt import check_tenant_status, jwt_decode
+from backend.common.security.jwt import jwt_decode
 from backend.common.security.token import (
     create_access_token,
     create_new_token,
@@ -26,6 +26,7 @@ from backend.common.security.token import (
     get_user_sessions,
     revoke_token,
 )
+from backend.common.tenant import check_tenant_status
 from backend.core.conf import settings
 from backend.database.db import uuid4_str
 from backend.database.redis import redis_client
@@ -73,7 +74,6 @@ class AuthService:
         await user_dao.update_login_time(db, obj.username)
         access_token_data = await create_access_token(
             user.id,
-            ctx.tenant_id,
             multi_login=user.is_multi_login,
             swagger=True,
         )
@@ -112,19 +112,15 @@ class AuthService:
 
             if settings.TENANT_ENABLED:
                 if obj.tenant_id is None:
-                    raise errors.RequestError(msg='租户 ID 不能为空')
+                    raise errors.RequestError(msg=t('error.tenant.tenant_id_required'))
                 ctx.tenant_id = obj.tenant_id
-                await check_tenant_status(db, ctx.tenant_id)
-            else:
-                # 登录前先写入当前租户，供后续登录请求流程使用
-                ctx.tenant_id = settings.TENANT_DEFAULT_ID
+                await check_tenant_status(db=db, tenant_id=ctx.tenant_id)
 
             user, days_remaining = await self.user_verify(db=db, username=obj.username, password=obj.password)
             await user_dao.update_login_time(db, obj.username)
             await db.refresh(user)
             access_token_data = await create_access_token(
                 user.id,
-                ctx.tenant_id,
                 multi_login=user.is_multi_login,
                 # extra info
                 username=user.username,
@@ -138,7 +134,6 @@ class AuthService:
             refresh_token_data = await create_refresh_token(
                 access_token_data.session_uuid,
                 user.id,
-                ctx.tenant_id,
                 multi_login=user.is_multi_login,
             )
             response.set_cookie(
@@ -224,22 +219,24 @@ class AuthService:
             raise errors.RequestError(msg=t('error.auth.refresh_token_expired'))
 
         token_payload = jwt_decode(refresh_token)
-        ctx.tenant_id = token_payload.tenant_id
+        if settings.TENANT_ENABLED and token_payload.tenant_id is not None:
+            ctx.tenant_id = token_payload.tenant_id
         user = await user_dao.get(db, token_payload.user_id)
         if not user:
             raise errors.NotFoundError(msg=t('error.user.not_found'))
         if not user.status:
             raise errors.AuthorizationError(msg=t('error.auth.user_locked'))
 
-        await check_tenant_status(db, ctx.tenant_id)
+        if settings.TENANT_ENABLED:
+            await check_tenant_status(db=db, tenant_id=ctx.tenant_id)
         if not user.is_multi_login and await get_user_sessions(user.id) - {token_payload.session_uuid}:
             raise errors.ForbiddenError(msg=t('error.auth.remote_login'))
         new_token = await create_new_token(
             refresh_token,
             token_payload.session_uuid,
             user.id,
-            ctx.tenant_id,
             multi_login=user.is_multi_login,
+            tenant_id=token_payload.tenant_id,
             # extra info
             username=user.username,
             nickname=user.nickname,

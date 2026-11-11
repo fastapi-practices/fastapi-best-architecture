@@ -14,19 +14,9 @@ from backend.app.admin.schema.role import (
     UpdateRoleParam,
     UpdateRoleScopeParam,
 )
-from backend.core.conf import settings
+from backend.common.tenant import inject_tenant
 from backend.utils.serializers import select_join_serialize
 from backend.utils.timezone import timezone
-
-if settings.TENANT_ENABLED:
-    try:
-        from backend.plugin.tenant.utils import get_tenant_dict as inject_tenant_dict
-    except ImportError:
-        raise ImportError('租户插件方法导入失败，请联系系统管理员')
-else:
-
-    def inject_tenant_dict(obj: dict[str, Any]) -> dict[str, Any]:
-        return obj
 
 
 class CRUDRole(CRUDPlus[Role]):
@@ -173,7 +163,7 @@ class CRUDRole(CRUDPlus[Role]):
             role_menu_data = []
             for menu_id in obj.menu_ids:
                 role_dict = CreateRoleMenuParam(role_id=role_id, menu_id=menu_id).model_dump()
-                role_menu_data.append(inject_tenant_dict(role_dict))
+                role_menu_data.append(inject_tenant(role_dict))
             role_menu_stmt = insert(role_menu)
             await db.execute(role_menu_stmt, role_menu_data)
 
@@ -196,7 +186,7 @@ class CRUDRole(CRUDPlus[Role]):
             role_scope_data = []
             for scope_id in obj.scope_ids:
                 scope_dict = CreateRoleScopeParam(role_id=role_id, data_scope_id=scope_id).model_dump()
-                role_scope_data.append(inject_tenant_dict(scope_dict))
+                role_scope_data.append(inject_tenant(scope_dict))
             role_scope_stmt = insert(role_data_scope)
             await db.execute(role_scope_stmt, role_scope_data)
 

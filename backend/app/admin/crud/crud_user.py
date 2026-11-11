@@ -29,20 +29,10 @@ from backend.app.admin.utils.password_security import get_hash_password
 from backend.common.enums import StatusType
 from backend.common.exception import errors
 from backend.common.i18n import t
-from backend.core.conf import settings
+from backend.common.tenant import inject_tenant
 from backend.plugin.core import check_plugin_installed_async
 from backend.utils.serializers import select_join_serialize
 from backend.utils.timezone import timezone
-
-if settings.TENANT_ENABLED:
-    try:
-        from backend.plugin.tenant.utils import get_tenant_dict as inject_tenant_dict
-    except ImportError:
-        raise ImportError('租户插件方法导入失败，请联系系统管理员')
-else:
-
-    def inject_tenant_dict(obj: dict[str, Any]) -> dict[str, Any]:
-        return obj
 
 
 class CRUDUser(CRUDPlus[User]):
@@ -164,7 +154,7 @@ class CRUDUser(CRUDPlus[User]):
             user_role_data = []
             for role in roles:
                 role_dict = AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump()
-                user_role_data.append(inject_tenant_dict(role_dict))
+                user_role_data.append(inject_tenant(role_dict))
             user_role_stmt = insert(user_role)
             await db.execute(user_role_stmt, user_role_data)
 
@@ -189,7 +179,7 @@ class CRUDUser(CRUDPlus[User]):
         if role is None:
             raise errors.NotFoundError(msg=t('error.role.unavailable'))
 
-        user_role_data = inject_tenant_dict(AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump())
+        user_role_data = inject_tenant(AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump())
         user_role_stmt = insert(user_role).values(user_role_data)
         await db.execute(user_role_stmt)
 
@@ -218,7 +208,7 @@ class CRUDUser(CRUDPlus[User]):
             user_role_data = []
             for role in roles:
                 role_dict = AddUserRoleParam(user_id=user_id, role_id=role.id).model_dump()
-                user_role_data.append(inject_tenant_dict(role_dict))
+                user_role_data.append(inject_tenant(role_dict))
             user_role_stmt = insert(user_role)
             await db.execute(user_role_stmt, user_role_data)
 
