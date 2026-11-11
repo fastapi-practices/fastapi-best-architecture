@@ -2,9 +2,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request
 
-from backend.common.context import ctx
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
 from backend.common.security.jwt import DependsJwtAuth
+from backend.common.tenant import current_tenant_id
 from backend.database.db import CurrentSession, CurrentSessionTransaction
 from backend.plugin.oauth2.schema.user_social import UserSocialQueryParam
 from backend.plugin.oauth2.service.user_social_service import user_social_service
@@ -25,7 +25,7 @@ async def get_binding_auth_url(
 ) -> ResponseSchemaModel[str]:
     binding_url = await user_social_service.get_binding_auth_url(
         user_id=request.user.id,
-        tenant_id=ctx.tenant_id,
+        tenant_id=current_tenant_id(),
         source=query.source,
     )
     return response_base.success(data=binding_url)

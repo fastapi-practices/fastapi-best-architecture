@@ -3,8 +3,8 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.common.context import ctx
 from backend.common.exception import errors
+from backend.common.tenant import current_tenant_id
 from backend.core.conf import settings
 from backend.database.redis import redis_client
 from backend.plugin.oauth2.crud.crud_user_social import user_social_dao
@@ -47,7 +47,7 @@ class UserSocialService:
         """
         if await user_social_dao.check_binding(db, user_id, source.value):
             raise errors.RequestError(msg=f'用户已绑定 {source.value} 账号')
-        if await user_social_dao.get_by_sid(db, ctx.tenant_id, sid, source.value):
+        if await user_social_dao.get_by_sid(db, current_tenant_id(), sid, source.value):
             raise errors.RequestError(msg=f'该 {source.value} 账号已被其他用户绑定')
 
         new_user_social = CreateUserSocialParam(sid=sid, source=source.value, user_id=user_id)

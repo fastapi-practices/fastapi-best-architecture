@@ -17,7 +17,7 @@ from backend.common.enums import LoginLogStatusType
 from backend.common.exception import errors
 from backend.common.i18n import t
 from backend.common.security.token import create_access_token, create_refresh_token
-from backend.common.tenant import check_tenant_status
+from backend.common.tenant import check_tenant_status, current_tenant_id
 from backend.core.conf import settings
 from backend.database.redis import redis_client
 from backend.plugin.oauth2.crud.crud_user_social import user_social_dao
@@ -102,7 +102,7 @@ class OAuth2Service:
         :param avatar: 头像地址
         :return:
         """
-        user_social = await user_social_dao.get_by_sid(db, ctx.tenant_id, sid, source.value)
+        user_social = await user_social_dao.get_by_sid(db, current_tenant_id(), sid, source.value)
         if user_social:
             sys_user = await user_dao.get(db, user_social.user_id)
             # 更新用户头像
