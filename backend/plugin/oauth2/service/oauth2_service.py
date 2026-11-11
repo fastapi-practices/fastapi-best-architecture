@@ -16,7 +16,8 @@ from backend.common.context import ctx
 from backend.common.enums import LoginLogStatusType
 from backend.common.exception import errors
 from backend.common.i18n import t
-from backend.common.security import jwt
+from backend.common.security.jwt import check_tenant_status
+from backend.common.security.token import create_access_token, create_refresh_token
 from backend.core.conf import settings
 from backend.database.redis import redis_client
 from backend.plugin.oauth2.crud.crud_user_social import user_social_dao
@@ -141,7 +142,7 @@ class OAuth2Service:
             await user_social_dao.create(db, new_user_social)
 
         # 创建 token
-        access_token_data = await jwt.create_access_token(
+        access_token_data = await create_access_token(
             sys_user.id,
             ctx.tenant_id,
             multi_login=sys_user.is_multi_login,
@@ -154,7 +155,7 @@ class OAuth2Service:
             browser=ctx.browser,
             device=ctx.device,
         )
-        refresh_token_data = await jwt.create_refresh_token(
+        refresh_token_data = await create_refresh_token(
             access_token_data.session_uuid,
             sys_user.id,
             ctx.tenant_id,
@@ -243,7 +244,7 @@ class OAuth2Service:
         ctx.tenant_id = tenant_id
 
         try:
-            await jwt.check_tenant_status(db, tenant_id)
+            await check_tenant_status(db, tenant_id)
 
             # 绑定流程
             if state_info.get('type') == UserSocialAuthType.binding.value:

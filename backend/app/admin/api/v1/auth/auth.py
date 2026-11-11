@@ -2,16 +2,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.security import HTTPBasicCredentials
-from pyrate_limiter import Duration, Rate
 from starlette.background import BackgroundTasks
 
 from backend.app.admin.schema.token import GetLoginToken, GetNewToken, GetSwaggerToken
 from backend.app.admin.schema.user import AuthLoginParam
 from backend.app.admin.service.auth_service import auth_service
+from backend.common.limiter import rate_limit
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
 from backend.common.security.jwt import DependsJwtAuth
 from backend.database.db import CurrentSession, CurrentSessionTransaction
-from backend.utils.limiter import RateLimiter
 
 router = APIRouter()
 
@@ -28,7 +27,7 @@ async def login_swagger(
     '/login',
     summary='用户登录',
     description='json 格式登录, 仅支持在第三方api工具调试, 例如: postman',
-    dependencies=[Depends(RateLimiter(Rate(5, Duration.MINUTE)))],
+    dependencies=[Depends(rate_limit('5/minute'))],
 )
 async def login(
     db: CurrentSessionTransaction,

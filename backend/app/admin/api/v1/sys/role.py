@@ -8,6 +8,7 @@ from backend.app.admin.schema.role import (
     DeleteRoleParam,
     GetRoleDetail,
     GetRoleWithRelationDetail,
+    RoleQueryParam,
     UpdateRoleMenuParam,
     UpdateRoleParam,
     UpdateRoleScopeParam,
@@ -64,10 +65,9 @@ async def get_role(
 )
 async def get_roles_paginated(
     db: CurrentSession,
-    name: Annotated[str | None, Query(description='角色名称')] = None,
-    status: Annotated[int | None, Query(description='状态')] = None,
+    query: Annotated[RoleQueryParam, Query()],
 ) -> ResponseSchemaModel[PageData[GetRoleDetail]]:
-    page_data = await role_service.get_list(db=db, name=name, status=status)
+    page_data = await role_service.get_list(db=db, name=query.name, status=query.status)
     return response_base.success(data=page_data)
 
 
@@ -112,9 +112,9 @@ async def update_role(
 async def update_role_menus(
     db: CurrentSessionTransaction,
     pk: Annotated[int, Path(description='角色 ID')],
-    menu_ids: UpdateRoleMenuParam,
+    obj: UpdateRoleMenuParam,
 ) -> ResponseModel:
-    count = await role_service.update_role_menu(db=db, pk=pk, menu_ids=menu_ids)
+    count = await role_service.update_role_menu(db=db, pk=pk, obj=obj)
     if count > 0:
         return response_base.success()
     return response_base.fail()
@@ -131,9 +131,9 @@ async def update_role_menus(
 async def update_role_scopes(
     db: CurrentSessionTransaction,
     pk: Annotated[int, Path(description='角色 ID')],
-    scope_ids: UpdateRoleScopeParam,
+    obj: UpdateRoleScopeParam,
 ) -> ResponseModel:
-    count = await role_service.update_role_scope(db=db, pk=pk, scope_ids=scope_ids)
+    count = await role_service.update_role_scope(db=db, pk=pk, obj=obj)
     if count > 0:
         return response_base.success()
     return response_base.fail()

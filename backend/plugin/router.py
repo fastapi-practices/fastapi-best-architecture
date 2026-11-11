@@ -39,7 +39,6 @@ def inject_extend_router(plugin: PluginEntry) -> None:
             file_path = os.path.join(root, file)
             path_to_module_str = os.path.relpath(file_path, PLUGIN_DIR).replace(os.sep, '.')[:-3]
             module_path = f'backend.plugin.{path_to_module_str}'
-
             try:
                 module = import_module_cached(module_path)
                 plugin_router = getattr(module, 'router', None)
@@ -57,7 +56,6 @@ def inject_extend_router(plugin: PluginEntry) -> None:
                 target_module_path = f'backend.app.{app_name}.api.{relative_path.replace(os.sep, ".")}'
                 target_module = import_module_cached(target_module_path)
                 target_router = getattr(target_module, 'router', None)
-
                 if not target_router or not isinstance(target_router, APIRouter):
                     raise PluginInjectError(_invalid_router_msg(plugin.name, module_path, '扩展级'))
 
@@ -86,7 +84,6 @@ def inject_app_router(plugin: PluginEntry, target_router: APIRouter) -> None:
         routers = plugin.routers
         if not routers or not isinstance(routers, list):
             raise PluginConfigError(f'应用级插件 {plugin.name} 配置文件存在错误，请检查')
-
         for router in routers:
             plugin_router = getattr(module, router, None)
             if not plugin_router or not isinstance(plugin_router, APIRouter):

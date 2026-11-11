@@ -1,9 +1,10 @@
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastapi import Request
 from sqlalchemy import Alias, ColumnElement, Table, and_, or_
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy_crud_plus.types import Model
+from starlette.concurrency import run_in_threadpool
 
 from backend.common.context import ctx
 from backend.common.enums import RoleDataRuleExpressionType, RoleDataRuleOperatorType
@@ -11,9 +12,6 @@ from backend.common.exception import errors
 from backend.core.conf import settings
 from backend.utils.dynamic_import import get_all_models
 from backend.utils.timezone import timezone
-
-if TYPE_CHECKING:
-    from backend.app.admin.model import DataRule
 
 
 class RequestPermission:
@@ -55,7 +53,9 @@ def get_data_permission_models() -> dict[str, object]:
 
 
 def filter_data_permission(  # ruff:ignore[complex-structure]
-    request: Request, *models: type[Model] | AliasedClass | Alias | Table
+    request: Request,
+    *models: type[Model] | AliasedClass | Alias | Table,
+    _model_map: dict[str, object] | None = None,
 ) -> ColumnElement[bool]:
     """
     过滤数据权限，控制用户可见数据范围
@@ -65,6 +65,7 @@ def filter_data_permission(  # ruff:ignore[complex-structure]
 
     :param request: FastAPI 请求对象
     :param models: 需要应用数据权限的模型类
+    :param _model_map: 已预计算的数据权限模型映射
     :return:
     """
     # 超级管理员不过滤
@@ -77,7 +78,7 @@ def filter_data_permission(  # ruff:ignore[complex-structure]
             return or_(1 == 1)
 
     # 获取数据规则
-    data_rules: set[DataRule] = set()
+    data_rules = set()
     for role in request.user.roles:
         if not role.status:
             continue
@@ -90,9 +91,12 @@ def filter_data_permission(  # ruff:ignore[complex-structure]
         return or_(1 != 1)
 
     # 目标模型
-    target_model_map = (
-        {getattr(model, '__name__', str(model)): model for model in models} if models else get_data_permission_models()
-    )
+    if _model_map is not None:
+        target_model_map = _model_map
+    elif models:
+        target_model_map = {getattr(model, '__name__', str(model)): model for model in models}
+    else:
+        raise ValueError('数据权限过滤缺少预计算的模型映射')
 
     # 字段模板变量映射
     column_template_resolvers = {
@@ -116,7 +120,6 @@ def filter_data_permission(  # ruff:ignore[complex-structure]
         else:
             target_model = target_model_map.get(data_rule.model)
             target_models = [target_model] if target_model is not None else []
-
         for target_model in target_models:
             table = target_model if isinstance(target_model, Table) else target_model.__table__
             rule_column = column_template_resolvers.get(data_rule.column, data_rule.column)
@@ -199,4 +202,5 @@ class DataPermissionFilter:
         self.models = models
 
     async def __call__(self, request: Request) -> ColumnElement[bool]:
-        return filter_data_permission(request, *self.models)
+        model_map = await run_in_threadpool(get_data_permission_models) if not self.models else None
+        return filter_data_permission(request, *self.models, _model_map=model_map)

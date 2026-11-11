@@ -1,12 +1,12 @@
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager
-from typing import Any, TypeAlias, overload
+from typing import Any, overload
 
 from fastapi import FastAPI
 
 from backend.common.enums import LifespanStage
 
-LifespanFunc: TypeAlias = Callable[[FastAPI], AbstractAsyncContextManager[dict[str, Any] | None]]
+type LifespanFunc = Callable[[FastAPI], AbstractAsyncContextManager[dict[str, Any] | None]]
 
 
 class LifespanManager:
@@ -66,10 +66,8 @@ class LifespanManager:
                         result = await exit_stack.enter_async_context(lifespan_fn(app))
                         if isinstance(result, dict):
                             state.update(result)
-
                 for key, value in state.items():
                     setattr(app.state, key, value)
-
                 yield state or None
 
         return combined_lifespan

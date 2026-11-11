@@ -85,7 +85,7 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
         TaskScheduler.no_changes = False
         return 1
 
-    async def set_status(self, db: AsyncSession, pk: int, *, status: bool) -> int:
+    async def set_status(self, db: AsyncSession, pk: int, *, status: int) -> int:
         """
         设置任务调度状态
 
@@ -95,7 +95,7 @@ class CRUDTaskScheduler(CRUDPlus[TaskScheduler]):
         :return:
         """
         task_scheduler = await self.get(db, pk)
-        task_scheduler.enabled = status
+        task_scheduler.status = status
         TaskScheduler.no_changes = False
         return 1
 

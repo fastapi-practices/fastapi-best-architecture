@@ -4,6 +4,7 @@ import os
 from functools import lru_cache
 from typing import Any
 
+import anyio
 import rtoml
 
 from backend.common.dataclasses import PluginEntry
@@ -14,7 +15,7 @@ from backend.core.path_conf import PLUGIN_DIR
 from backend.database.redis import RedisCli
 from backend.plugin.errors import PluginConfigError, PluginInjectError
 from backend.plugin.status import get_plugin_enable
-from backend.plugin.validator import validate_plugin_config
+from backend.plugin.validator import validate_plugin_config, validate_plugin_files
 from backend.utils.async_helper import run_await
 from backend.utils.dynamic_import import get_model_objects
 
@@ -27,6 +28,16 @@ def check_plugin_installed(plugin_name: str) -> bool:
     :return:
     """
     return (PLUGIN_DIR / plugin_name / '__init__.py').exists()
+
+
+async def check_plugin_installed_async(plugin_name: str) -> bool:
+    """
+    异步检查插件是否已安装
+
+    :param plugin_name: 插件名称
+    :return:
+    """
+    return await anyio.Path(PLUGIN_DIR / plugin_name / '__init__.py').exists()
 
 
 def get_required_plugins() -> tuple[str, ...]:
@@ -57,7 +68,6 @@ def get_plugins() -> tuple[str, ...]:
         item_path = PLUGIN_DIR / item
         if not os.path.isdir(item_path) and item == '__pycache__':
             continue
-
         # 检查是否为目录且包含 __init__.py 文件
         if os.path.isdir(item_path) and '__init__.py' in os.listdir(item_path):
             plugin_packages.append(item)
@@ -89,19 +99,18 @@ def get_enabled_plugins(plugins: tuple[str, ...] | None = None) -> set[str]:
     return enabled_plugins
 
 
-def load_plugin_config(plugin: str) -> dict[str, Any]:
+async def load_plugin_config(plugin: str) -> dict[str, Any]:
     """
     加载插件配置
 
     :param plugin: 插件名称
     :return:
     """
-    toml_path = PLUGIN_DIR / plugin / 'plugin.toml'
-    if not os.path.exists(toml_path):
+    toml_path = anyio.Path(PLUGIN_DIR / plugin / 'plugin.toml')
+    if not await toml_path.exists():
         raise PluginInjectError(f'插件 {plugin} 缺少 plugin.toml 配置文件，请检查插件是否合法')
 
-    with open(toml_path, encoding='utf-8') as f:
-        return rtoml.load(f)
+    return rtoml.loads(await toml_path.read_text(encoding='utf-8'))
 
 
 def parse_plugin_config() -> tuple[list[PluginEntry], list[PluginEntry]]:
@@ -121,17 +130,16 @@ def parse_plugin_config() -> tuple[list[PluginEntry], list[PluginEntry]]:
             settings.PLUGIN_REDIS_PREFIX,
             exclude_keys=exclude_keys,
         )
-
         for plugin in plugins:
-            plugin_config = load_plugin_config(plugin)
+            plugin_config = run_await(load_plugin_config)(plugin)
             plugin_type = validate_plugin_config(plugin, plugin_config)
+            validate_plugin_files(plugin)
 
             # 补充插件信息
             plugin_config['plugin']['name'] = plugin
             plugin_cache_key = f'{settings.PLUGIN_REDIS_PREFIX}:{plugin}'
             plugin_cache_info = run_await(current_redis_client.get)(plugin_cache_key)
             plugin_config['plugin']['enable'] = get_plugin_enable(plugin_cache_info, StatusType.enable.value)
-
             if plugin_type == PluginLevelType.extend:
                 extend_plugins.append(
                     PluginEntry(
@@ -180,7 +188,6 @@ def resolve_plugin_order(plugins: list[PluginEntry]) -> list[PluginEntry]:
             cycle_start = visiting.index(plugin.name)
             cycle_path = [*visiting[cycle_start:], plugin.name]
             raise PluginConfigError(f'插件存在循环依赖: {" -> ".join(cycle_path)}')
-
         if plugin.depends_on is not None:
             visiting.append(plugin.name)
             for dep_name in plugin.depends_on:

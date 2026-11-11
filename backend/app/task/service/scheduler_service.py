@@ -12,6 +12,7 @@ from backend.app.task.enums import TaskSchedulerType
 from backend.app.task.model import TaskScheduler
 from backend.app.task.schema.scheduler import CreateTaskSchedulerParam, UpdateTaskSchedulerParam
 from backend.app.task.utils.tzcrontab import crontab_verify
+from backend.common.enums import StatusType
 from backend.common.exception import errors
 from backend.common.pagination import paging_data
 
@@ -28,7 +29,6 @@ class TaskSchedulerService:
         :param pk: 任务调度 ID
         :return:
         """
-
         task_scheduler = await task_scheduler_dao.get(db, pk)
         if not task_scheduler:
             raise errors.NotFoundError(msg='任务调度不存在')
@@ -42,7 +42,6 @@ class TaskSchedulerService:
         :param db: 数据库会话
         :return:
         """
-
         task_schedulers = await task_scheduler_dao.get_all(db)
         return task_schedulers
 
@@ -68,7 +67,6 @@ class TaskSchedulerService:
         :param obj: 任务调度创建参数
         :return:
         """
-
         task_scheduler = await task_scheduler_dao.get_by_name(db, obj.name)
         if task_scheduler:
             raise errors.ConflictError(msg='任务调度已存在')
@@ -86,7 +84,6 @@ class TaskSchedulerService:
         :param obj: 任务调度更新参数
         :return:
         """
-
         task_scheduler = await task_scheduler_dao.get(db, pk)
         if not task_scheduler:
             raise errors.NotFoundError(msg='任务调度不存在')
@@ -106,11 +103,11 @@ class TaskSchedulerService:
         :param pk: 任务调度 ID
         :return:
         """
-
         task_scheduler = await task_scheduler_dao.get(db, pk)
         if not task_scheduler:
             raise errors.NotFoundError(msg='任务调度不存在')
-        count = await task_scheduler_dao.set_status(db, pk, status=not task_scheduler.enabled)
+        next_status = StatusType.disable if task_scheduler.status == StatusType.enable else StatusType.enable
+        count = await task_scheduler_dao.set_status(db, pk, status=next_status)
         return count
 
     @staticmethod
@@ -122,7 +119,6 @@ class TaskSchedulerService:
         :param pk: 用户 ID
         :return:
         """
-
         task_scheduler = await task_scheduler_dao.get(db, pk)
         if not task_scheduler:
             raise errors.NotFoundError(msg='任务调度不存在')
@@ -138,7 +134,6 @@ class TaskSchedulerService:
         :param pk: 任务调度 ID
         :return:
         """
-
         workers = await run_in_threadpool(celery_app.control.ping, timeout=0.5)
         if not workers:
             raise errors.ServerError(msg='Celery Worker 暂不可用，请稍后重试')

@@ -7,6 +7,14 @@ from backend.common.enums import StatusType
 from backend.common.schema import SchemaBase
 
 
+class OperaLogQueryParam(SchemaBase):
+    """操作日志查询参数"""
+
+    username: str | None = Field(None, description='用户名')
+    status: int | None = Field(None, description='状态')
+    ip: str | None = Field(None, description='IP 地址')
+
+
 class OperaLogSchemaBase(SchemaBase):
     """操作日志基础模型"""
 

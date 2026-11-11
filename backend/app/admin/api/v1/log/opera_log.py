@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from backend.app.admin.schema.opera_log import DeleteOperaLogParam, GetOperaLogDetail
+from backend.app.admin.schema.opera_log import DeleteOperaLogParam, GetOperaLogDetail, OperaLogQueryParam
 from backend.app.admin.service.opera_log_service import opera_log_service
 from backend.common.pagination import DependsPagination, PageData
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
@@ -24,11 +24,9 @@ router = APIRouter()
 )
 async def get_opera_logs_paginated(
     db: CurrentSession,
-    username: Annotated[str | None, Query(description='用户名')] = None,
-    status: Annotated[int | None, Query(description='状态')] = None,
-    ip: Annotated[str | None, Query(description='IP 地址')] = None,
+    query: Annotated[OperaLogQueryParam, Query()],
 ) -> ResponseSchemaModel[PageData[GetOperaLogDetail]]:
-    page_data = await opera_log_service.get_list(db=db, username=username, status=status, ip=ip)
+    page_data = await opera_log_service.get_list(db=db, username=query.username, status=query.status, ip=query.ip)
 
     return response_base.success(data=page_data)
 

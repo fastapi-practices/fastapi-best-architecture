@@ -6,6 +6,15 @@ from backend.common.enums import StatusType
 from backend.common.schema import CustomEmailStr, CustomPhoneNumber, SchemaBase
 
 
+class DeptQueryParam(SchemaBase):
+    """部门查询参数"""
+
+    name: str | None = Field(None, description='部门名称')
+    leader: str | None = Field(None, description='部门负责人')
+    phone: str | None = Field(None, description='联系电话')
+    status: int | None = Field(None, description='状态')
+
+
 class DeptSchemaBase(SchemaBase):
     """部门基础模型"""
 

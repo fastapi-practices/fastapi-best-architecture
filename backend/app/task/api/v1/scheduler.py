@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Path, Query
 from backend.app.task.schema.scheduler import (
     CreateTaskSchedulerParam,
     GetTaskSchedulerDetail,
+    TaskSchedulerQueryParam,
     UpdateTaskSchedulerParam,
 )
 from backend.app.task.service.scheduler_service import task_scheduler_service
@@ -43,10 +44,9 @@ async def get_task_scheduler(
 )
 async def get_task_scheduler_paginated(
     db: CurrentSession,
-    name: Annotated[str | None, Query(description='任务调度名称')] = None,
-    type: Annotated[int | None, Query(description='任务调度类型')] = None,
+    query: Annotated[TaskSchedulerQueryParam, Query()],
 ) -> ResponseSchemaModel[PageData[GetTaskSchedulerDetail]]:
-    page_data = await task_scheduler_service.get_list(db=db, name=name, type=type)
+    page_data = await task_scheduler_service.get_list(db=db, name=query.name, type=query.type)
     return response_base.success(data=page_data)
 
 

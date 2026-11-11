@@ -6,6 +6,13 @@ from backend.common.enums import MenuType, StatusType
 from backend.common.schema import SchemaBase
 
 
+class MenuQueryParam(SchemaBase):
+    """菜单查询参数"""
+
+    title: str | None = Field(None, description='菜单标题')
+    status: int | None = Field(None, description='状态')
+
+
 class MenuSchemaBase(SchemaBase):
     """菜单基础模型"""
 

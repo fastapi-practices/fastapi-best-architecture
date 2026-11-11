@@ -9,6 +9,7 @@ import socketio
 from fastapi import Depends, FastAPI
 from fastapi_pagination import add_pagination
 from prometheus_client import make_asgi_app
+from redis_fastapi import FastAPIRedis, get_async_redis, get_rate_limit_backend
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
@@ -16,16 +17,17 @@ from starlette_context.middleware import ContextMiddleware
 from starlette_context.plugins import RequestIdPlugin
 
 from backend import __version__
-from backend.common.cache.pubsub import cache_pubsub_manager
 from backend.common.exception.exception_handler import register_exception
 from backend.common.lifespan import lifespan_manager
+from backend.common.limiter import get_fba_rate_limit_backend
 from backend.common.log import set_custom_logfile, setup_logging
 from backend.common.observability.otel import init_otel
 from backend.common.response.response_code import StandardResponseCode
+from backend.common.response.response_schema import MsgSpecJSONResponse
 from backend.core.conf import settings
 from backend.core.path_conf import STATIC_DIR, UPLOAD_DIR
 from backend.database.db import create_tables, dispose_database
-from backend.database.redis import redis_client
+from backend.database.redis import get_fba_redis, redis_client
 from backend.middleware.access_middleware import AccessMiddleware
 from backend.middleware.i18n_middleware import I18nMiddleware
 from backend.middleware.jwt_auth_middleware import JwtAuthMiddleware
@@ -35,7 +37,6 @@ from backend.plugin.hooks import init_plugin_otel_hooks, register_plugin_hooks
 from backend.plugin.router import build_final_router
 from backend.utils.demo_mode import demo_site
 from backend.utils.openapi import ensure_unique_route_names, simplify_operation_ids
-from backend.utils.serializers import MsgSpecJSONResponse
 from backend.utils.snowflake import snowflake
 from backend.utils.trace_id import OtelTraceIdPlugin
 
@@ -62,9 +63,6 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
     # 创建操作日志任务
     opera_log_task = asyncio.create_task(OperaLogMiddleware.consumer())
 
-    # 启动缓存 Pub/Sub 监听器
-    cache_pubsub_manager.start_listener()
-
     # 注册租户 SQLAlchemy 监听器
     if settings.TENANT_ENABLED:
         try:
@@ -77,16 +75,8 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         yield
     finally:
-        # 停止缓存 Pub/Sub 监听器
-        await cache_pubsub_manager.stop_listener()
-
-        # 取消操作日志任务
-        if not opera_log_task.done():
-            opera_log_task.cancel()
-            try:
-                await opera_log_task
-            except asyncio.CancelledError:
-                pass
+        # 排空并停止操作日志任务
+        await OperaLogMiddleware.stop_consumer(opera_log_task)
 
         # 释放 snowflake 节点
         if settings.SNOWFLAKE_ENABLED or settings.DATABASE_PK_MODE == 'snowflake':
@@ -101,7 +91,6 @@ async def register_init(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def register_app() -> FastAPI:
     """注册 FastAPI 应用"""
-
     app = FastAPI(
         title=settings.FASTAPI_TITLE,
         version=__version__,
@@ -111,10 +100,18 @@ def register_app() -> FastAPI:
         openapi_url=settings.FASTAPI_OPENAPI_URL,
         default_response_class=MsgSpecJSONResponse,
         lifespan=lifespan_manager.build(),
+        telemetry={
+            'tracing': settings.GRAFANA_METRICS_ENABLE,
+            'metrics': settings.GRAFANA_METRICS_ENABLE,
+            # 异常日志由现有中间件记录，避免重复导出
+            'logs': False,
+            'auto_configure': False,
+        },
     )
 
     # 注册组件
     register_logger()
+    register_security()
     register_socket_app(app)
     register_static_file(app)
     register_middleware(app)
@@ -135,6 +132,14 @@ def register_logger() -> None:
     """注册日志"""
     setup_logging()
     set_custom_logfile()
+
+
+def register_security() -> None:
+    """注册安全组件，让 JWT 认证从用户体系获取认证用户"""
+    from backend.app.admin.service.user_service import user_service
+    from backend.common.security.jwt import register_jwt_user_provider
+
+    register_jwt_user_provider(user_service.get_jwt_user)
 
 
 def register_static_file(app: FastAPI) -> None:
@@ -163,6 +168,11 @@ def register_middleware(app: FastAPI) -> None:
     """
     # Opera log
     app.add_middleware(OperaLogMiddleware)
+
+    # 缓存、限流 SDK 复用现有连接池和生命周期
+    app.dependency_overrides[get_async_redis] = get_fba_redis
+    app.dependency_overrides[get_rate_limit_backend] = get_fba_rate_limit_backend
+    FastAPIRedis(app).caching().rate_limiting()
 
     # State
     app.add_middleware(StateMiddleware)
@@ -261,5 +271,5 @@ def register_metrics(app: FastAPI) -> None:
     metrics_app = make_asgi_app()
     app.mount(settings.GRAFANA_METRICS_PATH, metrics_app)
 
-    init_otel(app)
+    init_otel()
     init_plugin_otel_hooks(app)

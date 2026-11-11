@@ -6,6 +6,12 @@ from backend.common.enums import RoleDataRuleExpressionType, RoleDataRuleOperato
 from backend.common.schema import SchemaBase
 
 
+class DataRuleQueryParam(SchemaBase):
+    """数据规则查询参数"""
+
+    name: str | None = Field(None, description='规则名称')
+
+
 class DataRuleSchemaBase(SchemaBase):
     """数据规则基础模型"""
 

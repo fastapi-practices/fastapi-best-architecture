@@ -67,11 +67,8 @@ class I18n:
         """
         keys = key.split('.')
 
-        try:
-            translation = self.locales[self.current_language]
-        except KeyError:
-            keys = 'error.language_not_found'.split('.')
-            translation = self.locales[settings.I18N_DEFAULT_LANGUAGE]
+        # 当前语言包不存在时回退默认语言，保证所有文案都有可读内容
+        translation = self.locales.get(self.current_language) or self.locales[settings.I18N_DEFAULT_LANGUAGE]
 
         for k in keys:
             if isinstance(translation, dict) and k in list(translation.keys()):

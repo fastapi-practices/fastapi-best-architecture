@@ -1,6 +1,6 @@
 import anyio
 
-from backend.common.enums import DataBaseType, PrimaryKeyType
+from backend.common.enums import PrimaryKeyType
 from backend.core.path_conf import PLUGIN_DIR
 
 
@@ -29,22 +29,15 @@ def build_sql_filename(
     return f'{"_".join(parts)}.sql'
 
 
-async def get_plugin_sql(
-    plugin: str,
-    db_type: DataBaseType,
-    pk_type: PrimaryKeyType,
-    *,
-    tenant: bool = False,
-) -> str | None:
+async def get_plugin_sql(plugin: str, pk_type: PrimaryKeyType, *, tenant: bool = False) -> str | None:
     """
     获取插件 SQL 脚本
 
     :param plugin: 插件名称
-    :param db_type: 数据库类型
     :param pk_type: 主键类型
     :return:
     """
-    sql_dir = PLUGIN_DIR / plugin / 'sql' / ('mysql' if db_type == DataBaseType.mysql else 'postgresql')
+    sql_dir = PLUGIN_DIR / plugin / 'sql' / 'postgresql'
     if tenant:
         tenant_sql_file = sql_dir / build_sql_filename('init', pk_type, tenant=True)
         if await anyio.Path(tenant_sql_file).exists():
@@ -55,15 +48,14 @@ async def get_plugin_sql(
     return str(default_sql_file) if await anyio.Path(default_sql_file).exists() else None
 
 
-async def get_plugin_destroy_sql(plugin: str, db_type: DataBaseType, pk_type: PrimaryKeyType) -> str | None:
+async def get_plugin_destroy_sql(plugin: str, pk_type: PrimaryKeyType) -> str | None:
     """
     获取插件销毁 SQL 脚本
 
     :param plugin: 插件名称
-    :param db_type: 数据库类型
     :param pk_type: 主键类型
     :return:
     """
-    sql_dir = PLUGIN_DIR / plugin / 'sql' / ('mysql' if db_type == DataBaseType.mysql else 'postgresql')
+    sql_dir = PLUGIN_DIR / plugin / 'sql' / 'postgresql'
     sql_file = sql_dir / build_sql_filename('destroy', pk_type)
     return str(sql_file) if await anyio.Path(sql_file).exists() else None

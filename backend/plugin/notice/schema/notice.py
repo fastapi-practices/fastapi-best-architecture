@@ -7,6 +7,14 @@ from backend.common.schema import SchemaBase
 from backend.plugin.notice.enums import NoticeType
 
 
+class NoticeQueryParam(SchemaBase):
+    """通知公告查询参数"""
+
+    title: str | None = Field(None, description='标题')
+    type: int | None = Field(None, description='类型')
+    status: int | None = Field(None, description='状态')
+
+
 class NoticeSchemaBase(SchemaBase):
     """通知公告基础模型"""
 

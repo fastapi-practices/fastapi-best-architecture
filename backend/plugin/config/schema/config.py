@@ -5,6 +5,19 @@ from pydantic import ConfigDict, Field
 from backend.common.schema import SchemaBase
 
 
+class ConfigTypeQueryParam(SchemaBase):
+    """参数配置类型查询参数"""
+
+    type: str | None = Field(None, description='参数配置类型')
+
+
+class ConfigQueryParam(SchemaBase):
+    """参数配置查询参数"""
+
+    name: str | None = Field(None, description='参数配置名称')
+    type: str | None = Field(None, description='参数配置类型')
+
+
 class ConfigSchemaBase(SchemaBase):
     """参数配置基础模型"""
 

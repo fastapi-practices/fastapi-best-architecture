@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from backend.app.admin.schema.login_log import DeleteLoginLogParam, GetLoginLogDetail
+from backend.app.admin.schema.login_log import DeleteLoginLogParam, GetLoginLogDetail, LoginLogQueryParam
 from backend.app.admin.service.login_log_service import login_log_service
 from backend.common.pagination import DependsPagination, PageData
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
@@ -24,11 +24,9 @@ router = APIRouter()
 )
 async def get_login_logs_paginated(
     db: CurrentSession,
-    username: Annotated[str | None, Query(description='用户名')] = None,
-    status: Annotated[int | None, Query(description='状态')] = None,
-    ip: Annotated[str | None, Query(description='IP 地址')] = None,
+    query: Annotated[LoginLogQueryParam, Query()],
 ) -> ResponseSchemaModel[PageData[GetLoginLogDetail]]:
-    page_data = await login_log_service.get_list(db=db, username=username, status=status, ip=ip)
+    page_data = await login_log_service.get_list(db=db, username=query.username, status=query.status, ip=query.ip)
 
     return response_base.success(data=page_data)
 

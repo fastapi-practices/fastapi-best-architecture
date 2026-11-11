@@ -2,7 +2,7 @@
 
 1. Prerequisites
 
-    - Python >= 3.10
+    - Python >= 3.12
     - Git
     - [uv](https://docs.astral.sh/uv/getting-started/installation/)
     - Fork this repository to your GitHub account

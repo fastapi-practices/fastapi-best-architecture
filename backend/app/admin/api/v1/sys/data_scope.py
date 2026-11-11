@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Path, Query
 
 from backend.app.admin.schema.data_scope import (
     CreateDataScopeParam,
+    DataScopeQueryParam,
     DeleteDataScopeParam,
     GetDataScopeDetail,
     GetDataScopeWithRelationDetail,
@@ -55,10 +56,9 @@ async def get_data_scope_rules(
 )
 async def get_data_scopes_paginated(
     db: CurrentSession,
-    name: Annotated[str | None, Query(description='范围名称')] = None,
-    status: Annotated[int | None, Query(description='状态')] = None,
+    query: Annotated[DataScopeQueryParam, Query()],
 ) -> ResponseSchemaModel[PageData[GetDataScopeDetail]]:
-    page_data = await data_scope_service.get_list(db=db, name=name, status=status)
+    page_data = await data_scope_service.get_list(db=db, name=query.name, status=query.status)
     return response_base.success(data=page_data)
 
 
@@ -105,9 +105,9 @@ async def update_data_scope(
 async def update_data_scope_rules(
     db: CurrentSessionTransaction,
     pk: Annotated[int, Path(description='数据范围 ID')],
-    rule_ids: UpdateDataScopeRuleParam,
+    obj: UpdateDataScopeRuleParam,
 ) -> ResponseModel:
-    count = await data_scope_service.update_data_scope_rule(db=db, pk=pk, rule_ids=rule_ids)
+    count = await data_scope_service.update_data_scope_rule(db=db, pk=pk, obj=obj)
     if count > 0:
         return response_base.success()
     return response_base.fail()

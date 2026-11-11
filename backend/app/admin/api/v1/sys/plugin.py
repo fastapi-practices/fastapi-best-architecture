@@ -4,8 +4,8 @@ from fastapi import APIRouter, File, Path, UploadFile
 from fastapi.params import Query
 from starlette.responses import StreamingResponse
 
+from backend.app.admin.schema.plugin import PluginInstallQueryParam
 from backend.app.admin.service.plugin_service import plugin_service
-from backend.common.enums import PluginType
 from backend.common.response.response_code import CustomResponse
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
 from backend.common.security.jwt import DependsSuperUser
@@ -32,11 +32,10 @@ async def plugin_changed() -> ResponseSchemaModel[bool]:
     dependencies=[DependsSuperUser],
 )
 async def install_plugin(
-    type: Annotated[PluginType, Query(description='插件类型')],
+    query: Annotated[PluginInstallQueryParam, Query()],
     file: Annotated[UploadFile | None, File()] = None,
-    repo_url: Annotated[str | None, Query(description='插件 git 仓库地址')] = None,
 ) -> ResponseModel:
-    plugin_name = await plugin_service.install(type=type, file=file, repo_url=repo_url)
+    plugin_name = await plugin_service.install(type=query.type, file=file, repo_url=query.repo_url)
     return response_base.success(
         res=CustomResponse(
             code=200,

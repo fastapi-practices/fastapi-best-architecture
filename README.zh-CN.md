@@ -9,8 +9,7 @@
 简体中文 | [English](./README.md)
 
 [![GitHub](https://img.shields.io/github/license/fastapi-practices/fastapi_best_architecture)](https://github.com/fastapi-practices/fastapi_best_architecture/blob/master/LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
-![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-%2300758f)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/downloads/)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16.0%2B-%23336791)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-%23778877)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
@@ -40,6 +39,20 @@ mvc 架构作为常规设计模式，在 python web 中很常见，但是三层�
 ## 帮助
 
 更多详情请查看 [官方文档](https://fastapi-practices.github.io/fastapi_best_architecture_docs/)
+
+## 赞助商
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <a href="https://claude.uy/home">
+          <img src="https://purple-sun-4f5a.wuyao1243.workers.dev/" alt="Claude.uy" width="400">
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
 
 ## 贡献者
 

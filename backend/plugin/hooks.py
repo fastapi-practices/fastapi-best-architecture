@@ -24,7 +24,6 @@ def register_plugin_lifespan_hook(plugin: str, module: Any) -> None:
     lifespan_hook = getattr(module, 'lifespan', None)
     if lifespan_hook is None:
         return
-
     if not callable(lifespan_hook):
         log.warning(f'插件 {plugin} 的 lifespan 不是可调用对象，已跳过')
         return
@@ -45,7 +44,6 @@ def run_plugin_setup_hook(plugin: str, module: Any, app: FastAPI) -> None:
     setup_hook = getattr(module, 'setup', None)
     if setup_hook is None:
         return
-
     if not callable(setup_hook):
         log.warning(f'插件 {plugin} 的 setup 不是可调用对象，已跳过')
         return
@@ -68,7 +66,6 @@ def run_plugin_otel_hook(plugin: str, module: Any, app: FastAPI) -> None:
     otel_hook = getattr(module, 'otel', None)
     if otel_hook is None:
         return
-
     if not callable(otel_hook):
         log.warning(f'插件 {plugin} 的 otel 不是可调用对象，已跳过')
         return
@@ -99,7 +96,6 @@ def _get_plugin_hook_modules() -> list[tuple[str, Any]]:
         except Exception as e:
             log.warning(f'插件 {plugin.name} hooks 加载失败: {e}')
             continue
-
         plugin_hook_modules.append((plugin.name, module))
 
     return plugin_hook_modules

@@ -4,7 +4,11 @@ import re
 import stat
 import zipfile
 
+from pathlib import Path
+from typing import Any
+
 import anyio
+import rtoml
 
 from anyio import open_file
 from dulwich import porcelain
@@ -16,6 +20,8 @@ from backend.common.log import log
 from backend.core.conf import settings
 from backend.core.path_conf import ENV_FILE_PATH, PLUGIN_DIR
 from backend.database.redis import redis_client
+from backend.plugin.compatibility import check_fba_compatibility
+from backend.plugin.errors import PluginConfigError
 from backend.plugin.requirements import install_requirements_async
 from backend.utils.locks import acquire_distributed_reload_lock
 from backend.utils.pattern_validate import is_git_url
@@ -51,7 +57,105 @@ async def _append_env_example(plugin_path: anyio.Path) -> None:
         await f.write(new_content)
 
 
-async def install_zip_plugin(file: UploadFile | str) -> str:  # ruff:ignore[complex-structure]
+def _check_manifest_fba_compatibility(plugin_name: str, manifest: dict[str, Any]) -> None:
+    """
+    检测插件清单声明的 fba 版本兼容性
+
+    :param plugin_name: 插件名称
+    :param manifest: 插件清单
+    :return:
+    """
+    plugin_info = manifest.get('plugin')
+    specifier = plugin_info.get('fba_version') if isinstance(plugin_info, dict) else None
+    if not specifier:
+        raise errors.RequestError(msg=f'插件 {plugin_name} 未声明 fba_version 版本区间，无法安装')
+
+    try:
+        result = check_fba_compatibility(plugin_name, specifier)
+    except PluginConfigError as e:
+        raise errors.RequestError(msg=str(e)) from e
+
+    if not result.compatible:
+        raise errors.RequestError(
+            msg=f'插件 {plugin_name} 与当前 fba 版本不兼容，要求 fba 版本 {result.required}，当前版本 {result.current}'
+        )
+
+
+def _parse_manifest(content: str, plugin_name: str) -> dict[str, Any]:
+    """
+    解析插件清单
+
+    :param content: 插件清单内容
+    :param plugin_name: 插件名称
+    :return:
+    """
+    try:
+        manifest = rtoml.loads(content)
+    except Exception as e:
+        raise errors.RequestError(msg=f'插件 {plugin_name} 配置文件格式非法：{e!s}') from e
+
+    if not isinstance(manifest, dict):
+        raise errors.RequestError(msg=f'插件 {plugin_name} 配置文件格式非法')
+
+    return manifest
+
+
+def _install_zip_contents(  # ruff:ignore[complex-structure]
+    *, contents: bytes, plugin_name: str, destination: Path
+) -> None:
+    """
+    校验并安装 ZIP 插件内容
+
+    :param contents: 插件压缩包内容
+    :param plugin_name: 插件名称
+    :param destination: 插件安装目录
+    :return:
+    """
+    file_bytes = io.BytesIO(contents)
+    if not zipfile.is_zipfile(file_bytes):
+        raise errors.RequestError(msg='插件压缩包格式非法')
+
+    with zipfile.ZipFile(file_bytes) as zf:
+        plugin_namelist = zf.namelist()
+        if not plugin_namelist:
+            raise errors.RequestError(msg='插件压缩包内容非法')
+        plugin_dir_name = plugin_namelist[0].split('/', 1)[0].strip()
+        if not plugin_dir_name:
+            raise errors.RequestError(msg='插件压缩包内容非法')
+        if (
+            len(plugin_namelist) <= 3
+            or f'{plugin_dir_name}/plugin.toml' not in plugin_namelist
+            or f'{plugin_dir_name}/README.md' not in plugin_namelist
+        ):
+            raise errors.RequestError(msg='插件压缩包内缺少必要文件')
+
+        manifest = _parse_manifest(
+            zf.read(f'{plugin_dir_name}/plugin.toml').decode('utf-8'),
+            plugin_name,
+        )
+        _check_manifest_fba_compatibility(plugin_name, manifest)
+
+        members = []
+        prefix = f'{plugin_dir_name}/'
+        for member in zf.infolist():
+            if member.filename in {plugin_dir_name, prefix}:
+                continue
+            if not member.filename.startswith(prefix):
+                continue
+            relative_filename = member.filename.removeprefix(prefix)
+            if not relative_filename:
+                if member.is_dir():
+                    continue
+                raise errors.RequestError(msg='插件压缩包内容非法')
+            member.filename = relative_filename
+            members.append(member)
+        if not members:
+            raise errors.RequestError(msg='插件压缩包内容非法')
+        destination.mkdir(parents=True, exist_ok=True)
+        zf.extractall(destination, members)
+
+
+async def install_zip_plugin(file: UploadFile | str) -> str:
     """
     安装 ZIP 插件
 
@@ -63,64 +167,24 @@ async def install_zip_plugin(file: UploadFile | str) -> str:  # ruff:ignore[comp
             contents = await fb.read()
     else:
         contents = await file.read()
-    file_bytes = io.BytesIO(contents)
-    if not zipfile.is_zipfile(file_bytes):
-        raise errors.RequestError(msg='插件压缩包格式非法')
+    plugin_name_match = re.match(
+        r'^([a-zA-Z0-9_]+)',
+        file.split(os.sep)[-1].split('.')[0].strip() if isinstance(file, str) else file.filename.split('.')[0].strip(),
+    )
+    if not plugin_name_match:
+        raise errors.RequestError(msg='插件压缩包文件名非法')
+    plugin_name = plugin_name_match.group()
 
     async with acquire_distributed_reload_lock():
-        with zipfile.ZipFile(file_bytes) as zf:
-            # 校验压缩包
-            plugin_namelist = zf.namelist()
-            if not plugin_namelist:
-                raise errors.RequestError(msg='插件压缩包内容非法')
-            plugin_dir_name = plugin_namelist[0].split('/', 1)[0].strip()
-            if not plugin_dir_name:
-                raise errors.RequestError(msg='插件压缩包内容非法')
-            if (
-                len(plugin_namelist) <= 3
-                or f'{plugin_dir_name}/plugin.toml' not in plugin_namelist
-                or f'{plugin_dir_name}/README.md' not in plugin_namelist
-            ):
-                raise errors.RequestError(msg='插件压缩包内缺少必要文件')
-
-            # 插件是否可安装
-            plugin_name_match = re.match(
-                r'^([a-zA-Z0-9_]+)',
-                file.split(os.sep)[-1].split('.')[0].strip()
-                if isinstance(file, str)
-                else file.filename.split('.')[0].strip(),
-            )
-            if not plugin_name_match:
-                raise errors.RequestError(msg='插件压缩包文件名非法')
-            plugin_name = plugin_name_match.group()
-            full_plugin_path = anyio.Path(PLUGIN_DIR / plugin_name)
-            if await full_plugin_path.exists():
-                raise errors.ConflictError(msg='此插件已安装')
-
-            # 解压（安装）
-            members = []
-            prefix = f'{plugin_dir_name}/'
-            for member in zf.infolist():
-                if member.filename in {plugin_dir_name, prefix}:
-                    continue
-                if not member.filename.startswith(prefix):
-                    continue
-
-                relative_filename = member.filename.removeprefix(prefix)
-                if not relative_filename:
-                    if member.is_dir():
-                        continue
-                    raise errors.RequestError(msg='插件压缩包内容非法')
-
-                member.filename = relative_filename
-                members.append(member)
-
-            if not members:
-                raise errors.RequestError(msg='插件压缩包内容非法')
-
-            await full_plugin_path.mkdir(parents=True, exist_ok=True)
-            await run_in_threadpool(zf.extractall, full_plugin_path, members)
-
+        full_plugin_path = anyio.Path(PLUGIN_DIR / plugin_name)
+        if await full_plugin_path.exists():
+            raise errors.ConflictError(msg='此插件已安装')
+        await run_in_threadpool(
+            _install_zip_contents,
+            contents=contents,
+            plugin_name=plugin_name,
+            destination=PLUGIN_DIR / plugin_name,
+        )
         await _append_env_example(full_plugin_path)
         await install_requirements_async(plugin_name)
         await redis_client.set(f'{settings.PLUGIN_REDIS_PREFIX}:changed', 'true')
@@ -150,6 +214,17 @@ async def install_git_plugin(repo_url: str) -> str:
             log.error(f'插件安装失败: {e}')
             raise errors.ServerError(msg='插件安装失败，请稍后重试') from e
 
+        # 检测插件与当前 fba 版本的兼容性
+        manifest_path = path / 'plugin.toml'
+        if not await manifest_path.exists():
+            await run_in_threadpool(remove_plugin, path)
+            raise errors.RequestError(msg=f'插件 {repo_name} 缺少 plugin.toml 配置文件')
+        manifest = _parse_manifest(await manifest_path.read_text(encoding='utf-8'), repo_name)
+        try:
+            _check_manifest_fba_compatibility(repo_name, manifest)
+        except Exception:
+            await run_in_threadpool(remove_plugin, path)
+            raise
         await _append_env_example(path)
         await install_requirements_async(repo_name)
         await redis_client.set(f'{settings.PLUGIN_REDIS_PREFIX}:changed', 'true')
@@ -168,7 +243,6 @@ async def install_git_frontend_plugin(repo_url: str, frontend_project_root: str)
     match = is_git_url(repo_url)
     if not match:
         raise errors.RequestError(msg='Git 仓库地址格式非法，仅支持 HTTP/HTTPS 协议')
-
     if not frontend_project_root.strip():
         raise errors.RequestError(msg='前端项目根路径不能为空')
 
@@ -183,7 +257,8 @@ async def install_git_frontend_plugin(repo_url: str, frontend_project_root: str)
         raise errors.RequestError(msg='未检测到前端插件目录，请确认路径下存在 apps/web-antdv-next/src/plugins')
 
     repo_name = match.group('repo')
-    plugin_name = repo_name.removesuffix('_ui')
+    # 仓库名允许 _ui 或 -ui 后缀，安装目录不保留该后缀
+    plugin_name = repo_name.removesuffix('_ui') if repo_name.endswith('_ui') else repo_name.removesuffix('-ui')
     if not plugin_name:
         raise errors.RequestError(msg='前端插件仓库名称非法')
 

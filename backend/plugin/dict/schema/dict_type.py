@@ -5,6 +5,13 @@ from pydantic import ConfigDict, Field
 from backend.common.schema import SchemaBase
 
 
+class DictTypeQueryParam(SchemaBase):
+    """字典类型查询参数"""
+
+    name: str | None = Field(None, description='字典类型名称')
+    code: str | None = Field(None, description='字典类型编码')
+
+
 class DictTypeSchemaBase(SchemaBase):
     """字典类型基础模型"""
 

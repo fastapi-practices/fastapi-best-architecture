@@ -1,10 +1,10 @@
 [plugin]
 summary = "通知公告"
 version = "0.0.2"
+fba_version = ">=2.0.0,<3.0.0"
 description = "用于发布系统内部通知、公告"
 author = "wu-clan"
 tags = ["other"]
-database = ["mysql", "postgresql"]
 
 [app]
 extend = "admin"

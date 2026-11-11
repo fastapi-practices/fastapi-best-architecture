@@ -1,16 +1,20 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
+from redis_fastapi import cache, cache_evict
 
+from backend.common.cache import http_cache_key
 from backend.common.pagination import DependsPagination, PageData
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
 from backend.common.security.jwt import DependsJwtAuth
 from backend.common.security.permission import RequestPermission
 from backend.common.security.rbac import DependsRBAC
+from backend.core.conf import settings
 from backend.database.db import CurrentSession, CurrentSessionTransaction
 from backend.plugin.dict.schema.dict_data import (
     CreateDictDataParam,
     DeleteDictDataParam,
+    DictDataQueryParam,
     GetDictDataDetail,
     UpdateDictDataParam,
 )
@@ -19,13 +23,41 @@ from backend.plugin.dict.service.dict_data_service import dict_data_service
 router = APIRouter()
 
 
-@router.get('/all', summary='获取所有字典数据', dependencies=[DependsJwtAuth])
+@router.get(
+    '/all',
+    summary='获取所有字典数据',
+    dependencies=[
+        DependsJwtAuth,
+        Depends(
+            cache(
+                ttl=settings.HTTP_CACHE_TTL,
+                eviction_group='dict',
+                key_builder=http_cache_key,
+                no_store=True,
+            )
+        ),
+    ],
+)
 async def get_all_dict_datas(db: CurrentSession) -> ResponseSchemaModel[list[GetDictDataDetail]]:
     data = await dict_data_service.get_all(db=db)
     return response_base.success(data=data)
 
 
-@router.get('/{pk}', summary='获取字典数据详情', dependencies=[DependsJwtAuth])
+@router.get(
+    '/{pk}',
+    summary='获取字典数据详情',
+    dependencies=[
+        DependsJwtAuth,
+        Depends(
+            cache(
+                ttl=settings.HTTP_CACHE_TTL,
+                eviction_group='dict',
+                key_builder=http_cache_key,
+                no_store=True,
+            )
+        ),
+    ],
+)
 async def get_dict_data(
     db: CurrentSession,
     pk: Annotated[int, Path(description='字典数据 ID')],
@@ -34,7 +66,21 @@ async def get_dict_data(
     return response_base.success(data=data)
 
 
-@router.get('/type-codes/{code}', summary='获取字典数据列表', dependencies=[DependsJwtAuth])
+@router.get(
+    '/type-codes/{code}',
+    summary='获取字典数据列表',
+    dependencies=[
+        DependsJwtAuth,
+        Depends(
+            cache(
+                ttl=settings.HTTP_CACHE_TTL,
+                eviction_group='dict',
+                key_builder=http_cache_key,
+                no_store=True,
+            )
+        ),
+    ],
+)
 async def get_dict_data_by_type_code(
     db: CurrentSession,
     code: Annotated[str, Path(description='字典类型编码')],
@@ -49,23 +95,27 @@ async def get_dict_data_by_type_code(
     dependencies=[
         DependsJwtAuth,
         DependsPagination,
+        Depends(
+            cache(
+                ttl=settings.HTTP_CACHE_TTL,
+                eviction_group='dict',
+                key_builder=http_cache_key,
+                no_store=True,
+            )
+        ),
     ],
 )
 async def get_dict_datas_paginated(
     db: CurrentSession,
-    type_code: Annotated[str | None, Query(description='字典类型编码')] = None,
-    label: Annotated[str | None, Query(description='字典数据标签')] = None,
-    value: Annotated[str | None, Query(description='字典数据键值')] = None,
-    status: Annotated[int | None, Query(description='状态')] = None,
-    type_id: Annotated[int | None, Query(description='字典类型 ID')] = None,
+    query: Annotated[DictDataQueryParam, Query()],
 ) -> ResponseSchemaModel[PageData[GetDictDataDetail]]:
     page_data = await dict_data_service.get_list(
         db=db,
-        type_code=type_code,
-        label=label,
-        value=value,
-        status=status,
-        type_id=type_id,
+        type_code=query.type_code,
+        label=query.label,
+        value=query.value,
+        status=query.status,
+        type_id=query.type_id,
     )
     return response_base.success(data=page_data)
 
@@ -76,6 +126,7 @@ async def get_dict_datas_paginated(
     dependencies=[
         Depends(RequestPermission('dict:data:add')),
         DependsRBAC,
+        Depends(cache_evict(eviction_group='dict'), scope='function'),
     ],
 )
 async def create_dict_data(db: CurrentSessionTransaction, obj: CreateDictDataParam) -> ResponseModel:
@@ -89,6 +140,7 @@ async def create_dict_data(db: CurrentSessionTransaction, obj: CreateDictDataPar
     dependencies=[
         Depends(RequestPermission('dict:data:edit')),
         DependsRBAC,
+        Depends(cache_evict(eviction_group='dict'), scope='function'),
     ],
 )
 async def update_dict_data(
@@ -108,6 +160,7 @@ async def update_dict_data(
     dependencies=[
         Depends(RequestPermission('dict:data:del')),
         DependsRBAC,
+        Depends(cache_evict(eviction_group='dict'), scope='function'),
     ],
 )
 async def delete_dict_datas(db: CurrentSessionTransaction, obj: DeleteDictDataParam) -> ResponseModel:

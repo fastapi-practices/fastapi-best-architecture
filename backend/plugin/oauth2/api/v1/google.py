@@ -5,16 +5,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Response
 from fastapi_oauth20 import FastAPIOAuth20, GoogleOAuth20
-from pyrate_limiter import Duration, Rate
 from starlette.responses import RedirectResponse
 
+from backend.common.limiter import rate_limit
 from backend.common.response.response_schema import ResponseSchemaModel, response_base
 from backend.core.conf import settings
 from backend.database.db import CurrentSessionTransaction
 from backend.database.redis import redis_client
 from backend.plugin.oauth2.enums import UserSocialAuthType, UserSocialType
 from backend.plugin.oauth2.service.oauth2_service import oauth2_service
-from backend.utils.limiter import RateLimiter
 
 router = APIRouter()
 
@@ -39,7 +38,7 @@ async def get_google_oauth2_url() -> ResponseSchemaModel[str]:
     '/callback',
     summary='google 授权自动重定向',
     description='google 授权后，自动重定向到当前地址并获取用户信息，通过用户信息自动创建系统用户',
-    dependencies=[Depends(RateLimiter(Rate(5, Duration.MINUTE)))],
+    dependencies=[Depends(rate_limit('5/minute'))],
 )
 async def google_oauth2_callback(  # ruff:ignore[missing-return-type-undocumented-public-function]
     db: CurrentSessionTransaction,

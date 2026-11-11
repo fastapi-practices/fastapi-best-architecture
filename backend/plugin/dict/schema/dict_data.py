@@ -6,6 +6,16 @@ from backend.common.enums import StatusType
 from backend.common.schema import SchemaBase
 
 
+class DictDataQueryParam(SchemaBase):
+    """字典数据查询参数"""
+
+    type_code: str | None = Field(None, description='字典类型编码')
+    label: str | None = Field(None, description='字典数据标签')
+    value: str | None = Field(None, description='字典数据键值')
+    status: int | None = Field(None, description='状态')
+    type_id: int | None = Field(None, description='字典类型 ID')
+
+
 class DictDataSchemaBase(SchemaBase):
     """字典数据基础模型"""
 

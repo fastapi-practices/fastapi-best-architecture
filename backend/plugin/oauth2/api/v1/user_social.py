@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Request
+from typing import Annotated
+
+from fastapi import APIRouter, Query, Request
 
 from backend.common.context import ctx
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
 from backend.common.security.jwt import DependsJwtAuth
 from backend.database.db import CurrentSession, CurrentSessionTransaction
-from backend.plugin.oauth2.enums import UserSocialType
+from backend.plugin.oauth2.schema.user_social import UserSocialQueryParam
 from backend.plugin.oauth2.service.user_social_service import user_social_service
 
 router = APIRouter()
@@ -17,16 +19,23 @@ async def get_user_bindings(db: CurrentSession, request: Request) -> ResponseSch
 
 
 @router.get('/me/binding', summary='获取绑定授权链接', dependencies=[DependsJwtAuth])
-async def get_binding_auth_url(request: Request, source: UserSocialType) -> ResponseSchemaModel[str]:
+async def get_binding_auth_url(
+    request: Request,
+    query: Annotated[UserSocialQueryParam, Query()],
+) -> ResponseSchemaModel[str]:
     binding_url = await user_social_service.get_binding_auth_url(
         user_id=request.user.id,
         tenant_id=ctx.tenant_id,
-        source=source,
+        source=query.source,
     )
     return response_base.success(data=binding_url)
 
 
 @router.delete('/me/unbinding', summary='解绑用户社交账号', dependencies=[DependsJwtAuth])
-async def unbinding_user(db: CurrentSessionTransaction, request: Request, source: UserSocialType) -> ResponseModel:
-    await user_social_service.unbinding(db=db, user_id=request.user.id, source=source)
+async def unbinding_user(
+    db: CurrentSessionTransaction,
+    request: Request,
+    query: Annotated[UserSocialQueryParam, Query()],
+) -> ResponseModel:
+    await user_social_service.unbinding(db=db, user_id=request.user.id, source=query.source)
     return response_base.success()

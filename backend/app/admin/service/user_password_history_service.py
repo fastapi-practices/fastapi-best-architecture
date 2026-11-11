@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.admin.crud.crud_user_password_history import user_password_history_dao
 from backend.app.admin.schema.user_password_history import CreateUserPasswordHistoryParam
 from backend.common.exception import errors
+from backend.common.i18n import t
 from backend.core.conf import settings
 from backend.database.redis import redis_client
 from backend.utils.dynamic_config import load_user_security_config
@@ -26,18 +27,17 @@ class UserPasswordHistoryService:
         :return:
         """
         if not user_status:
-            raise errors.AuthorizationError(msg='用户已被锁定, 请联系统管理员')
+            raise errors.AuthorizationError(msg=t('error.auth.user_locked'))
 
-        locked_until_str = await redis_client.get(f'{settings.USER_LOCK_REDIS_PREFIX}:{user_id}')
-
+        lock_key = f'{settings.USER_LOCK_REDIS_PREFIX}:{user_id}'
+        locked_until_str = await redis_client.get(lock_key)
         if locked_until_str:
             locked_until = timezone.from_str(locked_until_str)
             now = timezone.now()
             if locked_until > now:
                 remaining_minutes = math.ceil((locked_until - now).total_seconds() / 60)
-                raise errors.AuthorizationError(msg=f'账号已被锁定，请在 {remaining_minutes} 分钟后重试')
-
-            await redis_client.delete(f'{settings.USER_LOCK_REDIS_PREFIX}:{user_id}')
+                raise errors.AuthorizationError(msg=t('error.auth.locked_retry', minutes=remaining_minutes))
+            await redis_client.delete(lock_key)
             await redis_client.delete(f'{settings.LOGIN_FAILURE_PREFIX}:{user_id}')
 
     @staticmethod
@@ -54,14 +54,11 @@ class UserPasswordHistoryService:
         if settings.USER_LOCK_THRESHOLD == 0:
             return
 
-        failure_count = await redis_client.get(f'{settings.LOGIN_FAILURE_PREFIX}:{user_id}')
+        failure_key = f'{settings.LOGIN_FAILURE_PREFIX}:{user_id}'
+        failure_count = await redis_client.get(failure_key)
         failure_count = int(failure_count) if failure_count else 0
         failure_count += 1
-        await redis_client.set(
-            f'{settings.LOGIN_FAILURE_PREFIX}:{user_id}',
-            str(failure_count),
-            ex=settings.USER_LOCK_SECONDS,
-        )
+        await redis_client.set(failure_key, str(failure_count), ex=settings.USER_LOCK_SECONDS)
 
         if failure_count >= settings.USER_LOCK_THRESHOLD:
             locked_until = timezone.now() + timedelta(seconds=settings.USER_LOCK_SECONDS)
@@ -70,7 +67,7 @@ class UserPasswordHistoryService:
                 timezone.to_str(locked_until),
                 ex=settings.USER_LOCK_SECONDS,
             )
-            raise errors.AuthorizationError(msg='登录失败次数过多，账号已被锁定')
+            raise errors.AuthorizationError(msg=t('error.auth.too_many_failures'))
 
     @staticmethod
     async def check_password_expiry_status(db: AsyncSession, password_changed_time: datetime) -> int | None:
@@ -85,16 +82,14 @@ class UserPasswordHistoryService:
 
         if settings.USER_PASSWORD_EXPIRY_DAYS == 0:
             return None
-
         if not password_changed_time:
-            raise errors.AuthorizationError(msg='密码已过期，请修改密码后重新登录')
+            raise errors.AuthorizationError(msg=t('error.auth.password_expired'))
 
         expiry_time = password_changed_time + timedelta(days=settings.USER_PASSWORD_EXPIRY_DAYS)
         days_remaining = (expiry_time - timezone.now()).days
 
         if days_remaining < 0:
-            raise errors.AuthorizationError(msg='密码已过期，请修改密码后重新登录')
-
+            raise errors.AuthorizationError(msg=t('error.auth.password_expired'))
         if days_remaining <= settings.USER_PASSWORD_REMINDER_DAYS:
             return days_remaining
 

@@ -9,9 +9,10 @@ from backend.app.admin.schema.user import (
     GetUserInfoWithRelationDetail,
     ResetPasswordParam,
     UpdateUserParam,
+    UpdateUserPermissionQueryParam,
+    UserQueryParam,
 )
 from backend.app.admin.service.user_service import user_service
-from backend.common.enums import UserPermissionType
 from backend.common.pagination import DependsPagination, PageData
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
 from backend.common.security.jwt import DependsJwtAuth, DependsSuperUser
@@ -55,12 +56,15 @@ async def get_user_roles(
 )
 async def get_users_paginated(
     db: CurrentSession,
-    dept: Annotated[int | None, Query(description='部门 ID')] = None,
-    username: Annotated[str | None, Query(description='用户名')] = None,
-    phone: Annotated[str | None, Query(description='手机号')] = None,
-    status: Annotated[int | None, Query(description='状态')] = None,
+    query: Annotated[UserQueryParam, Query()],
 ) -> ResponseSchemaModel[PageData[GetUserInfoWithRelationDetail]]:
-    page_data = await user_service.get_list(db=db, dept=dept, username=username, phone=phone, status=status)
+    page_data = await user_service.get_list(
+        db=db,
+        dept=query.dept,
+        username=query.username,
+        phone=query.phone,
+        status=query.status,
+    )
     return response_base.success(data=page_data)
 
 
@@ -90,9 +94,9 @@ async def update_user_permission(
     db: CurrentSessionTransaction,
     request: Request,
     pk: Annotated[int, Path(description='用户 ID')],
-    type: Annotated[UserPermissionType, Query(description='权限类型')],
+    query: Annotated[UpdateUserPermissionQueryParam, Query()],
 ) -> ResponseModel:
-    count = await user_service.update_permission(db=db, request=request, pk=pk, type=type)
+    count = await user_service.update_permission(db=db, request=request, pk=pk, type=query.type)
     if count > 0:
         return response_base.success()
     return response_base.fail()

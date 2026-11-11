@@ -1,10 +1,10 @@
 [plugin]
 summary = "参数配置"
 version = "0.0.2"
+fba_version = ">=2.0.0,<3.0.0"
 description = "通常用于动态配置系统参数和前端工程数据展示"
 author = "wu-clan"
 tags = ["other"]
-database = ["mysql", "postgresql"]
 
 [app]
 extend = "admin"

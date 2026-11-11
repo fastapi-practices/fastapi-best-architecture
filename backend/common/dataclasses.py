@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import Response
 
-from backend.common.enums import StatusType
+from backend.common.enums import RequestExceptionKind, StatusType
 
 
 @dataclasses.dataclass
@@ -84,3 +84,19 @@ class PluginEntry:
     extend: str | None = None
     routers: list[str] | None = None
     api: dict[str, Any] | None = None
+
+
+@dataclasses.dataclass
+class RequestException:
+    kind: RequestExceptionKind
+    code: int | None
+    msg: str | None
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class CompatibilityResult:
+    """插件与 fba 版本兼容性检测结果"""
+
+    compatible: bool
+    required: str
+    current: str

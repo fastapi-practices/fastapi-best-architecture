@@ -8,6 +8,13 @@ from backend.common.enums import StatusType
 from backend.common.schema import SchemaBase
 
 
+class RoleQueryParam(SchemaBase):
+    """角色查询参数"""
+
+    name: str | None = Field(None, description='角色名称')
+    status: int | None = Field(None, description='状态')
+
+
 class RoleSchemaBase(SchemaBase):
     """角色基础模型"""
 
@@ -41,7 +48,7 @@ class CreateRoleMenuParam(SchemaBase):
 class UpdateRoleMenuParam(SchemaBase):
     """更新角色菜单参数"""
 
-    menus: list[int] = Field(description='菜单 ID 列表')
+    menu_ids: list[int] = Field(description='菜单 ID 列表')
 
 
 class CreateRoleScopeParam(SchemaBase):
@@ -54,7 +61,7 @@ class CreateRoleScopeParam(SchemaBase):
 class UpdateRoleScopeParam(SchemaBase):
     """更新角色数据范围参数"""
 
-    scopes: list[int] = Field(description='数据范围 ID 列表')
+    scope_ids: list[int] = Field(description='数据范围 ID 列表')
 
 
 class GetRoleDetail(RoleSchemaBase):

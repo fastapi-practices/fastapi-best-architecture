@@ -1,6 +1,5 @@
 import shutil
 
-from functools import cache
 from re import Pattern
 from typing import Any, Literal
 
@@ -46,7 +45,6 @@ class Settings(BaseSettings):
     FASTAPI_STATIC_FILES: bool = True
 
     # .env 数据库
-    DATABASE_TYPE: Literal['mysql', 'postgresql']
     DATABASE_HOST: str
     DATABASE_PORT: int
     DATABASE_USER: str
@@ -57,7 +55,6 @@ class Settings(BaseSettings):
     DATABASE_ECHO: bool | Literal['debug'] = False
     DATABASE_POOL_ECHO: bool | Literal['debug'] = False
     DATABASE_SCHEMA: str = 'fba'
-    DATABASE_CHARSET: str = 'utf8mb4'
     DATABASE_PK_MODE: Literal['autoincrement', 'snowflake'] = 'autoincrement'
 
     # .env Redis
@@ -68,17 +65,11 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_TIMEOUT: int = 5
+    REDIS_MAX_CONNECTIONS: int = 100  # 连接池上限
+    REDIS_POOL_TIMEOUT: int = 20  # 等待空闲连接超时（秒）
 
-    # 缓存
-    CACHE_LOCAL_ENABLED: bool = True
-    CACHE_LOCAL_MAXSIZE: int = 100000
-    CACHE_LOCAL_TTL: int = 60 * 60 * 2  # 2 小时
-    CACHE_REDIS_TTL: int = 60 * 60 * 2  # 2 小时
-    CACHE_CONFIG_REDIS_PREFIX: str = 'fba:cache:config'
-    CACHE_DICT_REDIS_PREFIX: str = 'fba:cache:dict'
-    CACHE_PUBSUB_CHANNEL: str = 'fba:cache:invalidate'
-    CACHE_PUBSUB_RECONNECT_DELAY: int = 5  # 重连延迟（秒）
-    CACHE_PUBSUB_MAX_RECONNECT_ATTEMPTS: int = 10  # 最大重连次数
+    # HTTP 缓存
+    HTTP_CACHE_TTL: int = 300  # 5 分钟
 
     # .env Snowflake
     SNOWFLAKE_ENABLED: bool = False
@@ -101,6 +92,7 @@ class Settings(BaseSettings):
     TOKEN_EXTRA_INFO_REDIS_PREFIX: str = 'fba:token_extra_info'
     TOKEN_ONLINE_REDIS_PREFIX: str = 'fba:token_online'
     TOKEN_REFRESH_REDIS_PREFIX: str = 'fba:refresh_token'
+    TOKEN_SESSION_REDIS_PREFIX: str = 'fba:token_session'
     TOKEN_REQUEST_UNDERLYING_SECURITY: bool = True
     TOKEN_REQUEST_PATH_EXCLUDE: list[str] = [  # JWT / RBAC 路由白名单
         f'{FASTAPI_API_V1_PATH}/auth/login',
@@ -167,19 +159,14 @@ class Settings(BaseSettings):
     WS_NO_AUTH_MARKER: str = 'internal'
 
     # CORS
-    CORS_ALLOWED_ORIGINS: list[str] = [  # 末尾不带斜杠
-        'http://127.0.0.1',
-        'http://localhost:5173',
-    ]
+    CORS_ALLOWED_ORIGINS: list[str] = ['*']  # 末尾不带斜杠
     CORS_EXPOSE_HEADERS: list[str] = [
         'X-Request-ID',
+        'X-RateLimit-Retry-After',
     ]
 
     # 中间件配置
     MIDDLEWARE_CORS: bool = True
-
-    # 请求限制配置
-    REQUEST_LIMITER_REDIS_PREFIX: str = 'fba:limiter'
 
     # 时间配置
     DATETIME_TIMEZONE: str = 'Asia/Shanghai'
@@ -240,10 +227,12 @@ class Settings(BaseSettings):
         'old_password',
         'new_password',
         'confirm_password',
+        'secret',
     ]
     OPERA_LOG_QUEUE_MAXSIZE: int = 100000
     OPERA_LOG_QUEUE_BATCH_CONSUME_SIZE: int = 100
     OPERA_LOG_QUEUE_TIMEOUT: int = 60  # 1 分钟
+    OPERA_LOG_QUEUE_DRAIN_TIMEOUT: int = 10  # 停止时排空队列的最长等待时间
     OPERA_LOG_BODY_MAX_SIZE: int = 10240  # 10 KB
 
     # 租户
@@ -295,11 +284,6 @@ class Settings(BaseSettings):
     CELERY_TASK_MAX_RETRIES: int = 5
 
     ##################################################
-    # [ Plugin ] code_generator
-    ##################################################
-    CODE_GENERATOR_DOWNLOAD_ZIP_FILENAME: str
-
-    ##################################################
     # [ Plugin ] oauth2
     ##################################################
     # .env
@@ -330,21 +314,6 @@ class Settings(BaseSettings):
     EMAIL_CAPTCHA_REDIS_PREFIX: str
     EMAIL_CAPTCHA_EXPIRE_SECONDS: int
 
-    ##################################################
-    # [ Plugin ] ai
-    ##################################################
-    # 动态配置
-    AI_EXA_API_KEY: str = ''
-    AI_TAVILY_API_KEY: str = ''
-
-    # 基础配置（in plugin.toml）
-    AI_CODE_MODE_DYNAMIC_CATALOG: bool = False
-    AI_CODE_MODE_MAX_RETRIES: int = 3
-    AI_CODE_MODE_TOOLS: list[str] = []
-    AI_CONTEXT_WARNING_THRESHOLD: float = 0.8
-    AI_HTTP_MAX_RETRIES: int = 5
-    AI_MCP_MAX_RETRIES: int = 1
-
     @model_validator(mode='before')
     @classmethod
     def check_env(cls, values: Any) -> Any:
@@ -363,12 +332,11 @@ class Settings(BaseSettings):
         return values
 
 
-@cache
 def get_settings() -> Settings:
     """获取全局配置单例"""
     if not ENV_FILE_PATH.exists():
         shutil.copy(ENV_EXAMPLE_FILE_PATH, ENV_FILE_PATH)
-    return Settings()
+    return Settings.settings_cached()
 
 
 # 创建全局配置实例

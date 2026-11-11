@@ -3,10 +3,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.common.cache.decorator import cache_invalidate, cached
 from backend.common.exception import errors
 from backend.common.pagination import paging_data
-from backend.core.conf import settings
 from backend.plugin.dict.crud.crud_dict_data import dict_data_dao
 from backend.plugin.dict.crud.crud_dict_type import dict_type_dao
 from backend.plugin.dict.model import DictData
@@ -17,7 +15,6 @@ class DictDataService:
     """字典数据服务类"""
 
     @staticmethod
-    @cached(namespace=settings.CACHE_DICT_REDIS_PREFIX, key='pk')
     async def get(*, db: AsyncSession, pk: int) -> DictData:
         """
         获取字典数据详情
@@ -32,10 +29,6 @@ class DictDataService:
         return dict_data
 
     @staticmethod
-    @cached(
-        namespace=settings.CACHE_DICT_REDIS_PREFIX,
-        key_builder=lambda *, db, code: f'type:{code}',
-    )
     async def get_by_type_code(*, db: AsyncSession, code: str) -> Sequence[DictData]:
         """
         获取字典数据详情
@@ -91,7 +84,6 @@ class DictDataService:
         return await paging_data(db, dict_data_select)
 
     @staticmethod
-    @cache_invalidate(namespace=settings.CACHE_DICT_REDIS_PREFIX)
     async def create(*, db: AsyncSession, obj: CreateDictDataParam) -> None:
         """
         创建字典数据
@@ -109,7 +101,6 @@ class DictDataService:
         await dict_data_dao.create(db, obj, dict_type.code)
 
     @staticmethod
-    @cache_invalidate(namespace=settings.CACHE_DICT_REDIS_PREFIX)
     async def update(*, db: AsyncSession, pk: int, obj: UpdateDictDataParam) -> int:
         """
         更新字典数据
@@ -133,7 +124,6 @@ class DictDataService:
         return count
 
     @staticmethod
-    @cache_invalidate(namespace=settings.CACHE_DICT_REDIS_PREFIX)
     async def delete(*, db: AsyncSession, obj: DeleteDictDataParam) -> int:
         """
         批量删除字典数据

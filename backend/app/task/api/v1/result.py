@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
 
-from backend.app.task.schema.result import DeleteTaskResultParam, GetTaskResultDetail
+from backend.app.task.schema.result import DeleteTaskResultParam, GetTaskResultDetail, TaskResultQueryParam
 from backend.app.task.service.result_service import task_result_service
 from backend.common.pagination import DependsPagination, PageData
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
@@ -33,10 +33,9 @@ async def get_task_result(
 )
 async def get_task_results_paginated(
     db: CurrentSession,
-    name: Annotated[str | None, Query(description='任务名称')] = None,
-    task_id: Annotated[str | None, Query(description='任务 ID')] = None,
+    query: Annotated[TaskResultQueryParam, Query()],
 ) -> ResponseSchemaModel[PageData[GetTaskResultDetail]]:
-    page_data = await task_result_service.get_list(db=db, name=name, task_id=task_id)
+    page_data = await task_result_service.get_list(db=db, name=query.name, task_id=query.task_id)
     return response_base.success(data=page_data)
 
 

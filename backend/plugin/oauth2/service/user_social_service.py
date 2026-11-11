@@ -14,6 +14,8 @@ from backend.plugin.oauth2.utils import get_oauth2_authorization_url
 
 
 class UserSocialService:
+    """用户社交账号服务类"""
+
     @staticmethod
     async def get_bindings(*, db: AsyncSession, user_id: int) -> list[str]:
         """
@@ -45,7 +47,6 @@ class UserSocialService:
         """
         if await user_social_dao.check_binding(db, user_id, source.value):
             raise errors.RequestError(msg=f'用户已绑定 {source.value} 账号')
-
         if await user_social_dao.get_by_sid(db, ctx.tenant_id, sid, source.value):
             raise errors.RequestError(msg=f'该 {source.value} 账号已被其他用户绑定')
 

@@ -7,18 +7,25 @@ from backend.common.enums import StatusType
 from backend.common.schema import SchemaBase
 
 
-class DataScopeBase(SchemaBase):
+class DataScopeQueryParam(SchemaBase):
+    """数据范围查询参数"""
+
+    name: str | None = Field(None, description='范围名称')
+    status: int | None = Field(None, description='状态')
+
+
+class DataScopeSchemaBase(SchemaBase):
     """数据范围基础模型"""
 
     name: str = Field(description='名称')
     status: StatusType = Field(description='状态')
 
 
-class CreateDataScopeParam(DataScopeBase):
+class CreateDataScopeParam(DataScopeSchemaBase):
     """创建数据范围参数"""
 
 
-class UpdateDataScopeParam(DataScopeBase):
+class UpdateDataScopeParam(DataScopeSchemaBase):
     """更新数据范围参数"""
 
 
@@ -32,7 +39,7 @@ class CreateDataScopeRuleParam(SchemaBase):
 class UpdateDataScopeRuleParam(SchemaBase):
     """更新数据范围规则参数"""
 
-    rules: list[int] = Field(description='数据规则 ID 列表')
+    rule_ids: list[int] = Field(description='数据规则 ID 列表')
 
 
 class DeleteDataScopeParam(SchemaBase):
@@ -41,7 +48,7 @@ class DeleteDataScopeParam(SchemaBase):
     pks: list[int] = Field(description='数据范围 ID 列表')
 
 
-class GetDataScopeDetail(DataScopeBase):
+class GetDataScopeDetail(DataScopeSchemaBase):
     """数据范围详情"""
 
     model_config = ConfigDict(from_attributes=True)

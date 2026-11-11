@@ -24,7 +24,7 @@ from watchfiles import Change, PythonFilter
 
 from backend import __version__
 from backend.common.dataclasses import PluginEntry
-from backend.common.enums import DataBaseType, PrimaryKeyType
+from backend.common.enums import PrimaryKeyType
 from backend.common.exception.errors import BaseExceptionError
 from backend.common.model import MappedBase
 from backend.core.conf import settings
@@ -33,7 +33,6 @@ from backend.core.path_conf import (
     ENV_EXAMPLE_FILE_PATH,
     ENV_FILE_PATH,
     LOCALE_DIR,
-    MYSQL_SCRIPT_DIR,
     PLUGIN_DIR,
     POSTGRESQL_SCRIPT_DIR,
     RELOAD_LOCK_FILE,
@@ -55,7 +54,7 @@ from backend.plugin.installer import install_git_frontend_plugin, install_git_pl
 from backend.plugin.installer import remove_plugin as _remove_plugin
 from backend.plugin.requirements import install_requirements_async, uninstall_requirements_async
 from backend.plugin.sql import build_sql_filename, get_plugin_destroy_sql, get_plugin_sql
-from backend.plugin.validator import validate_plugin_config
+from backend.plugin.validator import validate_plugin_config, validate_plugin_files
 from backend.utils.console import console
 from backend.utils.dynamic_import import import_module_cached
 from backend.utils.sql_parser import parse_sql_script
@@ -91,24 +90,18 @@ def setup_env_file() -> bool:
     try:
         env_content = Path(ENV_EXAMPLE_FILE_PATH).read_text(encoding='utf-8')
         console.note('配置数据库连接信息...')
-        db_type = Prompt.ask('数据库类型', choices=['mysql', 'postgresql'], default='postgresql')
         db_host = Prompt.ask('数据库主机', default='127.0.0.1')
-        db_port = Prompt.ask('数据库端口', default='5432' if db_type == 'postgresql' else '3306')
-        db_user = Prompt.ask('数据库用户名', default='postgres' if db_type == 'postgresql' else 'root')
+        db_port = Prompt.ask('数据库端口', default='5432')
+        db_user = Prompt.ask('数据库用户名', default='postgres')
         db_password = Prompt.ask('数据库密码', password=True, default='123456')
-
         console.note('配置 Redis 连接信息...')
         redis_host = Prompt.ask('Redis 主机', default='127.0.0.1')
         redis_port = Prompt.ask('Redis 端口', default='6379')
         redis_password = Prompt.ask('Redis 密码（留空表示无密码）', password=True, default='')
         redis_db = Prompt.ask('Redis 数据库编号', default='0')
-
         console.info('生成 Token 密钥...')
         token_secret = secrets.token_urlsafe(32)
-
         console.info('写入 .env 文件...')
-        env_content = env_content.replace("DATABASE_TYPE='postgresql'", f"DATABASE_TYPE='{db_type}'")
-        settings.DATABASE_TYPE = db_type
         env_content = env_content.replace("DATABASE_HOST='127.0.0.1'", f"DATABASE_HOST='{db_host}'")
         settings.DATABASE_HOST = db_host
         env_content = env_content.replace('DATABASE_PORT=5432', f'DATABASE_PORT={db_port}')
@@ -127,7 +120,6 @@ def setup_env_file() -> bool:
         settings.REDIS_DATABASE = redis_db
         env_content = re.sub(r"TOKEN_SECRET_KEY='[^']*'", f"TOKEN_SECRET_KEY='{token_secret}'", env_content)
         settings.TOKEN_SECRET_KEY = token_secret
-
         Path(ENV_FILE_PATH).write_text(env_content, encoding='utf-8')
         console.tip('.env 文件创建成功')
     except Exception as e:
@@ -140,29 +132,18 @@ def setup_env_file() -> bool:
 async def create_database(conn: AsyncConnection) -> bool:
     """创建或重建数据库"""
     try:
-        terminate_sql = None
-        if DataBaseType.mysql == settings.DATABASE_TYPE:
-            check_sql = f"SHOW DATABASES LIKE '{settings.DATABASE_SCHEMA}'"
-            drop_sql = f'DROP DATABASE IF EXISTS `{settings.DATABASE_SCHEMA}`'
-            create_sql = (
-                f'CREATE DATABASE `{settings.DATABASE_SCHEMA}` CHARACTER SET {settings.DATABASE_CHARSET} '
-                f'COLLATE {settings.DATABASE_CHARSET}_unicode_ci'
-            )
-        else:
-            check_sql = f"SELECT 1 FROM pg_database WHERE datname = '{settings.DATABASE_SCHEMA}'"
-            drop_sql = f'DROP DATABASE IF EXISTS {settings.DATABASE_SCHEMA}'
-            create_sql = f'CREATE DATABASE {settings.DATABASE_SCHEMA}'
-            terminate_sql = (
-                f'SELECT pg_terminate_backend(pid) FROM pg_stat_activity '
-                f"WHERE datname = '{settings.DATABASE_SCHEMA}' AND pid <> pg_backend_pid()"
-            )
-
+        check_sql = f"SELECT 1 FROM pg_database WHERE datname = '{settings.DATABASE_SCHEMA}'"
+        drop_sql = f'DROP DATABASE IF EXISTS {settings.DATABASE_SCHEMA}'
+        create_sql = f'CREATE DATABASE {settings.DATABASE_SCHEMA}'
+        terminate_sql = (
+            f'SELECT pg_terminate_backend(pid) FROM pg_stat_activity '
+            f"WHERE datname = '{settings.DATABASE_SCHEMA}' AND pid <> pg_backend_pid()"
+        )
         result = await conn.execute(text(check_sql))
         exists = result.fetchone() is not None
         console.note(f'重建 {settings.DATABASE_SCHEMA} 数据库...')
         if exists:
-            if terminate_sql:
-                await conn.execute(text(terminate_sql))
+            await conn.execute(text(terminate_sql))
             await conn.execute(text(drop_sql))
         await conn.execute(text(create_sql))
         console.tip('数据库创建成功')
@@ -177,9 +158,7 @@ def _build_db_config_panel_content() -> Text:
     """构建数据库配置面板内容"""
     panel_content = Text()
     panel_content.append('【数据库配置】', style='bold green')
-    panel_content.append('\n\n  • 类型: ')
-    panel_content.append(f'{settings.DATABASE_TYPE}', style='yellow')
-    panel_content.append('\n  • 主机：')
+    panel_content.append('\n\n  • 主机：')
     panel_content.append(f'{settings.DATABASE_HOST}:{settings.DATABASE_PORT}', style='yellow')
     panel_content.append('\n  • 数据库：')
     panel_content.append(f'{settings.DATABASE_SCHEMA}', style='yellow')
@@ -261,22 +240,21 @@ async def init(db: AsyncSession, redis: RedisCli) -> None:
             for prefix in [
                 settings.JWT_USER_REDIS_PREFIX,
                 settings.TOKEN_EXTRA_INFO_REDIS_PREFIX,
+                settings.TOKEN_ONLINE_REDIS_PREFIX,
                 settings.TOKEN_REDIS_PREFIX,
                 settings.TOKEN_REFRESH_REDIS_PREFIX,
+                settings.TOKEN_SESSION_REDIS_PREFIX,
             ]:
                 await redis.delete_by_prefix(prefix)
-
             console.note('重建数据库表')
             conn = await db.connection()
             await conn.run_sync(MappedBase.metadata.drop_all)
             await conn.run_sync(MappedBase.metadata.create_all)
-
             console.note('执行 SQL 脚本')
             sql_scripts = await get_sql_scripts()
             for sql_script in sql_scripts:
                 console.note(f'正在执行：{sql_script}')
                 await execute_sql_scripts(db, sql_script, is_init=True)
-
             console.tip('初始化成功')
             console.print('\n快试试 [bold cyan]fba run[/bold cyan] 启动服务吧~')
         except Exception as e:
@@ -309,7 +287,6 @@ def run(host: str, port: int, reload: bool, workers: int) -> None:  # ruff:ignor
         panel_content.append(f'{", ".join(plugins)}', style='yellow')
     else:
         panel_content.append('无', style='white')
-
     if settings.ENVIRONMENT == 'dev':
         panel_content.append(f'\n\n📖 Swagger 文档: {docs_url}', style='bold magenta')
         panel_content.append(f'\n📚 Redoc   文档: {redoc_url}', style='bold magenta')
@@ -317,6 +294,9 @@ def run(host: str, port: int, reload: bool, workers: int) -> None:  # ruff:ignor
 
     panel_content.append('\n🌐 架构官方文档: ', style='bold magenta')
     panel_content.append('https://docs.fba.wu-clan.cc/fastapi_best_architecture_docs/')
+
+    panel_content.append('\n\n赞助商：', style='bold yellow')
+    panel_content.append('Claude.uy', style='link https://claude.uy/home')
 
     console.print(Panel(panel_content, title=f'fba (v{__version__})', border_style='purple', padding=(1, 2)))
     granian.Granian(
@@ -346,7 +326,7 @@ def run_celery_beat(log_level: Literal['info', 'debug']) -> None:
         pass
 
 
-def run_celery_flower(port: int, basic_auth: str) -> None:
+def run_celery_flower(port: int, basic_auth: str, *, read_only: bool = True) -> None:
     """启动 Celery flower 监控服务"""
     try:
         subprocess.run([
@@ -356,6 +336,7 @@ def run_celery_flower(port: int, basic_auth: str) -> None:
             'flower',
             f'--port={port}',
             f'--basic-auth={basic_auth}',
+            f'--read-only={str(read_only).lower()}',
         ])
     except KeyboardInterrupt:
         pass
@@ -366,7 +347,6 @@ async def install_plugin(  # ruff:ignore[complex-structure]
     repo_url: str | None,
     frontend: bool,  # ruff:ignore[boolean-type-hint-positional-argument]
     no_sql: bool,  # ruff:ignore[boolean-type-hint-positional-argument]
-    db_type: DataBaseType,
     pk_type: PrimaryKeyType,
 ) -> None:
     """安装插件"""
@@ -380,24 +360,19 @@ async def install_plugin(  # ruff:ignore[complex-structure]
         if frontend:
             if repo_url is None:
                 raise cappa.Exit('前端插件仅允许通过 Git 仓库地址安装', code=1)
-
             frontend_project_root = Prompt.ask('请输入前端项目根路径')
             plugin_name = await install_git_frontend_plugin(repo_url, frontend_project_root)
             console.tip(f'前端插件 {plugin_name} 安装成功')
             return
-
         if path is None and repo_url is None:
             raise cappa.Exit('path 或 repo_url 必须指定其中一项', code=1)
         if path and repo_url:
             raise cappa.Exit('path 和 repo_url 不能同时指定', code=1)
-
         if path:
             plugin_name = await install_zip_plugin(file=path)
         if repo_url:
             plugin_name = await install_git_plugin(repo_url=repo_url)
-
         console.tip(f'插件 {plugin_name} 安装成功')
-
         console.note(f'正在同步插件 {plugin_name} 数据库表...')
         try:
             import_module_cached(f'backend.plugin.{plugin_name}.model')
@@ -407,9 +382,8 @@ async def install_plugin(  # ruff:ignore[complex-structure]
             async with async_db_session.begin() as db:
                 conn = await db.connection()
                 await conn.run_sync(MappedBase.metadata.create_all)
-
         if not no_sql:
-            sql_file = await get_plugin_sql(plugin_name, db_type, pk_type, tenant=settings.TENANT_ENABLED)
+            sql_file = await get_plugin_sql(plugin_name, pk_type, tenant=settings.TENANT_ENABLED)
             if sql_file:
                 console.info(f'正在执行插件 {plugin_name} 初始化 SQL 脚本：{sql_file}')
                 async with async_db_session.begin() as db:
@@ -479,9 +453,8 @@ async def remove_plugin(plugin: str | None, *, no_sql: bool = False) -> None:  #
         plugin_dir = PLUGIN_DIR / plugin
         if not plugin_dir.exists():
             raise cappa.Exit(f'插件 {plugin} 不存在', code=1)
-
         if not no_sql:
-            destroy_sql_file = await get_plugin_destroy_sql(plugin, settings.DATABASE_TYPE, settings.DATABASE_PK_MODE)
+            destroy_sql_file = await get_plugin_destroy_sql(plugin, settings.DATABASE_PK_MODE)
             if destroy_sql_file:
                 console.note(f'正在执行插件 {plugin} 销毁 SQL 脚本：{destroy_sql_file}')
                 async with async_db_session.begin() as db:
@@ -505,22 +478,18 @@ async def remove_plugin(plugin: str | None, *, no_sql: bool = False) -> None:  #
     plugins = get_plugins()
     if not plugins:
         raise cappa.Exit('当前没有已安装的插件', code=1)
-
     if not plugin:
         table = Table(show_header=True, header_style='bold magenta')
         table.add_column('编号', style='cyan', no_wrap=True, justify='center')
         table.add_column('插件名称', style='green', no_wrap=True)
-
         for idx, name in enumerate(plugins, 1):
             table.add_row(str(idx), name)
-
         console.print(table)
         choice = IntPrompt.ask('请选择要卸载的插件编号', choices=[str(i) for i in range(1, len(plugins) + 1)])
         plugin = plugins[choice - 1]
     else:
         if plugin not in plugins:
             raise cappa.Exit(f'插件 {plugin} 不存在', code=1)
-
     if plugin in get_required_plugins():
         raise cappa.Exit(f'插件 {plugin} 为必需插件，禁止卸载', code=1)
 
@@ -533,8 +502,7 @@ async def remove_plugin(plugin: str | None, *, no_sql: bool = False) -> None:  #
 async def get_sql_scripts() -> list[str]:
     """获取所有待执行的 SQL 脚本路径列表"""
     sql_scripts: list[str] = []
-    db_script_dir = MYSQL_SCRIPT_DIR if DataBaseType.mysql == settings.DATABASE_TYPE else POSTGRESQL_SCRIPT_DIR
-    main_sql_file = db_script_dir / build_sql_filename(
+    main_sql_file = POSTGRESQL_SCRIPT_DIR / build_sql_filename(
         'init',
         settings.DATABASE_PK_MODE,
         suffix='test_data',
@@ -546,14 +514,14 @@ async def get_sql_scripts() -> list[str]:
 
     plugins = []
     for plugin in get_plugins():
-        plugin_config = load_plugin_config(plugin)
+        plugin_config = await load_plugin_config(plugin)
         validate_plugin_config(plugin, plugin_config)
+        validate_plugin_files(plugin)
         plugins.append(PluginEntry(name=plugin, depends_on=plugin_config['plugin'].get('depends_on')))
 
     for plugin in resolve_plugin_order(plugins):
         plugin_sql = await get_plugin_sql(
             plugin.name,
-            settings.DATABASE_TYPE,
             settings.DATABASE_PK_MODE,
             tenant=settings.TENANT_ENABLED,
         )
@@ -588,104 +556,6 @@ async def execute_destroy_sql_scripts(db: AsyncSession, sql_scripts: str) -> Non
         raise cappa.Exit(f'销毁 SQL 脚本执行失败：{e}', code=1)
 
     console.tip('销毁 SQL 脚本已执行完成')
-
-
-async def import_table(
-    app: str,
-    table_schema: str,
-    table_name: str,
-) -> None:
-    """导入代码生成业务和模型列"""
-    if settings.ENVIRONMENT != 'dev':
-        raise cappa.Exit('代码生成仅在开发环境可用', code=1)
-
-    try:
-        from backend.plugin.code_generator.schema.gen import ImportParam
-        from backend.plugin.code_generator.service.gen_service import gen_service
-    except ImportError:
-        raise cappa.Exit('代码生成插件用法导入失败，请联系系统管理员', code=1)
-
-    try:
-        obj = ImportParam(app=app, table_schema=table_schema, table_name=table_name)
-        async with async_db_session.begin() as db:
-            await gen_service.import_business_and_model(db=db, obj=obj)
-        console.tip('代码生成业务和模型列导入成功')
-        console.log('\n快试试 [bold cyan]fba codegen[/bold cyan] 生成代码吧~')
-    except Exception as e:
-        raise cappa.Exit(e.msg if isinstance(e, BaseExceptionError) else str(e), code=1)
-
-
-async def generate(*, preview: bool = False) -> None:
-    """交互式代码生成"""
-    if settings.ENVIRONMENT != 'dev':
-        raise cappa.Exit('代码生成仅在开发环境可用', code=1)
-
-    try:
-        from backend.plugin.code_generator.service.business_service import gen_business_service
-        from backend.plugin.code_generator.service.gen_service import gen_service
-    except ImportError:
-        raise cappa.Exit('代码生成插件用法导入失败，请联系系统管理员', code=1)
-
-    try:
-        ids = []
-        async with async_db_session() as db:
-            results = await gen_business_service.get_all(db=db)
-
-        if not results:
-            raise cappa.Exit('[red]暂无可用的代码生成业务！请先通过 import 命令导入！[/]')
-
-        table = Table(show_header=True, header_style='bold magenta')
-        table.add_column('业务编号', style='cyan', no_wrap=True, justify='center')
-        table.add_column('应用名称', style='green', no_wrap=True)
-        table.add_column('生成路径', style='yellow')
-        table.add_column('备注', style='blue')
-
-        for result in results:
-            ids.append(result.id)
-            table.add_row(
-                str(result.id),
-                result.app_name,
-                result.gen_path or f'应用 {result.app_name} 根路径',
-                result.remark or '',
-            )
-
-        console.print(table)
-        business = IntPrompt.ask('请从中选择一个业务编号', choices=[str(id_) for id_ in ids])
-
-        # 预览
-        async with async_db_session() as db:
-            preview_data = await gen_service.preview(db=db, pk=business)
-
-        console.print('\n[bold yellow]将要生成以下文件：[/]')
-        file_table = Table(show_header=True, header_style='bold cyan')
-        file_table.add_column('文件路径', style='white')
-        file_table.add_column('大小', style='green', justify='right')
-
-        for filepath, content in sorted(preview_data.items()):
-            size = len(content)
-            size_str = f'{size} B' if size < 1024 else f'{size / 1024:.1f} KB'
-            file_table.add_row(filepath, size_str)
-
-        console.print(file_table)
-
-        if preview:
-            console.print('\n[bold cyan]预览模式：未执行实际生成操作[/]')
-            return
-
-        # 生成
-        console.print('\n[bold red]警告：代码生成将进行磁盘文件（覆盖）写入，切勿在生产环境中使用！！！[/]')
-        ok = Prompt.ask('\n确认继续生成代码吗？', choices=['y', 'n'], default='n')
-
-        if ok.lower() == 'y':
-            async with async_db_session.begin() as db:
-                gen_path = await gen_service.generate(db=db, pk=business)
-
-            console.print()
-            console.tip('代码已生成完成')
-            console.print(Text('\n详情请查看：'), Text(str(gen_path), style='bold white'))
-
-    except Exception as e:
-        raise cappa.Exit(e.msg if isinstance(e, BaseExceptionError) else str(e), code=1)
 
 
 def run_alembic(*args: str) -> None:
@@ -759,17 +629,13 @@ class Add:
         bool,
         cappa.Arg(default=False, help='禁用插件 SQL 脚本自动执行'),
     ]
-    db_type: Annotated[
-        DataBaseType,
-        cappa.Arg(default=settings.DATABASE_TYPE, help='执行插件 SQL 脚本的数据库类型'),
-    ]
     pk_type: Annotated[
         PrimaryKeyType,
         cappa.Arg(default=settings.DATABASE_PK_MODE, help='执行插件 SQL 脚本数据库主键类型'),
     ]
 
     async def __call__(self) -> None:
-        await install_plugin(self.path, self.repo_url, self.frontend, self.no_sql, self.db_type, self.pk_type)
+        await install_plugin(self.path, self.repo_url, self.frontend, self.no_sql, self.pk_type)
 
 
 @cappa.command(help='移除插件')
@@ -855,48 +721,19 @@ class Flower:
         str,
         cappa.Arg(default='admin:123456', help='页面登录的用户名和密码'),
     ]
+    read_only: Annotated[
+        bool,
+        cappa.Arg(long=['--read-only', '--no-read-only'], default=True, help='只读监控模式，关闭后允许管理操作'),
+    ]
 
     def __call__(self) -> None:
-        run_celery_flower(port=self.port, basic_auth=self.basic_auth)
+        run_celery_flower(port=self.port, basic_auth=self.basic_auth, read_only=self.read_only)
 
 
 @cappa.command(help='运行 Celery 服务')
 @dataclass
 class Celery:
     subcmd: cappa.Subcommands[Worker | Beat | Flower]
-
-
-@cappa.command(help='导入代码生成业务和模型列', default_long=True)
-@dataclass
-class Import:
-    app: Annotated[
-        str,
-        cappa.Arg(help='应用名称，用于代码生成到指定 app'),
-    ]
-    table_schema: Annotated[
-        str,
-        cappa.Arg(short='tc', default='fba', help='数据库名'),
-    ]
-    table_name: Annotated[
-        str,
-        cappa.Arg(short='tn', help='数据库表名'),
-    ]
-
-    async def __call__(self) -> None:
-        await import_table(self.app, self.table_schema, self.table_name)
-
-
-@cappa.command(name='codegen', help='代码生成（体验完整功能，请自行部署 fba vben 前端工程）', default_long=True)
-@dataclass
-class CodeGenerator:
-    preview: Annotated[
-        bool,
-        cappa.Arg(short='-p', default=False, help='仅预览将要生成的文件，不执行实际生成操作'),
-    ]
-    subcmd: cappa.Subcommands[Import | None] = None
-
-    async def __call__(self) -> None:
-        await generate(preview=self.preview)
 
 
 @cappa.command(help='生成数据库迁移文件', default_long=True)
@@ -1011,9 +848,7 @@ class FbaCli:
         str,
         cappa.Arg(value_name='PATH', default='', show_default=False, help='在事务中执行 SQL 脚本'),
     ]
-    subcmd: cappa.Subcommands[Init | Run | Add | Remove | Deps | Format | Celery | CodeGenerator | Alembic | None] = (
-        None
-    )
+    subcmd: cappa.Subcommands[Init | Run | Add | Remove | Deps | Format | Celery | Alembic | None] = None
 
     async def __call__(self) -> None:
         if self.sql:

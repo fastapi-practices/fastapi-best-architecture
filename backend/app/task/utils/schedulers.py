@@ -19,12 +19,14 @@ from backend.app.task.enums import PeriodType, TaskSchedulerType
 from backend.app.task.model.scheduler import TaskScheduler
 from backend.app.task.schema.scheduler import CreateTaskSchedulerParam
 from backend.app.task.utils.tzcrontab import TzAwareCrontab, crontab_verify
+from backend.common.enums import StatusType
 from backend.common.exception import errors
 from backend.core.conf import settings
 from backend.database.db import async_db_session
 from backend.database.redis import redis_client
 from backend.utils.async_helper import run_await
 from backend.utils.serializers import select_as_dict
+from backend.utils.snowflake import snowflake
 from backend.utils.timezone import timezone
 
 if TYPE_CHECKING:
@@ -82,7 +84,6 @@ class ModelEntry(ScheduleEntry):
             self.options['expires'] = model.expire_seconds
         elif model.expire_time is not None:
             self.options['expires'] = timezone.from_datetime(model.expire_time)
-
         if not model.last_run_time:
             model.last_run_time = timezone.now()
             if model.start_time:
@@ -91,25 +92,26 @@ class ModelEntry(ScheduleEntry):
         self.last_run_at = timezone.from_datetime(model.last_run_time)
         self.options['periodic_task_name'] = model.name
         self.model = model
+        self.enabled = model.status == StatusType.enable
 
     async def _disable(self, model: TaskScheduler) -> None:
         """禁用任务"""
         model.no_changes = True
-        self.model.enabled = self.enabled = model.enabled = False
+        self.model.status = model.status = StatusType.disable
+        self.enabled = False
         async with async_db_session.begin() as db:
             stmt = select(TaskScheduler).where(TaskScheduler.id == model.id, TaskScheduler.deleted == 0)
             query = await db.execute(stmt)
             task = query.scalars().first()
             if task:
                 task.no_changes = True
-                task.enabled = False
+                task.status = StatusType.disable
 
     def is_due(self) -> tuple[bool, int | float | datetime]:
         """任务到期状态"""
-        if not self.model.enabled:
+        if self.model.status != StatusType.enable:
             # 重新启用时延迟 5 秒
             return schedules.schedstate(is_due=False, next=5)
-
         # 仅在 'start_time' 之后运行
         if self.model.start_time is not None:
             now = timezone.now()
@@ -117,13 +119,12 @@ class ModelEntry(ScheduleEntry):
             if now < start_time:
                 delay = math.ceil((start_time - now).total_seconds())
                 return schedules.schedstate(is_due=False, next=delay)
-
         # 一次性任务
-        if self.model.one_off and self.model.enabled and self.model.total_run_count > 0:
-            self.model.enabled = False
+        if self.model.one_off and self.model.status == StatusType.enable and self.model.total_run_count > 0:
+            self.model.status = StatusType.disable
             self.model.total_run_count = 0
             self.model.no_changes = False
-            save_fields = ('enabled',)
+            save_fields = ('status',)
             run_await(self.save)(save_fields)
             return schedules.schedstate(is_due=False, next=1000000000)  # 高延迟，避免重新检查
 
@@ -210,7 +211,6 @@ class ModelEntry(ScheduleEntry):
                     obj = TaskScheduler(**CreateTaskSchedulerParam(task=task, **spec).model_dump())
             else:
                 raise errors.NotFoundError(msg=f'暂不支持的计划类型：{schedule}')
-
             return obj
 
     @classmethod
@@ -229,7 +229,7 @@ class ModelEntry(ScheduleEntry):
         for k in ['id', 'created_time', 'updated_time', 'deleted', 'deleted_time']:
             try:
                 del model_dict[k]
-            except KeyError:  # ruff:ignore[try-except-in-loop]
+            except KeyError:
                 continue
         model_dict.update(
             args=json.dumps(args, ensure_ascii=False) if args else None,
@@ -237,6 +237,9 @@ class ModelEntry(ScheduleEntry):
             **cls._unpack_options(**options or {}),
             **entry,
         )
+        if 'enabled' in model_dict:
+            enabled = model_dict.pop('enabled')
+            model_dict['status'] = StatusType.enable if enabled else StatusType.disable
         return model_dict
 
     @classmethod
@@ -268,6 +271,14 @@ class ModelEntry(ScheduleEntry):
             elif isinstance(expires, datetime):
                 data['expire_time'] = expires
         return data
+
+
+async def extend_lock(lock: Lock) -> None:
+    """延长调度锁的有效期
+
+    lock.extend 是同步方法，令牌校验在调用线程执行，因此必须在事件循环线程内调用
+    """
+    await lock.extend(_DEFAULT_MAX_LOCK_TIMEOUT, replace_ttl=True)
 
 
 class DatabaseScheduler(Scheduler):
@@ -307,6 +318,9 @@ class DatabaseScheduler(Scheduler):
     def setup_schedule(self) -> None:
         """重写父函数"""
         logger.info('setup_schedule')
+        # beat 进程需要生成任务调度记录的主键，使用雪花算法时必须先初始化节点
+        if settings.SNOWFLAKE_ENABLED or settings.DATABASE_PK_MODE == 'snowflake':
+            run_await(snowflake.init)()
         tasks = self.schedule
         self.install_default_entries(tasks)
         self.update_from_dict(self.app.conf.beat_schedule)
@@ -338,7 +352,7 @@ class DatabaseScheduler(Scheduler):
         """重写父函数"""
         if self.lock:
             logger.debug('beat: Extending lock...')
-            run_await(self.lock.extend)(_DEFAULT_MAX_LOCK_TIMEOUT, replace_ttl=True)
+            run_await(extend_lock)(self.lock)
 
         return super().tick(**kwargs)
 
@@ -359,7 +373,7 @@ class DatabaseScheduler(Scheduler):
         try:
             for name, entry_fields in beat_dict.items():
                 entry = run_await(self.Entry.from_entry)(name, app=self.app, **entry_fields)
-                if entry.model.enabled:
+                if entry.model.status == StatusType.enable:
                     s[name] = entry
         except Exception:
             logger.error(f'添加任务 {name} 到数据库失败')
@@ -371,9 +385,10 @@ class DatabaseScheduler(Scheduler):
     def schedule_changed(self) -> bool | None:
         """任务调度变更状态"""
         now = timezone.now()
-        last_update = run_await(redis_client.get)(f'{settings.CELERY_REDIS_PREFIX}:last_update')
+        last_update_key = f'{settings.CELERY_REDIS_PREFIX}:last_update'
+        last_update = run_await(redis_client.get)(last_update_key)
         if not last_update:
-            run_await(redis_client.set)(f'{settings.CELERY_REDIS_PREFIX}:last_update', timezone.to_str(now))
+            run_await(redis_client.set)(last_update_key, timezone.to_str(now))
             return False
 
         last, ts = self._last_update, timezone.from_str(last_update)
@@ -388,7 +403,7 @@ class DatabaseScheduler(Scheduler):
         async with async_db_session() as db:
             logger.debug('DatabaseScheduler: Fetching database schedule')
             stmt = select(TaskScheduler).where(
-                TaskScheduler.enabled.is_(True),
+                TaskScheduler.status == StatusType.enable,
                 TaskScheduler.deleted == 0,
             )
             query = await db.execute(stmt)
@@ -409,7 +424,6 @@ class DatabaseScheduler(Scheduler):
         elif self.schedule_changed():
             logger.info('DatabaseScheduler: Schedule changed.')
             update = True
-
         if update:
             logger.debug('beat: Synchronizing schedule...')
             self.sync()

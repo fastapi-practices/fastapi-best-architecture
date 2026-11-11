@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Path, Query
 
 from backend.app.admin.schema.data_rule import (
     CreateDataRuleParam,
+    DataRuleQueryParam,
     DeleteDataRuleParam,
     GetDataRuleColumnDetail,
     GetDataRuleDetail,
@@ -66,9 +67,9 @@ async def get_data_rule(
 )
 async def get_data_rules_paginated(
     db: CurrentSession,
-    name: Annotated[str | None, Query(description='规则名称')] = None,
+    query: Annotated[DataRuleQueryParam, Query()],
 ) -> ResponseSchemaModel[PageData[GetDataRuleDetail]]:
-    page_data = await data_rule_service.get_list(db=db, name=name)
+    page_data = await data_rule_service.get_list(db=db, name=query.name)
     return response_base.success(data=page_data)
 
 

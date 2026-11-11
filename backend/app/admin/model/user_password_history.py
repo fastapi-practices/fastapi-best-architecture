@@ -4,7 +4,7 @@ import sqlalchemy as sa
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.common.model import DataClassBase, TenantMixin, TimeZone, id_key
+from backend.common.model import DataClassBase, TenantMixin, id_key
 from backend.utils.timezone import timezone
 
 
@@ -17,7 +17,7 @@ class UserPasswordHistory(DataClassBase, TenantMixin):
     user_id: Mapped[int] = mapped_column(sa.BigInteger, index=True, comment='用户 ID')
     password: Mapped[str] = mapped_column(sa.String(256), comment='历史密码')
     created_time: Mapped[datetime] = mapped_column(
-        TimeZone,
+        sa.DateTime(timezone=True),
         init=False,
         default_factory=timezone.now,
         comment='创建时间',

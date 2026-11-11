@@ -5,6 +5,14 @@ from pydantic import ConfigDict, Field
 from backend.common.schema import SchemaBase
 
 
+class LoginLogQueryParam(SchemaBase):
+    """登录日志查询参数"""
+
+    username: str | None = Field(None, description='用户名')
+    status: int | None = Field(None, description='状态')
+    ip: str | None = Field(None, description='IP 地址')
+
+
 class LoginLogSchemaBase(SchemaBase):
     """登录日志基础模型"""
 

@@ -12,6 +12,7 @@ from backend.plugin.notice.schema.notice import (
     CreateNoticeParam,
     DeleteNoticeParam,
     GetNoticeDetail,
+    NoticeQueryParam,
     UpdateNoticeParam,
 )
 from backend.plugin.notice.service.notice_service import notice_service
@@ -37,11 +38,9 @@ async def get_notice(
 )
 async def get_notices_paginated(
     db: CurrentSession,
-    title: Annotated[str | None, Query(description='标题')] = None,
-    type: Annotated[int | None, Query(description='类型')] = None,
-    status: Annotated[int | None, Query(description='状态')] = None,
+    query: Annotated[NoticeQueryParam, Query()],
 ) -> ResponseSchemaModel[PageData[GetNoticeDetail]]:
-    page_data = await notice_service.get_list(db=db, title=title, type=type, status=status)
+    page_data = await notice_service.get_list(db=db, title=query.title, type=query.type, status=query.status)
     return response_base.success(data=page_data)
 
 

@@ -3,6 +3,7 @@ from typing import Any
 
 from sqlalchemy import Table
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from backend.app.admin.crud.crud_data_rule import data_rule_dao
 from backend.app.admin.model import DataRule
@@ -15,6 +16,7 @@ from backend.app.admin.schema.data_rule import (
 )
 from backend.app.admin.utils.cache import user_cache_manager
 from backend.common.exception import errors
+from backend.common.i18n import t
 from backend.common.pagination import paging_data
 from backend.common.security.permission import get_data_permission_models
 from backend.core.conf import settings
@@ -32,19 +34,17 @@ class DataRuleService:
         :param pk: 规则 ID
         :return:
         """
-
         data_rule = await data_rule_dao.get(db, pk)
         if not data_rule:
-            raise errors.NotFoundError(msg='数据规则不存在')
+            raise errors.NotFoundError(msg=t('error.data_rule.not_found'))
         return data_rule
 
     @staticmethod
     async def get_models() -> list[str]:
         """获取所有数据规则可用模型"""
         model_template_variables = [var['key'] for var in settings.DATA_PERMISSION_MODEL_TEMPLATE_VARIABLES]
-        models = [
-            m for m in list(get_data_permission_models().keys()) if m not in settings.DATA_PERMISSION_MODEL_EXCLUDE
-        ]
+        available_models = await run_in_threadpool(get_data_permission_models)
+        models = [m for m in available_models if m not in settings.DATA_PERMISSION_MODEL_EXCLUDE]
         return model_template_variables + models
 
     @staticmethod
@@ -53,7 +53,7 @@ class DataRuleService:
         return [GetDataRuleTemplateVariableDetail(**var) for var in settings.DATA_PERMISSION_TEMPLATE_VARIABLES]
 
     @staticmethod
-    async def get_columns(model: str) -> list[GetDataRuleColumnDetail]:
+    async def get_columns(*, model: str) -> list[GetDataRuleColumnDetail]:
         """
         获取数据规则可用模型的字段列表
 
@@ -69,9 +69,9 @@ class DataRuleService:
         if model in model_template_variable_keys:
             return column_template_variables
 
-        available_models = get_data_permission_models()
+        available_models = await run_in_threadpool(get_data_permission_models)
         if model not in available_models:
-            raise errors.NotFoundError(msg='数据规则可用模型不存在')
+            raise errors.NotFoundError(msg=t('error.data_rule.model_not_found'))
         model_ins = available_models[model]
 
         table = model_ins if isinstance(model_ins, Table) else model_ins.__table__
@@ -102,7 +102,6 @@ class DataRuleService:
         :param db: 数据库会话
         :return:
         """
-
         data_rules = await data_rule_dao.get_all(db)
         return data_rules
 
@@ -117,7 +116,7 @@ class DataRuleService:
         """
         data_rule = await data_rule_dao.get_by_name(db, obj.name)
         if data_rule:
-            raise errors.ConflictError(msg='数据规则已存在')
+            raise errors.ConflictError(msg=t('error.data_rule.exists'))
         await data_rule_dao.create(db, obj)
 
     @staticmethod
@@ -132,9 +131,9 @@ class DataRuleService:
         """
         data_rule = await data_rule_dao.get(db, pk)
         if not data_rule:
-            raise errors.NotFoundError(msg='数据规则不存在')
+            raise errors.NotFoundError(msg=t('error.data_rule.not_found'))
         if data_rule.name != obj.name and await data_rule_dao.get_by_name(db, obj.name):
-            raise errors.ConflictError(msg='数据规则已存在')
+            raise errors.ConflictError(msg=t('error.data_rule.exists'))
         count = await data_rule_dao.update(db, pk, obj)
         await user_cache_manager.clear_by_data_rule_id(db, [pk])
         return count

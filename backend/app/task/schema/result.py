@@ -3,8 +3,15 @@ from typing import Any
 
 from pydantic import ConfigDict, Field, field_serializer
 
-from backend.app.task import celery_app
+from backend.app.task.celery import celery_app
 from backend.common.schema import SchemaBase
+
+
+class TaskResultQueryParam(SchemaBase):
+    """任务结果查询参数"""
+
+    name: str | None = Field(None, description='任务名称')
+    task_id: str | None = Field(None, description='任务 ID')
 
 
 class TaskResultSchemaBase(SchemaBase):
@@ -36,6 +43,6 @@ class GetTaskResultDetail(TaskResultSchemaBase):
 
     id: int = Field(description='任务结果 ID')
 
-    @field_serializer('args', 'kwargs', when_used='unless-none')
+    @field_serializer('result', 'args', 'kwargs', when_used='unless-none')
     def serialize_params(self, value: bytes | None) -> Any:
         return celery_app.backend.decode(value)

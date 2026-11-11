@@ -1,17 +1,21 @@
 import os
-import urllib.parse
+
+from typing import Any
 
 import celery
 import celery_aio_pool
 
+from celery.app.defaults import NAMESPACES
 from celery.signals import worker_process_init
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
+from sqlalchemy import URL
 
 from backend.app.task.tasks.beat import get_local_beat_schedule
-from backend.common.enums import DataBaseType
 from backend.common.observability.otel import init_resource, init_tracer
 from backend.core.conf import settings
 from backend.core.path_conf import BASE_PATH
+from backend.database.db import get_database_url
+from backend.database.redis import get_redis_url
 
 _celery_otel_initialized = False
 
@@ -30,6 +34,13 @@ def init_celery_tracing(*args, **kwargs) -> None:
     _celery_otel_initialized = True
 
 
+def get_database_engine_options() -> dict[str, Any]:
+    """获取数据库引擎参数，在 celery 默认值的基础上合并 echo 配置"""
+    options = dict(NAMESPACES['database']['engine_options'].default or {})
+    options['echo'] = settings.DATABASE_ECHO
+    return options
+
+
 def find_task_packages() -> list[str]:
     packages = []
     task_dir = BASE_PATH / 'app' / 'task' / 'tasks'
@@ -42,20 +53,28 @@ def find_task_packages() -> list[str]:
 
 def init_celery() -> celery.Celery:
     """初始化 Celery 应用"""
-
     # TODO: Update this work if celery version >= 6.0.0
     # https://github.com/fastapi-practices/fastapi-best-architecture/issues/321
     # https://github.com/celery/celery/issues/7874
     celery.app.trace.build_tracer = celery_aio_pool.build_async_tracer
     celery.app.trace.reset_worker_optimizations()
 
-    broker_url = f'amqp://{settings.CELERY_RABBITMQ_USERNAME}:{urllib.parse.quote(settings.CELERY_RABBITMQ_PASSWORD)}@{settings.CELERY_RABBITMQ_HOST}:{settings.CELERY_RABBITMQ_PORT}/{settings.CELERY_RABBITMQ_VHOST}'
+    # 使用 SQLA URL 构建，避免密码中的特殊字符破坏连接地址
     if settings.CELERY_BROKER == 'redis':
-        broker_url = f'redis://:{urllib.parse.quote(settings.REDIS_PASSWORD)}@{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.CELERY_BROKER_REDIS_DATABASE}'
+        broker_url = get_redis_url(database=settings.CELERY_BROKER_REDIS_DATABASE)
+    else:
+        broker_url = URL.create(
+            drivername='amqp',
+            username=settings.CELERY_RABBITMQ_USERNAME,
+            password=settings.CELERY_RABBITMQ_PASSWORD,
+            host=settings.CELERY_RABBITMQ_HOST,
+            port=settings.CELERY_RABBITMQ_PORT,
+            database=settings.CELERY_RABBITMQ_VHOST,
+        ).render_as_string(hide_password=False)
 
-    result_backend = f'db+postgresql+psycopg://{settings.DATABASE_USER}:{urllib.parse.quote(settings.DATABASE_PASSWORD)}@{settings.DATABASE_HOST}:{settings.DATABASE_PORT}/{settings.DATABASE_SCHEMA}'
-    if DataBaseType.mysql == settings.DATABASE_TYPE:
-        result_backend = result_backend.replace('postgresql+psycopg', 'mysql+pymysql')
+    database_url = get_database_url()
+    result_backend = database_url.set(drivername='postgresql+psycopg').render_as_string(hide_password=False)
+    result_backend = f'db+{result_backend}'
 
     # https://docs.celeryq.dev/en/stable/userguide/configuration.html
     app = celery.Celery(
@@ -64,7 +83,7 @@ def init_celery() -> celery.Celery:
         broker_connection_retry_on_startup=True,
         result_backend=result_backend,
         result_extended=True,
-        database_engine_options={'echo': settings.DATABASE_ECHO},
+        database_engine_options=get_database_engine_options(),
         # result_expires=0,
         # beat_sync_every=1,
         beat_schedule=get_local_beat_schedule(),

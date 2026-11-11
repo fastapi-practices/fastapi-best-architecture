@@ -1,14 +1,19 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, Path, Query
+from redis_fastapi import cache, cache_evict
 
+from backend.common.cache import http_cache_key
 from backend.common.pagination import DependsPagination, PageData
 from backend.common.response.response_schema import ResponseModel, ResponseSchemaModel, response_base
 from backend.common.security.jwt import DependsJwtAuth
 from backend.common.security.permission import RequestPermission
 from backend.common.security.rbac import DependsRBAC
+from backend.core.conf import settings
 from backend.database.db import CurrentSession, CurrentSessionTransaction
 from backend.plugin.config.schema.config import (
+    ConfigQueryParam,
+    ConfigTypeQueryParam,
     CreateConfigParam,
     GetConfigDetail,
     UpdateConfigParam,
@@ -19,16 +24,44 @@ from backend.plugin.config.service.config_service import config_service
 router = APIRouter()
 
 
-@router.get('/all', summary='获取所有参数配置', dependencies=[DependsJwtAuth])
+@router.get(
+    '/all',
+    summary='获取所有参数配置',
+    dependencies=[
+        DependsJwtAuth,
+        Depends(
+            cache(
+                ttl=settings.HTTP_CACHE_TTL,
+                eviction_group='config',
+                key_builder=http_cache_key,
+                no_store=True,
+            )
+        ),
+    ],
+)
 async def get_all_configs(
     db: CurrentSession,
-    type: Annotated[str | None, Query(description='参数配置类型')] = None,
+    query: Annotated[ConfigTypeQueryParam, Query()],
 ) -> ResponseSchemaModel[list[GetConfigDetail]]:
-    configs = await config_service.get_all(db=db, type=type)
+    configs = await config_service.get_all(db=db, type=query.type)
     return response_base.success(data=configs)
 
 
-@router.get('/{pk}', summary='获取参数配置详情', dependencies=[DependsJwtAuth])
+@router.get(
+    '/{pk}',
+    summary='获取参数配置详情',
+    dependencies=[
+        DependsJwtAuth,
+        Depends(
+            cache(
+                ttl=settings.HTTP_CACHE_TTL,
+                eviction_group='config',
+                key_builder=http_cache_key,
+                no_store=True,
+            )
+        ),
+    ],
+)
 async def get_config(
     db: CurrentSession, pk: Annotated[int, Path(description='参数配置 ID')]
 ) -> ResponseSchemaModel[GetConfigDetail]:
@@ -42,14 +75,21 @@ async def get_config(
     dependencies=[
         DependsJwtAuth,
         DependsPagination,
+        Depends(
+            cache(
+                ttl=settings.HTTP_CACHE_TTL,
+                eviction_group='config',
+                key_builder=http_cache_key,
+                no_store=True,
+            )
+        ),
     ],
 )
 async def get_configs_paginated(
     db: CurrentSession,
-    name: Annotated[str | None, Query(description='参数配置名称')] = None,
-    type: Annotated[str | None, Query(description='参数配置类型')] = None,
+    query: Annotated[ConfigQueryParam, Query()],
 ) -> ResponseSchemaModel[PageData[GetConfigDetail]]:
-    page_data = await config_service.get_list(db=db, name=name, type=type)
+    page_data = await config_service.get_list(db=db, name=query.name, type=query.type)
     return response_base.success(data=page_data)
 
 
@@ -59,6 +99,7 @@ async def get_configs_paginated(
     dependencies=[
         Depends(RequestPermission('sys:config:add')),
         DependsRBAC,
+        Depends(cache_evict(eviction_group='config'), scope='function'),
     ],
 )
 async def create_config(db: CurrentSessionTransaction, obj: CreateConfigParam) -> ResponseModel:
@@ -66,7 +107,15 @@ async def create_config(db: CurrentSessionTransaction, obj: CreateConfigParam) -
     return response_base.success()
 
 
-@router.put('', summary='批量更新参数配置', dependencies=[Depends(RequestPermission('sys.config.edits')), DependsRBAC])
+@router.put(
+    '',
+    summary='批量更新参数配置',
+    dependencies=[
+        Depends(RequestPermission('sys:config:edit')),
+        DependsRBAC,
+        Depends(cache_evict(eviction_group='config'), scope='function'),
+    ],
+)
 async def bulk_update_config(db: CurrentSessionTransaction, objs: list[UpdateConfigsParam]) -> ResponseModel:
     count = await config_service.bulk_update(db=db, objs=objs)
     if count > 0:
@@ -80,6 +129,7 @@ async def bulk_update_config(db: CurrentSessionTransaction, objs: list[UpdateCon
     dependencies=[
         Depends(RequestPermission('sys:config:edit')),
         DependsRBAC,
+        Depends(cache_evict(eviction_group='config'), scope='function'),
     ],
 )
 async def update_config(
@@ -97,6 +147,7 @@ async def update_config(
     dependencies=[
         Depends(RequestPermission('sys:config:del')),
         DependsRBAC,
+        Depends(cache_evict(eviction_group='config'), scope='function'),
     ],
 )
 async def delete_configs(

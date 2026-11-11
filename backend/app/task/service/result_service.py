@@ -10,6 +10,8 @@ from backend.common.pagination import paging_data
 
 
 class TaskResultService:
+    """任务结果服务类"""
+
     @staticmethod
     async def get(*, db: AsyncSession, pk: int) -> TaskResult:
         """
@@ -19,7 +21,6 @@ class TaskResultService:
         :param pk: 任务 ID
         :return:
         """
-
         result = await task_result_dao.get(db, pk)
         if not result:
             raise errors.NotFoundError(msg='任务结果不存在')
@@ -47,7 +48,6 @@ class TaskResultService:
         :param obj: 任务结果 ID 列表
         :return:
         """
-
         count = await task_result_dao.delete(db, obj.pks)
         return count
 

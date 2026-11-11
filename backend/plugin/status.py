@@ -2,7 +2,7 @@ import json
 
 from typing import cast
 
-from fastapi import Request
+from starlette.requests import HTTPConnection
 
 from backend.common.enums import StatusType
 from backend.common.exception import errors
@@ -22,7 +22,7 @@ async def repair_plugin_cache(plugin: str) -> str:
     from backend.plugin.core import load_plugin_config
     from backend.plugin.validator import validate_plugin_config
 
-    plugin_config = load_plugin_config(plugin)
+    plugin_config = await load_plugin_config(plugin)
     validate_plugin_config(plugin, plugin_config)
     plugin_config['plugin']['name'] = plugin
     plugin_config['plugin']['enable'] = str(StatusType.enable.value)
@@ -60,14 +60,17 @@ class PluginStatusChecker:
         """
         self.plugin = plugin
 
-    async def __call__(self, request: Request) -> None:
+    async def __call__(self, connection: HTTPConnection) -> None:
         """
         验证插件状态
 
-        :param request: FastAPI 请求对象
+        :param connection: 当前 HTTP/WebSocket 连接
         :return:
         """
-        plugin_info = cast('str | None', await redis_client.get(f'{settings.PLUGIN_REDIS_PREFIX}:{self.plugin}'))
+        plugin_info = cast(
+            'str | None',
+            await redis_client.get(f'{settings.PLUGIN_REDIS_PREFIX}:{self.plugin}'),
+        )
         if not plugin_info:
             log.warning('插件 {} 状态未初始化或丢失，尝试自动修复', self.plugin)
             try:
@@ -75,6 +78,5 @@ class PluginStatusChecker:
             except Exception as e:
                 log.exception('插件 {} 状态自动修复失败', self.plugin)
                 raise PluginInjectError('插件状态未初始化或丢失，请联系系统管理员') from e
-
         if get_plugin_enable(plugin_info, StatusType.disable.value) != str(StatusType.enable.value):
             raise errors.ServerError(msg=f'插件 {self.plugin} 未启用，请联系系统管理员')

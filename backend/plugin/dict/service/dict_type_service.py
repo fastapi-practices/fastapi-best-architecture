@@ -22,7 +22,6 @@ class DictTypeService:
         :param pk: 字典类型 ID
         :return:
         """
-
         dict_type = await dict_type_dao.get(db, pk)
         if not dict_type:
             raise errors.NotFoundError(msg='字典类型不存在')
@@ -61,7 +60,6 @@ class DictTypeService:
         :param obj: 字典类型创建参数
         :return:
         """
-
         dict_type = await dict_type_dao.get_by_code(db, obj.code)
         if dict_type:
             raise errors.ConflictError(msg='字典类型已存在')
@@ -77,7 +75,6 @@ class DictTypeService:
         :param obj: 字典类型更新参数
         :return:
         """
-
         dict_type = await dict_type_dao.get(db, pk)
         if not dict_type:
             raise errors.NotFoundError(msg='字典类型不存在')
@@ -95,7 +92,6 @@ class DictTypeService:
         :param obj: 字典类型 ID 列表
         :return:
         """
-
         count = await dict_type_dao.delete(db, obj.pks)
         return count
 
