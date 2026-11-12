@@ -6,7 +6,7 @@ alembic==1.20.1
     # via fastapi-best-architecture
 amqp==5.4.2
     # via kombu
-annotated-doc==0.0.5
+annotated-doc==0.0.6
     # via
     #   fastapi
     #   typer
@@ -14,6 +14,7 @@ annotated-types==0.8.0
     # via pydantic
 anyio==4.16.0
     # via
+    #   fastapi
     #   fastapi-redis-sdk
     #   httpx
     #   httpx2
@@ -49,7 +50,7 @@ cffi==2.1.1 ; platform_python_implementation != 'PyPy'
     #   gevent
 charset-normalizer==3.5.2
     # via requests
-click==8.5.0
+click==8.5.1
     # via
     #   celery
     #   click-didyoumean
@@ -79,12 +80,12 @@ email-validator==2.3.0
     # via fastapi
 fast-captcha==0.3.2
     # via fastapi-best-architecture
-fastapi==0.162.0
+fastapi==0.162.5
     # via
     #   fastapi-best-architecture
     #   fastapi-pagination
     #   fastapi-redis-sdk
-fastapi-cli==0.0.32
+fastapi-cli==0.0.33
     # via fastapi
 fastapi-pagination==0.16.2
     # via fastapi-best-architecture
@@ -98,7 +99,7 @@ googleapis-common-protos==1.76.0
     # via
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-granian==2.8.7
+granian==2.8.8
     # via fastapi-best-architecture
 greenlet==3.5.6
     # via
@@ -145,11 +146,11 @@ jinja2==3.1.6
     #   fastapi-best-architecture
 kombu==5.7.0
     # via celery
-loguru==0.7.3
+loguru==0.8.0
     # via fastapi-best-architecture
 mako==1.4.3
     # via alembic
-markdown-it-py==4.2.0
+markdown-it-py==4.3.0
     # via rich
 markupsafe==3.0.4
     # via
@@ -277,6 +278,7 @@ pydantic==2.14.3
     #   pydantic-extra-types
     #   pydantic-settings
     #   sqlalchemy-crud-plus
+    #   typer
 pydantic-core==2.50.4
     # via pydantic
 pydantic-extra-types==2.11.1
@@ -357,7 +359,7 @@ starlette-context==0.5.1
     # via fastapi-best-architecture
 termcolor==3.3.0
     # via pytest-sugar
-tornado==6.6
+tornado==6.6.1
     # via flower
 truststore==0.10.5 ; sys_platform != 'emscripten'
     # via
@@ -365,7 +367,7 @@ truststore==0.10.5 ; sys_platform != 'emscripten'
     #   httpx2
 type-lens==0.2.6
     # via cappa
-typer==0.28.0
+typer==0.29.1
     # via fastapi-cli
 typing-extensions==4.16.0
     # via
