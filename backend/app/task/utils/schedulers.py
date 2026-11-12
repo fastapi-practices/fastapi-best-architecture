@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import math
 
 from datetime import datetime, timedelta
@@ -67,9 +66,9 @@ class ModelEntry(ScheduleEntry):
             asyncio.create_task(self._disable(model))
 
         try:
-            self.args = json.loads(model.args) if model.args else None
-            self.kwargs = json.loads(model.kwargs) if model.kwargs else None
-        except ValueError as exc:
+            self.args = list(model.args) if model.args else None
+            self.kwargs = dict(model.kwargs) if model.kwargs else None
+        except (TypeError, ValueError) as exc:
             logger.error(f'禁用参数错误的任务：{self.name}；error: {exc!s}')
             asyncio.create_task(self._disable(model))
 
@@ -232,8 +231,8 @@ class ModelEntry(ScheduleEntry):
             except KeyError:
                 continue
         model_dict.update(
-            args=json.dumps(args, ensure_ascii=False) if args else None,
-            kwargs=json.dumps(kwargs, ensure_ascii=False) if kwargs else None,
+            args=list(args) if args else None,
+            kwargs=kwargs or None,
             **cls._unpack_options(**options or {}),
             **entry,
         )

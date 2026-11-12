@@ -1,5 +1,3 @@
-import json
-
 from collections.abc import Sequence
 from typing import Any
 
@@ -141,9 +139,9 @@ class TaskSchedulerService:
         if not task_scheduler:
             raise errors.NotFoundError(msg='任务调度不存在')
         try:
-            args = json.loads(task_scheduler.args) if task_scheduler.args else None
-            kwargs = json.loads(task_scheduler.kwargs) if task_scheduler.kwargs else None
-        except (TypeError, json.JSONDecodeError):
+            args = list(task_scheduler.args) if task_scheduler.args else None
+            kwargs = dict(task_scheduler.kwargs) if task_scheduler.kwargs else None
+        except (TypeError, ValueError):
             raise errors.RequestError(msg='执行失败，任务参数非法')
         else:
             celery_app.send_task(name=task_scheduler.task, args=args, kwargs=kwargs)

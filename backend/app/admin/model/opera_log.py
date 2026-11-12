@@ -1,7 +1,9 @@
 from datetime import datetime
+from typing import Any
 
 import sqlalchemy as sa
 
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.common.model import DataClassBase, id_key
@@ -27,7 +29,7 @@ class OperaLog(DataClassBase):
     os: Mapped[str | None] = mapped_column(sa.String(64), comment='操作系统')
     browser: Mapped[str | None] = mapped_column(sa.String(64), comment='浏览器')
     device: Mapped[str | None] = mapped_column(sa.String(64), comment='设备')
-    args: Mapped[str | None] = mapped_column(sa.JSON(), comment='请求参数')
+    args: Mapped[dict[str, Any] | None] = mapped_column(JSONB, comment='请求参数')
     status: Mapped[int] = mapped_column(comment='操作状态（0异常 1正常）')
     code: Mapped[str] = mapped_column(sa.String(32), insert_default='200', comment='操作状态码')
     msg: Mapped[str | None] = mapped_column(sa.Text, comment='提示消息')
