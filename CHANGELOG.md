@@ -1,3 +1,34 @@
+<a id="v2.0.0"></a>
+# [v2.0.0](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v2.0.0) - 2026-11-13
+
+## What's Changed
+* Update changelog for v1.17.0 by [@wu-clan](https://github.com/wu-clan) in [#1289](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1289)
+* Bump dependencies and pre-commits by [@wu-clan](https://github.com/wu-clan) in [#1291](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1291)
+* Fix typo in menu status query parameter description by [@wu-clan](https://github.com/wu-clan) in [#1292](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1292)
+* Fix config bulk update permission identifier by [@wu-clan](https://github.com/wu-clan) in [#1293](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1293)
+* Remove decorative blank lines in function bodies by [@wu-clan](https://github.com/wu-clan) in [#1295](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1295)
+* Fix import conventions and adopt query parameter models by [@wu-clan](https://github.com/wu-clan) in [#1296](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1296)
+* Add fba version compatibility check for plugins by [@wu-clan](https://github.com/wu-clan) in [#1297](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1297)
+* Remove blocking file I/O from the plugin request path by [@wu-clan](https://github.com/wu-clan) in [#1298](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1298)
+* Move blocking request path work onto the thread pool by [@wu-clan](https://github.com/wu-clan) in [#1299](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1299)
+* Remove MySQL support in favor of PostgreSQL by [@wu-clan](https://github.com/wu-clan) in [#1300](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1300)
+* Remove the code generator plugin by [@wu-clan](https://github.com/wu-clan) in [#1301](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1301)
+* Derive the plugin database requirement from plugin models by [@wu-clan](https://github.com/wu-clan) in [#1302](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1302)
+* Update the version number to 2.0.0 by [@wu-clan](https://github.com/wu-clan) in [#1303](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1303)
+* Update the plugin fba version requirement to 2.0 by [@wu-clan](https://github.com/wu-clan) in [#1304](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1304)
+* Use JSONB columns for structured data by [@wu-clan](https://github.com/wu-clan) in [#1305](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1305)
+* Bump dependencies and pre-commits by [@wu-clan](https://github.com/wu-clan) in [#1306](https://github.com/fastapi-practices/fastapi-best-architecture/pull/1306)
+
+
+**Full Changelog**: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.17.0...v2.0.0
+
+## Contributors
+
+<a href="https://github.com/wu-clan"><img src="https://wsrv.nl/?url=https%3A%2F%2Fgithub.com%2Fwu-clan.png&w=128&h=128&fit=cover&mask=circle" width="64" height="64" alt="@wu-clan"></a>
+
+[Changes][v2.0.0]
+
+
 <a id="v1.17.0"></a>
 # [v1.17.0](https://github.com/fastapi-practices/fastapi-best-architecture/releases/tag/v1.17.0) - 2026-10-29
 
@@ -1682,6 +1713,7 @@
 [Changes][v1.0.0]
 
 
+[v2.0.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.17.0...v2.0.0
 [v1.17.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.16.0...v1.17.0
 [v1.16.0]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.15.1...v1.16.0
 [v1.15.1]: https://github.com/fastapi-practices/fastapi-best-architecture/compare/v1.15.0...v1.15.1
