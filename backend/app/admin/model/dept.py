@@ -3,14 +3,16 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.common.model import Base, id_key
+from backend.common.tenant import TenantMixin, tenant_unique_columns
 
 
-class Dept(Base):
+class Dept(Base, TenantMixin):
     """部门表"""
 
     __tablename__ = 'sys_dept'
+
     __table_args__ = (
-        sa.UniqueConstraint('name', 'deleted', name='uk_sys_dept_name_deleted'),
+        sa.UniqueConstraint(*tenant_unique_columns('name'), name='uk_sys_dept_name_deleted'),
         {'comment': '部门表'},
     )
 

@@ -5,10 +5,11 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.common.model import DataClassBase, id_key
+from backend.common.tenant import TenantMixin
 from backend.utils.timezone import timezone
 
 
-class UserPasswordHistory(DataClassBase):
+class UserPasswordHistory(DataClassBase, TenantMixin):
     """用户密码历史记录表"""
 
     __tablename__ = 'sys_user_password_history'

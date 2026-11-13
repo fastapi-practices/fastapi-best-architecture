@@ -107,6 +107,9 @@
       "permission_self": "Modifying your own permissions is not allowed",
       "permission_type_not_found": "Permission type does not exist",
       "username_registered": "Username is already registered"
+    },
+    "tenant": {
+      "tenant_id_required": "Tenant ID must not be empty"
     }
   },
   "response": {

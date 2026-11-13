@@ -14,6 +14,7 @@ from backend.app.admin.schema.role import (
     UpdateRoleParam,
     UpdateRoleScopeParam,
 )
+from backend.common.tenant import inject_tenant
 from backend.utils.serializers import select_join_serialize
 from backend.utils.timezone import timezone
 
@@ -159,9 +160,10 @@ class CRUDRole(CRUDPlus[Role]):
         await db.execute(role_menu_stmt)
 
         if obj.menu_ids:
-            role_menu_data = [
-                CreateRoleMenuParam(role_id=role_id, menu_id=menu_id).model_dump() for menu_id in obj.menu_ids
-            ]
+            role_menu_data = []
+            for menu_id in obj.menu_ids:
+                role_dict = CreateRoleMenuParam(role_id=role_id, menu_id=menu_id).model_dump()
+                role_menu_data.append(inject_tenant(role_dict))
             role_menu_stmt = insert(role_menu)
             await db.execute(role_menu_stmt, role_menu_data)
 
@@ -181,9 +183,10 @@ class CRUDRole(CRUDPlus[Role]):
         await db.execute(role_scope_stmt)
 
         if obj.scope_ids:
-            role_scope_data = [
-                CreateRoleScopeParam(role_id=role_id, data_scope_id=scope_id).model_dump() for scope_id in obj.scope_ids
-            ]
+            role_scope_data = []
+            for scope_id in obj.scope_ids:
+                scope_dict = CreateRoleScopeParam(role_id=role_id, data_scope_id=scope_id).model_dump()
+                role_scope_data.append(inject_tenant(scope_dict))
             role_scope_stmt = insert(role_data_scope)
             await db.execute(role_scope_stmt, role_scope_data)
 

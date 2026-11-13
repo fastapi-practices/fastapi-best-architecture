@@ -7,6 +7,7 @@ from backend.app.admin.schema.dept import GetDeptDetail
 from backend.app.admin.schema.role import GetRoleWithRelationDetail
 from backend.common.enums import StatusType, UserPermissionType
 from backend.common.schema import CustomEmailStr, CustomPhoneNumber, SchemaBase, ser_string
+from backend.core.conf import settings
 
 
 class UserQueryParam(SchemaBase):
@@ -33,6 +34,9 @@ class AuthSchemaBase(SchemaBase):
 
 class AuthLoginParam(AuthSchemaBase):
     """用户登录参数"""
+
+    if settings.TENANT_ENABLED:
+        tenant_id: int = Field(description='租户 ID')
 
     uuid: str | None = Field(None, description='验证码 UUID')
     captcha: str | None = Field(None, description='验证码')
@@ -93,6 +97,9 @@ class GetUserInfoDetail(UserInfoSchemaBase):
     """用户信息详情"""
 
     model_config = ConfigDict(from_attributes=True)
+
+    if settings.TENANT_ENABLED:
+        tenant_id: int = Field(description='租户 ID')
 
     dept_id: int | None = Field(None, description='部门 ID')
     id: int = Field(description='用户 ID')

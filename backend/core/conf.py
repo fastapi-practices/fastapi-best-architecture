@@ -310,6 +310,14 @@ class Settings(BaseSettings):
     EMAIL_CAPTCHA_REDIS_PREFIX: str
     EMAIL_CAPTCHA_EXPIRE_SECONDS: int
 
+    ##################################################
+    # [ Plugin ] tenant
+    ##################################################
+    # 基础配置（in plugin.toml）
+    TENANT_ADMIN_DEFAULT_ROLE_NAME: str = '租户管理员'
+    TENANT_DEFAULT_ID: int = 0
+    TENANT_ENABLED: bool = False  # 租户是可选能力，开启后需要安装 tenant 插件
+
     @model_validator(mode='before')
     @classmethod
     def check_env(cls, values: Any) -> Any:

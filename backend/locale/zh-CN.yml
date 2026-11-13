@@ -80,6 +80,8 @@ error:
   token:
     invalid: Token 无效
     role_locked: 用户所属角色已被锁定，请联系系统管理员
+  tenant:
+    tenant_id_required: 租户 ID 不能为空
   user:
     email_bound: 邮箱已被绑定
     not_found: 用户不存在

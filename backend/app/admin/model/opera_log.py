@@ -7,10 +7,11 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.common.model import DataClassBase, id_key
+from backend.common.tenant import TenantMixin
 from backend.utils.timezone import timezone
 
 
-class OperaLog(DataClassBase):
+class OperaLog(DataClassBase, TenantMixin):
     """操作日志表"""
 
     __tablename__ = 'sys_opera_log'
