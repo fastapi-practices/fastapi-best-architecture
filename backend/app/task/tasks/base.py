@@ -1,8 +1,7 @@
-import asyncio
-
 from typing import Any
 
 from celery import Task
+from celery_aio_pool import AsyncIOPool
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.common.socketio.actions import task_notification
@@ -43,4 +42,6 @@ class TaskBase(Task):
         :param einfo: 异常信息
         :return:
         """
-        asyncio.create_task(task_notification(msg=f'任务 {task_id} 执行失败'))
+        # on_failure 由 Celery 在执行任务的线程中同步调用，该线程没有运行中的事件循环，
+        # 必须交给 worker 绑定的 AsyncIOPool 事件循环执行
+        AsyncIOPool.run_in_pool(task_notification, msg=f'任务 {task_id} 执行失败')
