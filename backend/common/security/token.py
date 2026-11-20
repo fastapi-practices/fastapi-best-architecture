@@ -2,7 +2,7 @@ import asyncio
 import json
 import uuid
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import Request
@@ -12,12 +12,36 @@ from backend.common.dataclasses import AccessToken, NewToken, RefreshToken
 from backend.common.exception import errors
 from backend.common.i18n import t
 from backend.common.security.jwt import jwt_encode
+from backend.common.tenant import current_tenant_id
 from backend.core.conf import settings
 from backend.database.redis import redis_client
 from backend.utils.timezone import timezone
 
 _socket_disconnect_tasks: set[asyncio.Task[None]] = set()
 _REDIS_BATCH_SIZE = 1000
+
+
+def _token_payload(user_id: int, session_uuid: str, tenant_id: int | None, expire: datetime) -> dict[str, Any]:
+    """
+    构造 token 载荷
+
+    未启用租户时不写入租户 ID，开启租户时为空则取当前租户
+
+    :param user_id: 用户 ID
+    :param session_uuid: 会话 UUID
+    :param tenant_id: 租户 ID
+    :param expire: 过期时间
+    :return:
+    """
+    payload: dict[str, Any] = {
+        'session_uuid': session_uuid,
+        'jti': str(uuid.uuid4()),
+        'exp': timezone.to_utc(expire).timestamp(),
+        'sub': str(user_id),
+    }
+    if settings.TENANT_ENABLED:
+        payload['tenant_id'] = tenant_id if tenant_id is not None else current_tenant_id()
+    return payload
 
 
 def get_token(request: Request) -> str:
@@ -114,6 +138,7 @@ async def create_access_token(
     user_id: int,
     *,
     multi_login: bool,
+    tenant_id: int | None = None,
     session_uuid: str | None = None,
     swagger: bool = False,
     **kwargs: Any,
@@ -123,6 +148,7 @@ async def create_access_token(
 
     :param user_id: 用户 ID
     :param multi_login: 是否允许多端登录
+    :param tenant_id: 租户 ID，为空时取当前租户，未启用租户时不写入
     :param session_uuid: 复用已有会话 UUID，刷新令牌时保持在线状态连续
     :param swagger: 是否为 swagger 调试 token，不写入会话索引且不踢其他端
     :param kwargs: token 额外信息
@@ -130,12 +156,7 @@ async def create_access_token(
     """
     expire = timezone.now() + timedelta(seconds=settings.TOKEN_EXPIRE_SECONDS)
     session_uuid = session_uuid or str(uuid.uuid4())
-    access_token = jwt_encode({
-        'session_uuid': session_uuid,
-        'jti': str(uuid.uuid4()),
-        'exp': timezone.to_utc(expire).timestamp(),
-        'sub': str(user_id),
-    })
+    access_token = jwt_encode(_token_payload(user_id, session_uuid, tenant_id, expire))
 
     if not swagger and not multi_login:
         await revoke_user_tokens(user_id, exclude_session_uuid=session_uuid, include_swagger=False)
@@ -176,22 +197,24 @@ async def create_access_token(
     return AccessToken(access_token=access_token, access_token_expire_time=expire, session_uuid=session_uuid)
 
 
-async def create_refresh_token(session_uuid: str, user_id: int, *, multi_login: bool) -> RefreshToken:
+async def create_refresh_token(
+    session_uuid: str,
+    user_id: int,
+    *,
+    multi_login: bool,
+    tenant_id: int | None = None,
+) -> RefreshToken:
     """
     生成加密刷新 token，仅用于创建新的 token
 
     :param session_uuid: 会话 UUID
     :param user_id: 用户 ID
     :param multi_login: 是否允许多端登录
+    :param tenant_id: 租户 ID，为空时取当前租户，未启用租户时不写入
     :return:
     """
     expire = timezone.now() + timedelta(seconds=settings.TOKEN_REFRESH_EXPIRE_SECONDS)
-    refresh_token = jwt_encode({
-        'session_uuid': session_uuid,
-        'jti': str(uuid.uuid4()),
-        'exp': timezone.to_utc(expire).timestamp(),
-        'sub': str(user_id),
-    })
+    refresh_token = jwt_encode(_token_payload(user_id, session_uuid, tenant_id, expire))
 
     session_ttl = max(settings.TOKEN_EXPIRE_SECONDS, settings.TOKEN_REFRESH_EXPIRE_SECONDS)
     index_key = f'{settings.TOKEN_SESSION_REDIS_PREFIX}:{user_id}'
@@ -215,6 +238,7 @@ async def create_new_token(
     user_id: int,
     *,
     multi_login: bool,
+    tenant_id: int | None = None,
     **kwargs: Any,
 ) -> NewToken:
     """
@@ -224,6 +248,7 @@ async def create_new_token(
     :param session_uuid: 会话 UUID
     :param user_id: 用户 ID
     :param multi_login: 是否允许多端登录
+    :param tenant_id: 租户 ID，为空时取当前租户，未启用租户时不写入
     :param kwargs: token 附加信息
     :return:
     """
@@ -234,10 +259,11 @@ async def create_new_token(
     new_access_token = await create_access_token(
         user_id,
         multi_login=multi_login,
+        tenant_id=tenant_id,
         session_uuid=session_uuid,
         **kwargs,
     )
-    new_refresh_token = await create_refresh_token(session_uuid, user_id, multi_login=multi_login)
+    new_refresh_token = await create_refresh_token(session_uuid, user_id, multi_login=multi_login, tenant_id=tenant_id)
 
     return NewToken(
         new_access_token=new_access_token.access_token,

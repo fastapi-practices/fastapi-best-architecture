@@ -3,12 +3,14 @@ import json
 import time
 
 from asyncio import Queue, QueueFull
+from collections import defaultdict
 from typing import Any
 
 from fastapi import Response
 from starlette.datastructures import UploadFile
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from starlette_context import request_cycle_context
 
 from backend.app.admin.schema.opera_log import CreateOperaLogParam
 from backend.app.admin.service.opera_log_service import opera_log_service
@@ -19,6 +21,7 @@ from backend.common.observability.prometheus.queue import inc_queue_exception, o
 from backend.common.queue import batch_consume
 from backend.common.redaction import REDACTED, redaction
 from backend.common.response.response_code import StandardResponseCode
+from backend.common.tenant import current_tenant_id
 from backend.core.conf import settings
 from backend.database.db import async_db_session
 from backend.utils.trace_id import get_request_trace_id
@@ -28,7 +31,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
     """操作日志中间件"""
 
     opera_log_queue_name = 'opera_log_queue'
-    opera_log_queue: Queue[CreateOperaLogParam] = Queue(maxsize=settings.OPERA_LOG_QUEUE_MAXSIZE)
+    opera_log_queue: Queue[tuple[int, CreateOperaLogParam]] = Queue(maxsize=settings.OPERA_LOG_QUEUE_MAXSIZE)
     opera_log_stop_event = asyncio.Event()
 
     async def dispatch(self, request: Request, call_next: Any) -> Response:  # ruff:ignore[complex-structure]
@@ -114,7 +117,7 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
                 )
                 # 日志队列已满时丢弃，避免日志写入积压拖慢业务请求
                 try:
-                    self.opera_log_queue.put_nowait(opera_log_in)
+                    self.opera_log_queue.put_nowait((current_tenant_id(), opera_log_in))
                 except QueueFull:
                     log.warning('操作日志队列已满，已丢弃本次请求的操作日志')
                     if settings.GRAFANA_METRICS_ENABLE:
@@ -247,12 +250,18 @@ class OperaLogMiddleware(BaseHTTPMiddleware):
         """操作日志消费者"""
         cls.opera_log_stop_event.clear()
 
-        async def bulk_create_opera_log(logs: list[CreateOperaLogParam]) -> None:
+        async def bulk_create_opera_log(logs: list[tuple[int, CreateOperaLogParam]]) -> None:
             """批量创建操作日志"""
             if settings.DATABASE_ECHO:
                 log.info('自动执行【操作日志批量创建】任务...')
+            logs_by_tenant = defaultdict(list)
+            for tenant_id, log_in in logs:
+                logs_by_tenant[tenant_id].append(log_in)
             async with async_db_session.begin() as db:
-                await opera_log_service.bulk_create(db=db, objs=logs)
+                for tenant_id, tenant_logs in logs_by_tenant.items():
+                    # 消费任务没有请求上下文，按租户建立作用域后由租户监听器注入租户 ID
+                    with request_cycle_context({'tenant_id': tenant_id}):
+                        await opera_log_service.bulk_create(db=db, objs=tenant_logs)
 
         await batch_consume(
             cls.opera_log_queue,

@@ -29,6 +29,7 @@ from backend.app.admin.utils.password_security import get_hash_password
 from backend.common.enums import StatusType
 from backend.common.exception import errors
 from backend.common.i18n import t
+from backend.common.tenant import inject_tenant
 from backend.plugin.core import check_plugin_installed_async
 from backend.utils.serializers import select_join_serialize
 from backend.utils.timezone import timezone
@@ -140,6 +141,7 @@ class CRUDUser(CRUDPlus[User]):
 
         dict_obj = obj.model_dump(exclude={'role_ids'})
         dict_obj.update({'salt': salt})
+
         new_user = self.model(**dict_obj)
         db.add(new_user)
         await db.flush()
@@ -148,7 +150,11 @@ class CRUDUser(CRUDPlus[User]):
             role_stmt = select(Role).where(Role.id.in_(obj.role_ids), Role.deleted == 0)
             result = await db.execute(role_stmt)
             roles = result.scalars().all()
-            user_role_data = [AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump() for role in roles]
+
+            user_role_data = []
+            for role in roles:
+                role_dict = AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump()
+                user_role_data.append(inject_tenant(role_dict))
             user_role_stmt = insert(user_role)
             await db.execute(user_role_stmt, user_role_data)
 
@@ -162,6 +168,7 @@ class CRUDUser(CRUDPlus[User]):
         """
         dict_obj = obj.model_dump()
         dict_obj.update({'is_staff': True, 'salt': None})
+
         new_user = self.model(**dict_obj)
         db.add(new_user)
         await db.flush()
@@ -172,7 +179,8 @@ class CRUDUser(CRUDPlus[User]):
         if role is None:
             raise errors.NotFoundError(msg=t('error.role.unavailable'))
 
-        user_role_stmt = insert(user_role).values(AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump())
+        user_role_data = inject_tenant(AddUserRoleParam(user_id=new_user.id, role_id=role.id).model_dump())
+        user_role_stmt = insert(user_role).values(user_role_data)
         await db.execute(user_role_stmt)
 
     async def update(self, db: AsyncSession, user_id: int, obj: UpdateUserParam) -> int:
@@ -196,7 +204,11 @@ class CRUDUser(CRUDPlus[User]):
             role_stmt = select(Role).where(Role.id.in_(role_ids), Role.deleted == 0)
             result = await db.execute(role_stmt)
             roles = result.scalars().all()
-            user_role_data = [AddUserRoleParam(user_id=user_id, role_id=role.id).model_dump() for role in roles]
+
+            user_role_data = []
+            for role in roles:
+                role_dict = AddUserRoleParam(user_id=user_id, role_id=role.id).model_dump()
+                user_role_data.append(inject_tenant(role_dict))
             user_role_stmt = insert(user_role)
             await db.execute(user_role_stmt, user_role_data)
 

@@ -81,6 +81,7 @@ def jwt_decode(token: str) -> TokenPayload:
         raise errors.TokenError(msg='Token 无效')
     return TokenPayload(
         user_id=int(user_id),
+        tenant_id=int(payload['tenant_id']) if payload.get('tenant_id') is not None else None,
         session_uuid=session_uuid,
         expire_time=timezone.from_datetime(timezone.to_utc(expire)),
     )
@@ -95,6 +96,8 @@ async def jwt_authentication(token: str) -> JwtUser:
     """
     token_payload = jwt_decode(token)
     ctx.user_id = token_payload.user_id
+    if settings.TENANT_ENABLED and token_payload.tenant_id is not None:
+        ctx.tenant_id = token_payload.tenant_id
     redis_token = await redis_client.get(f'{settings.TOKEN_REDIS_PREFIX}:{ctx.user_id}:{token_payload.session_uuid}')
     if not redis_token:
         raise errors.TokenError(msg='Token 已过期')

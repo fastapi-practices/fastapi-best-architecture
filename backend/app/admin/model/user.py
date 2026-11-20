@@ -5,17 +5,19 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.common.model import Base, id_key
+from backend.common.tenant import TenantMixin, tenant_unique_columns
 from backend.database.db import uuid4_str
 from backend.utils.timezone import timezone
 
 
-class User(Base):
+class User(Base, TenantMixin):
     """用户表"""
 
     __tablename__ = 'sys_user'
+
     __table_args__ = (
-        sa.UniqueConstraint('username', 'deleted', name='uk_sys_user_username_deleted'),
-        sa.UniqueConstraint('email', 'deleted', name='uk_sys_user_email_deleted'),
+        sa.UniqueConstraint(*tenant_unique_columns('username'), name='uk_sys_user_username_deleted'),
+        sa.UniqueConstraint(*tenant_unique_columns('email'), name='uk_sys_user_email_deleted'),
         {'comment': '用户表'},
     )
 
